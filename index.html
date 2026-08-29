@@ -4,102 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QC Check Sheet - GitHub Pages Edition</title>
-    <!-- โหลด Tailwind CSS และ FontAwesome แบบปลอดภัยสำหรับการเชื่อมต่อข้ามค่าย -->
-    <link rel="stylesheet" href="https://cloudflare.com" crossorigin="anonymous" referrerPolicy="no-referrer">
-    <link rel="stylesheet" href="https://cloudflare.com" crossorigin="anonymous" referrerPolicy="no-referrer">
+    <!-- ฝังดีไซน์และไอคอนพื้นฐานโดยไม่พึ่งพาลิงก์ภายนอกที่เสี่ยงโดนบล็อก -->
     <style>
         @import url('https://googleapis.com');
-        body { font-family: 'Prompt', sans-serif; }
+        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+        .header { background-color: #4338ca; color: white; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); sticky; top: 0; z-index: 30; }
+        .header-content { max-w: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .main { max-w: 1200px; margin: 24px auto; padding: 0 16px; }
+        .btn { background-color: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 500; cursor: pointer; font-size: 14px; }
+        .btn:hover { background-color: #0369a1; }
+        .btn-danger { background-color: #ef4444; border-radius: 8px; padding: 6px 12px; color: white; cursor: pointer; border: none; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .table-container { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow-x: auto; margin-top: 16px; }
+        table { w-full; width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+        th { background-color: #f8fafc; color: #64748b; padding: 16px; border-b: 1px solid #e2e8f0; font-weight: 500; }
+        td { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+        .badge { padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; border: 1px solid; }
+        .badge-pass { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .badge-fail { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        .badge-pending { background-color: #fffbeb; color: #b45309; border-color: #fef3c7; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #0f172a; color: white; padding: 12px 20px; border-radius: 12px; display: none; z-index: 50; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body>
 
     <!-- Navbar -->
-    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white bg-opacity-10 p-2.5 rounded-xl">
-                    <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-wide">QC & Production Dashboard</h1>
-                    <p class="text-xs text-indigo-200 flex items-center gap-1.5">
-                        <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                        <span id="syncStatusText">กำลังเชื่อมต่อฐานข้อมูล Google Sheets...</span>
-                    </p>
-                </div>
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <h1 style="margin: 0; font-size: 20px; font-weight: 700;">QC & Production Dashboard</h1>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: #c7d2fe;" id="syncStatusText">กำลังเชื่อมต่อฐานข้อมูล Google Sheets...</p>
             </div>
-            <div class="flex items-center gap-2.5">
-                <button onclick="forceSyncData()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-rotate" id="syncIcon"></i> ซิงค์ข้อมูล
-                </button>
+            <div>
+                <button onclick="forceSyncData()" class="btn">🔄 ซิงค์ข้อมูล</button>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
-        <!-- Notification Toast -->
-        <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-            <i id="toast-icon" class="fa-solid fa-circle-info text-blue-400 text-lg"></i>
-            <span id="toast-msg" class="text-sm font-medium">ระบบกำลังทำงาน...</span>
-        </div>
+    <main class="main">
+        <div id="toast" class="toast">ระบบกำลังทำงาน...</div>
 
         <!-- Table Data Section -->
-        <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-medium">
-                            <th class="p-4">QC ID</th>
-                            <th class="p-4">วันที่</th>
-                            <th class="p-4">แผนก</th>
-                            <th class="p-4">รายละเอียดสรุป</th>
-                            <th class="p-4 text-center">สถานะ</th>
-                            <th class="p-4">ผู้ตรวจสอบ</th>
-                            <th class="p-4 text-center">STAMP</th>
-                            <th class="p-4 text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-gray-100">
-                        <tr><td colspan="8" class="p-8 text-center text-gray-400">กำลังดาวน์โหลดข้อมูลตารางจาก Google Sheets...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>QC ID</th>
+                        <th>วันที่</th>
+                        <th>แผนก</th>
+                        <th>รายละเอียดสรุป</th>
+                        <th style="text-align: center;">สถานะ</th>
+                        <th>ผู้ตรวจสอบ</th>
+                        <th style="text-align: center;">STAMP</th>
+                        <th style="text-align: center;">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 32px;">กำลังดาวน์โหลดข้อมูลตารางจาก Google Sheets...</td></tr>
+                </tbody>
+            </table>
         </div>
     </main>
 
     <script>
-        // 🔒 ลิงก์เชื่อมโยง Web App จากหน้า Google Apps Script ของคุณ
-        const BACKEND_API_URL = "https://script.google.com/macros/s/AKfycbx4-GPp_qi4um9SWWQWo5xNtuVyA9ROIsmKbMIMQbvqcf-oFPQvCN2wJO-Wq1spt89_Yg/exec";
+        // 🔒 ลิงก์เชื่อมโยง Web App ตัวล่าสุดจากหน้า Google Apps Script ของคุณ
+        const BACKEND_API_URL = "https://google.com";
 
         let globalData = [];
 
         function forceSyncData() {
-            const syncIcon = document.getElementById('syncIcon');
-            if(syncIcon) syncIcon.classList.add('fa-spin');
-            
-            document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
             document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลงานล่าสุด...";
 
-            // สั่งเรียกข้อมูลโดยใช้การเปิดโหมดดักโครงสร้าง CORS และ No-Cache
-            fetch(`${BACKEND_API_URL}?action=get`, {
-                method: 'GET',
-                cache: 'no-store'
+            // สั่งเรียกข้อมูลผ่านคำสั่งข้ามค่ายตรงไปยัง Google Apps Script
+            fetch(`${BACKEND_API_URL}?action=get`)
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
             })
-            .then(res => res.json())
             .then(data => {
                 globalData = data;
                 renderTable(data);
-                document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-green-500 inline-block";
                 document.getElementById('syncStatusText').innerText = `เชื่อมต่อสำเร็จ (${data.length} รายการ)`;
-                if(syncIcon) syncIcon.classList.remove('fa-spin');
             })
             .catch(err => {
-                document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-red-500 inline-block";
-                document.getElementById('syncStatusText').innerText = "กรุณาตรวจสอบสิทธิ์การแชร์หลังบ้าน";
-                if(syncIcon) syncIcon.classList.remove('fa-spin');
-                showToast("ระบบความปลอดภัยเครือข่ายบล็อกการเชื่อมต่อฐานข้อมูล", "error");
+                document.getElementById('syncStatusText').innerText = "กรุณาตรวจสอบสิทธิ์เป็น 'Anyone' ใน Apps Script";
+                showToast("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
                 console.error(err);
             });
         }
@@ -109,30 +99,27 @@
             tbody.innerHTML = '';
             
             if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-400">ไม่พบรายการข้อมูลในฐานข้อมูล</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 32px;">ไม่พบรายการข้อมูลในฐานข้อมูล</td></tr>`;
                 return;
             }
 
             data.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition duration-150";
 
-                let statusClass = "bg-yellow-50 text-yellow-700 border border-yellow-200";
-                if(row.status === 'PASS') statusClass = "bg-green-50 text-green-700 border border-green-200";
-                if(row.status === 'FAIL') statusClass = "bg-red-50 text-red-700 border border-red-200";
+                let badgeClass = "badge badge-pending";
+                if(row.status === 'PASS') badgeClass = "badge badge-pass";
+                if(row.status === 'FAIL') badgeClass = "badge badge-fail";
 
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-indigo-600">${row.id || '-'}</td>
-                    <td class="p-4 text-gray-500">${row.date || '-'}</td>
-                    <td class="p-4 font-medium">${row.department || '-'}</td>
-                    <td class="p-4 text-gray-600">${row.details || '-'}</td>
-                    <td class="p-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-bold border ${statusClass}">${row.status}</span></td>
-                    <td class="p-4 text-gray-500">${row.inspector || '-'}</td>
-                    <td class="p-4 text-center font-medium">${row.stamp || '-'}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="deleteItem('${row.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-xl transition duration-200" title="ลบข้อมูล">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                    <td style="font-weight: 600; color: #4338ca;">${row.id || '-'}</td>
+                    <td style="color: #64748b;">${row.date || '-'}</td>
+                    <td style="font-weight: 500;">${row.department || '-'}</td>
+                    <td style="color: #334155;">${row.details || '-'}</td>
+                    <td style="text-align: center;"><span class="${badgeClass}">${row.status}</span></td>
+                    <td style="color: #64748b;">${row.inspector || '-'}</td>
+                    <td style="text-align: center; font-weight: 500;">${row.stamp || '-'}</td>
+                    <td style="text-align: center;">
+                        <button onclick="deleteItem('${row.id}')" class="btn-danger">🗑️ ลบ</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -143,7 +130,7 @@
             if (!id) return;
             if (!confirm(`คุณต้องการลบรายการ QC ID: ${id} ใช่หรือไม่?`)) return;
 
-            showToast("กำลังส่งคำสั่งลบข้อมูลไปยัง Google Sheets...", "info");
+            showToast("กำลังส่งคำสั่งลบข้อมูล...");
 
             fetch(BACKEND_API_URL, {
                 method: 'POST',
@@ -153,30 +140,23 @@
             .then(res => res.json())
             .then(response => {
                 if (response.result === 'success') {
-                    showToast("ลบข้อมูลรายการเรียบร้อยแล้ว", "success");
+                    showToast("ลบข้อมูลรายการเรียบร้อยแล้ว");
                     forceSyncData();
                 } else {
-                    showToast("ฐานข้อมูลแจ้งเตือน: " + response.message, "error");
+                    showToast("เกิดข้อผิดพลาด: " + response.message);
                 }
             })
             .catch(err => {
-                showToast("เครื่องคุณถูกบล็อกสิทธิ์การส่งคำสั่งลบข้อมูล", "error");
+                showToast("ไม่สามารถส่งคำสั่งลบได้");
                 console.error(err);
             });
         }
 
-        function showToast(msg, type = "success") {
+        function showToast(msg) {
             const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
-            const text = document.getElementById('toast-msg');
-
-            text.innerText = msg;
-            icon.className = "fa-solid text-lg " + 
-                (type === 'success' ? 'fa-circle-check text-green-400' : 
-                 type === 'error' ? 'fa-circle-xmark text-red-400' : 'fa-circle-info text-blue-400');
-
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3500);
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
         }
 
         window.addEventListener('DOMContentLoaded', forceSyncData);
