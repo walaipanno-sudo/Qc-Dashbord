@@ -16,7 +16,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Navbar -->
     <header id="mainHeader" class="bg-indigo-700 text-white shadow-md sticky top-0 z-30 transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
@@ -24,10 +23,10 @@
                     <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">QC & Production Workflow Dashboard</h1>
+                    <h1 class="text-xl font-bold tracking-wide">QC & Production Dashboard (GitHub Pages)</h1>
                     <p class="text-xs text-indigo-200 flex items-center gap-1.5">
                         <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                        <span id="syncStatusText">กำลังเชื่อมต่อ Google Sheets...</span>
+                        <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อ...</span>
                     </p>
                 </div>
             </div>
@@ -54,7 +53,6 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
 
         <!-- Notification Toast -->
@@ -103,42 +101,49 @@
             </div>
         </div>
 
-        <!-- Filter & Search Section -->
+        <!-- View Switcher & Filter Section -->
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
-            <div class="relative w-full md:w-80">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <i class="fa-solid fa-search"></i>
-                </span>
-                <input type="text" id="searchInput" oninput="filterTable()" placeholder="ค้นหา ID, M/O, แผนก, รายละเอียด..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+            <!-- View Tabs -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition">
+                    <i class="fa-solid fa-list mr-1.5"></i> รายการ QC ทั้งหมด
+                </button>
+                <button onclick="switchView('summary')" id="tabSummaryBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-chart-pie mr-1.5"></i> สรุปภาพรวมตาม M/O, S/O
+                </button>
             </div>
-            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-medium text-slate-500">สถานะ:</span>
+
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <div class="relative w-full sm:w-64">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                        <i class="fa-solid fa-search"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="filterTable()" placeholder="ค้นหา ID, M/O, แผนก..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                </div>
+                <div id="deptFilterWrapper" class="flex items-center gap-2">
                     <select id="statusFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">ทั้งหมด</option>
+                        <option value="">ทุกสถานะ</option>
                         <option value="PASS">PASS</option>
                         <option value="FAIL">FAIL</option>
                         <option value="PENDING">PENDING</option>
                     </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-medium text-slate-500">แผนก:</span>
                     <select id="deptFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">ทุกแผนก</option>
                         <option value="ดีไซน์/ขยายลาย">ดีไซน์/ขยายลาย</option>
                         <option value="แผนกวางแผน">แผนกวางแผน</option>
                         <option value="แผนกย้อม">แผนกย้อม</option>
+                        <option value="แผนกทอมือ">แผนกทอมือ</option>
                         <option value="แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์">แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์</option>
                     </select>
                 </div>
                 <button onclick="resetFilters()" class="text-slate-500 hover:text-indigo-600 text-xs font-medium px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> รีเซ็ตตัวกรอง
+                    <i class="fa-solid fa-rotate-right mr-1"></i> รีเซ็ต
                 </button>
             </div>
         </div>
 
-        <!-- Data Table Container -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <!-- Records View Table -->
+        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -147,7 +152,7 @@
                             <th class="py-3.5 px-4">วันที่</th>
                             <th class="py-3.5 px-4">แผนก</th>
                             <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">รายละเอียดสรุป</th>
+                            <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
                             <th class="py-3.5 px-4 text-center">สถานะ</th>
                             <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
                             <th class="py-3.5 px-4 text-center">Stamp Pass</th>
@@ -168,14 +173,45 @@
             </div>
         </div>
 
+        <!-- M/O, S/O Summary View Table -->
+        <div id="summaryViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
+            <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-chart-pie mr-2 text-indigo-600"></i> สรุปสถานะความคืบหน้าการผลิตและ QC แยกตามหมายเลข M/O, S/O</h3>
+                <span id="summaryCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full">0 รายการ M/O, S/O</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                            <th class="py-3.5 px-4">M/O, S/O</th>
+                            <th class="py-3.5 px-4">แผนกที่ผ่านการตรวจแล้ว</th>
+                            <th class="py-3.5 px-4 text-center">จำนวนครั้งที่ตรวจ</th>
+                            <th class="py-3.5 px-4 text-center">สถานะภาพรวม</th>
+                            <th class="py-3.5 px-4">ผู้ตรวจสอบล่าสุด</th>
+                            <th class="py-3.5 px-4">วันที่อัปเดตล่าสุด</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Summary rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Empty Summary State -->
+            <div id="emptySummaryState" class="hidden py-16 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-solid fa-chart-simple"></i>
+                </div>
+                <p class="text-slate-500 font-medium">ยังไม่มีข้อมูล M/O, S/O ในระบบ</p>
+            </div>
+        </div>
+
     </main>
 
-    <!-- Footer -->
     <footer class="bg-white border-t border-slate-100 py-4 mt-auto text-center text-xs text-slate-400">
-        <p>QC Check Sheet Comprehensive Workflow &copy; 2026. All rights reserved.</p>
+        <p>QC Check Sheet GitHub Pages Edition &copy; 2026. All rights reserved.</p>
     </footer>
 
-    <!-- Custom Delete Confirmation Modal -->
+    <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
             <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
@@ -191,23 +227,23 @@
         </div>
     </div>
 
-    <!-- Share Modal (Web App & QR Code) -->
+    <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all text-center p-6 space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-share-nodes text-emerald-600 mr-2"></i> แชร์ Web App ภายนอก</h3>
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-share-nodes text-emerald-600 mr-2"></i> แชร์เว็บแอป</h3>
                 <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-600 text-lg">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <p class="text-xs text-slate-500">สแกน QR Code หรือคัดลอกลิงก์ด้านล่างเพื่อให้ทีมงานและผู้บริหารเปิดดูแบบเรียลไทม์</p>
+            <p class="text-xs text-slate-500">สแกน QR Code หรือคัดลอกลิงก์ด้านล่างเพื่อเปิดใช้งานจากเครื่องอื่น</p>
             
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 inline-block mx-auto">
-                <img id="qrCodeImg" src="" alt="QR Code for Web App" class="w-48 h-48 mx-auto rounded-lg shadow-sm">
+                <img id="qrCodeImg" src="" alt="QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-sm">
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1 text-left">ลิงก์เว็บแอป (URL):</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1 text-left">ลิงก์หน้าเว็บ (URL):</label>
                 <div class="flex gap-2">
                     <input type="text" id="shareUrlInput" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none">
                     <button onclick="copyShareUrl()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition shadow flex items-center gap-1 shrink-0">
@@ -218,9 +254,9 @@
         </div>
     </div>
 
-    <!-- Dynamic Modal Form (Add / Edit) -->
+    <!-- Add / Edit Modal -->
     <div id="qcModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
             <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
                 <h3 id="modalTitle" class="font-bold text-lg">เพิ่มบันทึก QC ตามแผนก</h3>
                 <button onclick="closeModal()" class="text-indigo-200 hover:text-white transition text-lg">
@@ -245,6 +281,7 @@
                             <option value="ดีไซน์/ขยายลาย">ดีไซน์/ขยายลาย</option>
                             <option value="แผนกวางแผน">แผนกวางแผน</option>
                             <option value="แผนกย้อม">แผนกย้อม</option>
+                            <option value="แผนกทอมือ">แผนกทอมือ</option>
                             <option value="แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์">แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์</option>
                         </select>
                     </div>
@@ -255,9 +292,13 @@
                     <input type="text" id="formMoSo" required placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 
-                <!-- Dynamic Department Specific Fields Container -->
-                <div id="departmentSpecificFields" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
-                    <!-- Injected dynamically via JS -->
+                <!-- Dynamic Department Fields -->
+                <div id="departmentSpecificFields" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4"></div>
+
+                <!-- Universal Remark Field for All Departments -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1"><i class="fa-solid fa-note-sticky mr-1 text-indigo-600"></i> หมายเหตุ / ข้อมูลเพิ่มเติม (ทุกแผนก)</label>
+                    <textarea id="formRemark" rows="2" placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
@@ -285,17 +326,17 @@
 
                 <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm rounded-xl transition">ยกเลิก</button>
-                    <button type="submit" id="saveBtn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึกข้อมูล</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Google Sheet Configuration Modal -->
+    <!-- Configuration Modal -->
     <div id="configModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden transform transition-all flex flex-col">
             <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-brands fa-google mr-2"></i> ตั้งค่าเชื่อมต่อ Google Sheets</h3>
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-brands fa-google mr-2"></i> ตั้งค่าเชื่อมต่อ Google Apps Script</h3>
                 <button onclick="closeConfigModal()" class="text-indigo-200 hover:text-white transition text-lg">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -304,7 +345,7 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Google Apps Script Web App URL:</label>
                     <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <p class="text-xs text-slate-400 mt-1">วาง URL ของ Web App ที่ได้จากการ Deploy ใน Apps Script เพื่อซิงค์ข้อมูลสองทาง</p>
+                    <p class="text-xs text-slate-400 mt-1">วางลิงก์ Web App จาก Google Apps Script เพื่อให้ทุกเครื่องที่เปิดผ่าน GitHub ดึงและบันทึกข้อมูลลง Google Sheet เดียวกัน</p>
                 </div>
             </div>
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
@@ -314,19 +355,14 @@
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
     <script>
         let qcData = [];
-        let defaultGasUrl = '';
-        if (window.location.href.includes('script.google.com')) {
-            defaultGasUrl = window.location.href.split('?')[0];
-        }
-
-        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || defaultGasUrl;
+        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
+        let currentView = 'records'; // 'records' or 'summary'
 
         window.addEventListener('DOMContentLoaded', () => {
-            const savedLocal = localStorage.getItem('qc_comprehensive_data');
+            const savedLocal = localStorage.getItem('qc_comprehensive_data_v2');
             if (savedLocal) {
                 try { qcData = JSON.parse(savedLocal); } catch(e) {}
             }
@@ -334,17 +370,43 @@
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
             } else {
-                updateSyncStatus(false, 'ไม่ได้เชื่อมต่อ Google Sheet (โหมดข้อมูลภายใน)');
+                updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
+                openConfigModal();
             }
         });
 
         function saveToLocal() {
-            localStorage.setItem('qc_comprehensive_data', JSON.stringify(qcData));
+            localStorage.setItem('qc_comprehensive_data_v2', JSON.stringify(qcData));
         }
 
         function initApp() {
             renderTable(qcData);
+            renderSummaryTable(qcData);
             updateStats();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const recordsBtn = document.getElementById('tabRecordsBtn');
+            const summaryBtn = document.getElementById('tabSummaryBtn');
+            const recordsContainer = document.getElementById('recordsViewContainer');
+            const summaryContainer = document.getElementById('summaryViewContainer');
+            const deptFilterWrapper = document.getElementById('deptFilterWrapper');
+
+            if (view === 'records') {
+                recordsBtn.className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
+                summaryBtn.className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
+                recordsContainer.classList.remove('hidden');
+                summaryContainer.classList.add('hidden');
+                deptFilterWrapper.classList.remove('hidden');
+            } else {
+                summaryBtn.className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
+                recordsBtn.className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
+                summaryContainer.classList.remove('hidden');
+                recordsContainer.classList.add('hidden');
+                deptFilterWrapper.classList.add('hidden');
+                renderSummaryTable(qcData);
+            }
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -355,7 +417,7 @@
                 text.textContent = message || "เชื่อมต่อ Google Sheets แล้ว";
             } else {
                 indicator.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
-                text.textContent = message || "ใช้ข้อมูลในเครื่อง";
+                text.textContent = message || "ไม่ได้เชื่อมต่อ Google Sheet";
             }
         }
 
@@ -370,7 +432,7 @@
         async function fetchDataFromGoogleSheet(isManual = false) {
             if (!gasWebAppUrl) {
                 if (isManual) {
-                    showToast('ยังไม่ได้ตั้งค่า Google Apps Script Web App URL', 'fa-circle-xmark', 'text-rose-400');
+                    showToast('โปรดตั้งค่า Google Apps Script Web App URL ก่อน', 'fa-circle-xmark', 'text-rose-400');
                     openConfigModal();
                 }
                 return;
@@ -382,8 +444,8 @@
                 const text = await response.text();
                 
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                    if (isManual) showToast('ข้อผิดพลาด: URL ที่ระบุไม่ใช่ JSON API', 'fa-circle-xmark', 'text-rose-400');
-                    updateSyncStatus(false, 'เชื่อมต่อไม่สำเร็จ (ได้ค่า HTML)');
+                    if (isManual) showToast('ข้อผิดพลาด: URL ที่ระบุไม่ถูกต้อง', 'fa-circle-xmark', 'text-rose-400');
+                    updateSyncStatus(false, 'เชื่อมต่อไม่สำเร็จ');
                     return;
                 }
 
@@ -415,6 +477,7 @@
                             status: validStatus,
                             inspector: item.inspector || '',
                             stamp: item.stamp || '-',
+                            remark: item.remark || parsedExtra.remark || '',
                             extraData: parsedExtra
                         };
                     });
@@ -426,198 +489,258 @@
             } catch(e) {
                 console.error("Fetch error:", e);
                 updateSyncStatus(false, 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
-                if (isManual) showToast('เชื่อมต่อล้มเหลว ตรวจสอบลิงก์', 'fa-circle-xmark', 'text-rose-400');
+                if (isManual) showToast('เชื่อมต่อล้มเหลว', 'fa-circle-xmark', 'text-rose-400');
             }
         }
 
-        function renderDepartmentFields() {
+        function renderDepartmentFields(existingExtra = {}) {
             const dept = document.getElementById('formDept').value;
             const container = document.getElementById('departmentSpecificFields');
             container.innerHTML = '';
 
             if (dept === 'ดีไซน์/ขยายลาย') {
                 container.innerHTML = `
-                    <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2"><i class="fa-solid fa-pen-ruler mr-1"></i> รายการตรวจสอบแผนกดีไซน์ / ขยายลาย</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Design ID ตรงกับ M/O ไหม?</label>
-                            <select id="ds_idMatch" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ถูกต้องตรงกับ M/O">ถูกต้องตรงกับ M/O</option>
-                                <option value="ไม่ถูกต้อง">ไม่ถูกต้อง</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ขนาดตรงตาม PO ลูกค้าไหม?</label>
-                            <select id="ds_sizeMatch" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ตรงตาม PO ลูกค้า">ตรงตาม PO ลูกค้า</option>
-                                <option value="ขนาดไม่ตรง">ขนาดไม่ตรง</option>
-                            </select>
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-pen-ruler mr-1"></i> รายการตรวจสอบแผนกดีไซน์ / ขยายลาย (เพิ่มได้หลายรายการ)</h4>
+                        <button type="button" onclick="addDesignRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                        </button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">แบบสี, จำนวนสี, โค้ดสี, %สี ถูกต้องไหม?</label>
-                            <select id="ds_colorCheck" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ถูกต้องครบถ้วน">ถูกต้องครบถ้วน</option>
-                                <option value="ไม่ถูกต้อง">ไม่ถูกต้อง</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ระบุชนิดไหมที่แถบสีถูกต้องไหม?</label>
-                            <select id="ds_yarnType" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ระบุถูกต้อง">ระบุถูกต้อง</option>
-                                <option value="ไม่ถูกต้อง">ไม่ถูกต้อง</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">จำนวนที่ต้องแก้ไข (ชิ้น/ผืน)</label>
-                            <input type="number" id="ds_fixQty" value="0" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">สาเหตุความไม่ถูกต้อง (ถ้ามี)</label>
-                            <input type="text" id="ds_reason" placeholder="ระบุสาเหตุ..." class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
+                    <div id="designRowsContainer" class="space-y-2"></div>
                 `;
+                const items = existingExtra.items || (existingExtra.designIdMatch ? [existingExtra] : []);
+                if (items.length === 0) addDesignRow();
+                else items.forEach(item => addDesignRow(item));
             } else if (dept === 'แผนกวางแผน') {
                 container.innerHTML = `
-                    <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2"><i class="fa-solid fa-calendar-days mr-1"></i> รายการตรวจสอบแผนกวางแผน</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">วันที่รับ M/O, S/O</label>
-                            <input type="date" id="pl_receiveDate" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">เช็คแบบสีถูกต้องกับ M/O, S/O ไหม?</label>
-                            <select id="pl_colorMatch" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ถูกต้องตรงกัน">ถูกต้องตรงกัน</option>
-                                <option value="ไม่ถูกต้อง">ไม่ถูกต้อง</option>
-                            </select>
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-calendar-days mr-1"></i> รายการตรวจสอบแผนกวางแผน (เพิ่มได้หลายรายการ)</h4>
+                        <button type="button" onclick="addPlanRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                        </button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ระบุเกรดการทอ (เกรดอะไร)</label>
-                            <input type="text" id="pl_weavingGrade" placeholder="เช่น เกรด A, เกรด Premium" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">กำหนดเสร็จเมื่อไหร่ (Due Date)</label>
-                            <input type="date" id="pl_dueDate" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">ใส่พนักงานทอแต่ละคน และจำนวนภาระงาน</label>
-                        <input type="text" id="pl_weaverWorkload" placeholder="เช่น ช่างสมชาย 100 ตร.ม., ช่างวิชัย 80 ตร.ม." class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">คำนวณใบสั่งย้อม (สีอะไร จำนวนเท่าไหร่)</label>
-                            <input type="text" id="pl_dyeingOrder" placeholder="เช่น สีน้ำเงิน 50 กก., สีแดง 30 กก." class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">หากไม่เสร็จตามกำหนด เพราะอะไร?</label>
-                            <input type="text" id="pl_delayReason" placeholder="ระบุสาเหตุ (ถ้ามี)" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
+                    <div id="planRowsContainer" class="space-y-2"></div>
                 `;
+                const items = existingExtra.items || (existingExtra.weavingGrade ? [existingExtra] : []);
+                if (items.length === 0) addPlanRow();
+                else items.forEach(item => addPlanRow(item));
             } else if (dept === 'แผนกย้อม') {
                 container.innerHTML = `
-                    <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2"><i class="fa-solid fa-droplet mr-1"></i> รายการตรวจสอบแผนกย้อม</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Code สี และจำนวนที่สั่งย้อม</label>
-                            <input type="text" id="dy_codeAndQty" placeholder="เช่น Code: B-01 / 100 กก." class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">เริ่มย้อมวันที่</label>
-                            <input type="date" id="dy_startDate" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">จำนวนที่ย้อมจริงตรงตามสั่งไหม?</label>
-                            <select id="dy_qtyMatch" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="ตรงตามสั่งย้อม">ตรงตามสั่งย้อม</option>
-                                <option value="ไม่ตรงตามสั่ง">ไม่ตรงตามสั่ง</option>
-                            </select>
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-droplet mr-1"></i> รายการตรวจสอบแผนกย้อม (เพิ่มได้หลายรายการ)</h4>
+                        <button type="button" onclick="addDyeRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                        </button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ย้อมสีเหมือนไหม?</label>
-                            <select id="dy_colorMatch" onchange="toggleDyeingFailFields()" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="เหมือน / ผ่าน (PASS)">เหมือน / ผ่าน (PASS)</option>
-                                <option value="ไม่เหมือน">ไม่เหมือน</option>
-                            </select>
-                        </div>
-                        <div id="dy_correctionGroup" class="hidden">
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ไม่เหมือนเพราะอะไร / แก้ไขกี่ครั้ง / วิธีการแก้ไข</label>
-                            <input type="text" id="dy_correctionDetails" placeholder="สาเหตุ / จำนวนครั้งแก้ไข / วิธีแก้" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ผลการพิจารณา QC หรือผู้อُنุมัติ</label>
-                            <select id="dy_approvalResult" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                                <option value="QC ให้ผ่าน">QC ให้ผ่าน</option>
-                                <option value="ผู้อُنุมัติคนอื่นให้ผ่าน">ผู้อُنุมัติคนอื่นให้ผ่าน</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อผู้อُنุมัติ & ตำแหน่ง (กรณีไม่ใช่ QC)</label>
-                            <input type="text" id="dy_approverInfo" placeholder="ระบุชื่อ และตำแหน่ง" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
+                    <div id="dyeRowsContainer" class="space-y-2"></div>
                 `;
+                const items = existingExtra.items || (existingExtra.codeAndQty ? [existingExtra] : []);
+                if (items.length === 0) addDyeRow();
+                else items.forEach(item => addDyeRow(item));
+            } else if (dept === 'แผนกทอมือ') {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-hand-holding-heart mr-1"></i> รายการตรวจสอบแผนกทอมือ (รอบการตรวจ)</h4>
+                        <button type="button" onclick="addLoomRoundRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มรอบตรวจ
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">ทอที่จอไหน / เครื่องทอไหน</label>
+                        <input type="text" id="hw_loomNo" placeholder="เช่น จอที่ 2 / เครื่องทอ A1" value="${existingExtra.loomNo || ''}" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
+                    </div>
+                    <div id="loomRoundsContainer" class="space-y-2"></div>
+                `;
+                const rounds = existingExtra.loomRounds || [];
+                if (rounds.length === 0) addLoomRoundRow();
+                else rounds.forEach(r => addLoomRoundRow(r));
             } else if (dept === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
                 container.innerHTML = `
-                    <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2"><i class="fa-solid fa-box-archive mr-1"></i> รายการตรวจสอบแผนกตกแต่ง / ทากาว / บรรจุภัณฑ์</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ทากาว: เริ่มวันที่และเวลา</label>
-                            <input type="datetime-local" id="fn_glueStart" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ทากาว: เสร็จวันที่และเวลา</label>
-                            <input type="datetime-local" id="fn_glueFinish" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-box-archive mr-1"></i> รายการตรวจสอบแผนกตกแต่ง / บรรจุภัณฑ์ (เพิ่มได้หลายรายการ)</h4>
+                        <button type="button" onclick="addFinishRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                        </button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ตกแต่ง: เริ่มวันที่และเวลา</label>
-                            <input type="datetime-local" id="fn_decorStart" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ขนาดพรม (หน้าพรม/สี/ขนพรมตาม Spec)</label>
-                            <input type="text" id="fn_specMatch" placeholder="ตรงตาม Spec (ถ้าไม่ระบุวิธีแก้)" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">ตกแต่งเสร็จวันที่</label>
-                            <input type="date" id="fn_decorFinishDate" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">บรรจุภัณฑ์ที่ใช้ และความสะอาดเรียบร้อย</label>
-                            <input type="text" id="fn_packagingInfo" placeholder="เช่น ถุงพลาสติกหนา, สะอาดเรียบร้อย" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">การอนุมัติสรุป (ถ้าไม่ถูกต้อง แจ้งผู้เกี่ยวข้อง)</label>
-                            <input type="text" id="fn_approvalSign" placeholder="ชื่อผู้เกี่ยวข้อง / ผู้อُنุมัติลงนามร่วมกับ QC" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                        </div>
-                    </div>
+                    <div id="finishRowsContainer" class="space-y-2"></div>
                 `;
+                const items = existingExtra.items || (existingExtra.packagingInfo || existingExtra.specMatch ? [existingExtra] : []);
+                if (items.length === 0) addFinishRow();
+                else items.forEach(item => addFinishRow(item));
             }
         }
 
-        function toggleDyeingFailFields() {
-            const val = document.getElementById('dy_colorMatch').value;
-            const group = document.getElementById('dy_correctionGroup');
-            if (val === 'ไม่เหมือน') {
-                group.classList.remove('hidden');
-            } else {
-                group.classList.add('hidden');
-            }
+        function addDesignRow(data = {}) {
+            const container = document.getElementById('designRowsContainer');
+            if (!container) return;
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
+            rowDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600">รายการลายผ้า</span>
+                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">Design ID ตรงกับ M/O ไหม?</label>
+                        <select class="row-idMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="ถูกต้องตรงกับ M/O" ${data.designIdMatch === 'ถูกต้องตรงกับ M/O' ? 'selected' : ''}>ถูกต้องตรงกับ M/O</option>
+                            <option value="ไม่ถูกต้อง" ${data.designIdMatch === 'ไม่ถูกต้อง' ? 'selected' : ''}>ไม่ถูกต้อง</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ขนาดตรงตาม PO ลูกค้าไหม?</label>
+                        <select class="row-sizeMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="ตรงตาม PO ลูกค้า" ${data.sizeMatch === 'ตรงตาม PO ลูกค้า' ? 'selected' : ''}>ตรงตาม PO ลูกค้า</option>
+                            <option value="ขนาดไม่ตรง" ${data.sizeMatch === 'ขนาดไม่ตรง' ? 'selected' : ''}>ขนาดไม่ตรง</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">โค้ดสี/จำนวนสี/รหัส</label>
+                        <input type="text" class="row-colorCheck w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ถูกต้องครบถ้วน" value="${data.colorCheck || 'ถูกต้องครบถ้วน'}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">จำนวนที่ต้องแก้ไข (ชิ้น)</label>
+                        <input type="number" class="row-fixQty w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.fixQty || 0}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">สาเหตุ/หมายเหตุย่อย</label>
+                        <input type="text" class="row-reason w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ระบุ..." value="${data.reason || ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function addPlanRow(data = {}) {
+            const container = document.getElementById('planRowsContainer');
+            if (!container) return;
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
+            rowDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600">รายการวางแผน</span>
+                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">เกรดการทอ</label>
+                        <input type="text" class="row-weavingGrade w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="เกรด A" value="${data.weavingGrade || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">กำหนดเสร็จ (Due Date)</label>
+                        <input type="date" class="row-dueDate w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.dueDate || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ภาระงานพนักงาน</label>
+                        <input type="text" class="row-workload w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ช่างสมชาย 100 ตร.ม." value="${data.weaverWorkload || ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function addDyeRow(data = {}) {
+            const container = document.getElementById('dyeRowsContainer');
+            if (!container) return;
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
+            rowDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600">รายการย้อมสี</span>
+                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี และจำนวน</label>
+                        <input type="text" class="row-codeQty w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="B-01 / 50 กก." value="${data.codeAndQty || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ผลการเทียบสี</label>
+                        <select class="row-colorMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="เหมือน / ผ่าน (PASS)" ${data.colorMatch === 'เหมือน / ผ่าน (PASS)' ? 'selected' : ''}>เหมือน / ผ่าน (PASS)</option>
+                            <option value="ไม่เหมือน" ${data.colorMatch === 'ไม่เหมือน' ? 'selected' : ''}>ไม่เหมือน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">รายละเอียดแก้ไข/ผู้อนุมัติ</label>
+                        <input type="text" class="row-approver w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ชื่อผู้อนุมัติ" value="${data.approverInfo || ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function addFinishRow(data = {}) {
+            const container = document.getElementById('finishRowsContainer');
+            if (!container) return;
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
+            rowDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600">รายการตกแต่ง / บรรจุภัณฑ์</span>
+                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ขนาดพรม / Spec</label>
+                        <input type="text" class="row-specMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ตรงตาม Spec" value="${data.specMatch || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">บรรจุภัณฑ์ & ความสะอาด</label>
+                        <input type="text" class="row-packaging w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ถุงพลาสติกหนา" value="${data.packagingInfo || ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function addLoomRoundRow(data = {}) {
+            const container = document.getElementById('loomRoundsContainer');
+            if(!container) return;
+            const roundIndex = container.children.length + 1;
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "loom-round-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
+            rowDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600">รอบที่ <span class="round-num">${roundIndex}</span></span>
+                    <button type="button" onclick="removeLoomRoundRow(this)" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">เริ่มตรวจกี่โมง / เสร็จกี่โมง</label>
+                        <div class="flex gap-1">
+                            <input type="time" class="round-start w-1/2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.start || ''}">
+                            <input type="time" class="round-end w-1/2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.end || ''}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ปัญหาที่พบ</label>
+                        <input type="text" class="round-problem w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ระบุปัญหา..." value="${data.problem || 'ไม่มีปัญหา'}">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-0.5">วิธีแก้ไขปัญหา</label>
+                    <input type="text" class="round-solution w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="วิธีการแก้ไข..." value="${data.solution || '-'}">
+                </div>
+            `;
+            container.appendChild(rowDiv);
+            updateLoomRoundNumbers();
+        }
+
+        function removeLoomRoundRow(btn) {
+            const row = btn.closest('.loom-round-row');
+            row.remove();
+            updateLoomRoundNumbers();
+        }
+
+        function updateLoomRoundNumbers() {
+            const rows = document.querySelectorAll('.loom-round-row');
+            rows.forEach((r, idx) => {
+                r.querySelector('.round-num').textContent = idx + 1;
+            });
         }
 
         function renderTable(dataToRender) {
@@ -647,15 +770,26 @@
                 let summaryText = '';
                 const ex = item.extraData || {};
                 if (item.department === 'ดีไซน์/ขยายลาย') {
-                    summaryText = `Design ID: ${ex.designIdMatch || '-'}, สี: ${ex.colorCheck || '-'}`;
+                    const count = ex.items ? ex.items.length : (ex.designIdMatch ? 1 : 0);
+                    summaryText = `รวม ${count} รายการลายผ้า (เช็คดีไซน์ & สี)`;
                 } else if (item.department === 'แผนกวางแผน') {
-                    summaryText = `เกรดทอ: ${ex.weavingGrade || '-'}, กำหนดเสร็จ: ${ex.dueDate || '-'}`;
+                    const count = ex.items ? ex.items.length : (ex.weavingGrade ? 1 : 0);
+                    summaryText = `รวม ${count} รายการแผนงาน (เกรดทอ & กำหนดเสร็จ)`;
                 } else if (item.department === 'แผนกย้อม') {
-                    summaryText = `สีย้อม: ${ex.codeAndQty || '-'}, ผล: ${ex.colorMatch || '-'}`;
+                    const count = ex.items ? ex.items.length : (ex.codeAndQty ? 1 : 0);
+                    summaryText = `รวม ${count} รายการย้อมสี`;
+                } else if (item.department === 'แผนกทอมือ') {
+                    const roundsCount = ex.loomRounds ? ex.loomRounds.length : 0;
+                    summaryText = `จอ: ${ex.loomNo || '-'}, ตรวจ ${roundsCount} รอบ`;
                 } else if (item.department === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                    summaryText = `แพ็คเกจ: ${ex.packagingInfo || '-'}, ลงนาม: ${ex.approvalSign || '-'}`;
+                    const count = ex.items ? ex.items.length : (ex.packagingInfo || ex.specMatch ? 1 : 0);
+                    summaryText = `รวม ${count} รายการตกแต่ง/บรรจุภัณฑ์`;
                 } else {
                     summaryText = item.moSo;
+                }
+
+                if (item.remark) {
+                    summaryText += ` | หมายเหตุ: ${item.remark}`;
                 }
 
                 const tr = document.createElement('tr');
@@ -682,15 +816,83 @@
             });
         }
 
+        function renderSummaryTable(dataToRender) {
+            const tbody = document.getElementById('summaryTableBody');
+            const emptyState = document.getElementById('emptySummaryState');
+            const countBadge = document.getElementById('summaryCountBadge');
+            tbody.innerHTML = '';
+
+            // Group data by M/O, S/O
+            const summaryMap = {};
+            dataToRender.forEach(item => {
+                const key = (item.moSo || 'ไม่ระบุ M/O').trim();
+                if (!summaryMap[key]) {
+                    summaryMap[key] = {
+                        moSo: key,
+                        departments: new Set(),
+                        totalChecks: 0,
+                        hasFail: false,
+                        hasPending: false,
+                        lastInspector: item.inspector,
+                        lastDate: item.date
+                    };
+                }
+                if (item.department) {
+                    summaryMap[key].departments.add(item.department);
+                }
+                summaryMap[key].totalChecks++;
+                if (item.status === 'FAIL') summaryMap[key].hasFail = true;
+                if (item.status === 'PENDING') summaryMap[key].hasPending = true;
+
+                // Keep latest date/inspector if newer
+                if (item.date >= summaryMap[key].lastDate) {
+                    summaryMap[key].lastDate = item.date;
+                    summaryMap[key].lastInspector = item.inspector;
+                }
+            });
+
+            const summaryArray = Object.values(summaryMap);
+            countBadge.textContent = `${summaryArray.length} รายการ M/O, S/O`;
+
+            if (summaryArray.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            summaryArray.forEach(sum => {
+                let statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">PASS (ผ่านทุกแผนก)</span>';
+                if (sum.hasFail) {
+                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">FAIL (มีจุดต้องแก้ไข)</span>';
+                } else if (sum.hasPending) {
+                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">PENDING (กำลังตรวจสอบ)</span>';
+                }
+
+                // Department badges list
+                const deptListHtml = Array.from(sum.departments).map(d => 
+                    `<span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md text-[11px] font-medium mr-1 mb-1">${escapeHtml(d)}</span>`
+                ).join('') || '<span class="text-slate-400">-</span>';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/85 transition border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(sum.moSo)}</td>
+                    <td class="py-3.5 px-4 text-xs">${deptListHtml}</td>
+                    <td class="py-3.5 px-4 text-center text-xs font-semibold text-slate-700">${sum.totalChecks} ครั้ง</td>
+                    <td class="py-3.5 px-4 text-center">${statusBadge}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(sum.lastInspector || '-')}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(sum.lastDate || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function updateStats() {
             document.getElementById('stat-total').textContent = qcData.length;
-            const passCount = qcData.filter(d => d.status === 'PASS').length;
-            const failCount = qcData.filter(d => d.status === 'FAIL').length;
-            const pendingCount = qcData.filter(d => d.status === 'PENDING').length;
-
-            document.getElementById('stat-pass').textContent = passCount;
-            document.getElementById('stat-fail').textContent = failCount;
-            document.getElementById('stat-pending').textContent = pendingCount;
+            document.getElementById('stat-pass').textContent = qcData.filter(d => d.status === 'PASS').length;
+            document.getElementById('stat-fail').textContent = qcData.filter(d => d.status === 'FAIL').length;
+            document.getElementById('stat-pending').textContent = qcData.filter(d => d.status === 'PENDING').length;
         }
 
         function filterTable() {
@@ -702,7 +904,8 @@
                 const matchQuery = String(item.id).toLowerCase().includes(query) ||
                                    String(item.moSo).toLowerCase().includes(query) ||
                                    String(item.department).toLowerCase().includes(query) ||
-                                   String(item.inspector).toLowerCase().includes(query);
+                                   String(item.inspector).toLowerCase().includes(query) ||
+                                   String(item.remark || '').toLowerCase().includes(query);
                 
                 const matchStatus = statusVal === '' || item.status === statusVal;
                 const matchDept = deptVal === '' || item.department === deptVal;
@@ -711,6 +914,7 @@
             });
 
             renderTable(filtered);
+            renderSummaryTable(filtered);
         }
 
         function resetFilters() {
@@ -718,11 +922,11 @@
             document.getElementById('statusFilter').value = '';
             document.getElementById('deptFilter').value = '';
             renderTable(qcData);
+            renderSummaryTable(qcData);
         }
 
         function openModal() {
-            const modal = document.getElementById('qcModal');
-            modal.classList.remove('hidden');
+            document.getElementById('qcModal').classList.remove('hidden');
             document.getElementById('modalTitle').textContent = 'เพิ่มบันทึก QC ตามแผนก';
             document.getElementById('qcForm').reset();
             document.getElementById('editIndex').value = '';
@@ -745,10 +949,9 @@
         }
 
         function openShareModal() {
-            const shareUrl = gasWebAppUrl || window.location.href;
+            const shareUrl = window.location.href;
             document.getElementById('shareUrlInput').value = shareUrl;
-            const qrImg = document.getElementById('qrCodeImg');
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}`;
+            document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}`;
             document.getElementById('shareModal').classList.remove('hidden');
         }
 
@@ -759,7 +962,6 @@
         function copyShareUrl() {
             const input = document.getElementById('shareUrlInput');
             input.select();
-            input.setSelectionRange(0, 99999);
             document.execCommand('copy');
             showToast('คัดลอกลิงก์สำเร็จ!');
         }
@@ -799,47 +1001,69 @@
             e.preventDefault();
             const editIndex = document.getElementById('editIndex').value;
             const dept = document.getElementById('formDept').value;
+            const remarkText = document.getElementById('formRemark').value;
             
             let extra = {};
             if (dept === 'ดีไซน์/ขยายลาย') {
-                extra = {
-                    designIdMatch: document.getElementById('ds_idMatch').value,
-                    sizeMatch: document.getElementById('ds_sizeMatch').value,
-                    colorCheck: document.getElementById('ds_colorCheck').value,
-                    yarnType: document.getElementById('ds_yarnType').value,
-                    fixQty: document.getElementById('ds_fixQty').value,
-                    reason: document.getElementById('ds_reason').value
-                };
+                const rowDivs = document.querySelectorAll('#designRowsContainer .dept-item-row');
+                const items = [];
+                rowDivs.forEach(r => {
+                    items.push({
+                        designIdMatch: r.querySelector('.row-idMatch').value,
+                        sizeMatch: r.querySelector('.row-sizeMatch').value,
+                        colorCheck: r.querySelector('.row-colorCheck').value,
+                        fixQty: r.querySelector('.row-fixQty').value,
+                        reason: r.querySelector('.row-reason').value
+                    });
+                });
+                extra = { items };
             } else if (dept === 'แผนกวางแผน') {
-                extra = {
-                    receiveDate: document.getElementById('pl_receiveDate').value,
-                    colorMatch: document.getElementById('pl_colorMatch').value,
-                    weavingGrade: document.getElementById('pl_weavingGrade').value,
-                    dueDate: document.getElementById('pl_dueDate').value,
-                    weaverWorkload: document.getElementById('pl_weaverWorkload').value,
-                    dyeingOrder: document.getElementById('pl_dyeingOrder').value,
-                    delayReason: document.getElementById('pl_delayReason').value
-                };
+                const rowDivs = document.querySelectorAll('#planRowsContainer .dept-item-row');
+                const items = [];
+                rowDivs.forEach(r => {
+                    items.push({
+                        weavingGrade: r.querySelector('.row-weavingGrade').value,
+                        dueDate: r.querySelector('.row-dueDate').value,
+                        weaverWorkload: r.querySelector('.row-workload').value
+                    });
+                });
+                extra = { items };
             } else if (dept === 'แผนกย้อม') {
+                const rowDivs = document.querySelectorAll('#dyeRowsContainer .dept-item-row');
+                const items = [];
+                rowDivs.forEach(r => {
+                    items.push({
+                        codeAndQty: r.querySelector('.row-codeQty').value,
+                        colorMatch: r.querySelector('.row-colorMatch').value,
+                        approverInfo: r.querySelector('.row-approver').value
+                    });
+                });
+                extra = { items };
+            } else if (dept === 'แผนกทอมือ') {
+                const roundRows = document.querySelectorAll('.loom-round-row');
+                const rounds = [];
+                roundRows.forEach(row => {
+                    rounds.push({
+                        start: row.querySelector('.round-start').value,
+                        end: row.querySelector('.round-end').value,
+                        problem: row.querySelector('.round-problem').value,
+                        solution: row.querySelector('.round-solution').value
+                    });
+                });
                 extra = {
-                    codeAndQty: document.getElementById('dy_codeAndQty').value,
-                    startDate: document.getElementById('dy_startDate').value,
-                    qtyMatch: document.getElementById('dy_qtyMatch').value,
-                    colorMatch: document.getElementById('dy_colorMatch').value,
-                    correctionDetails: document.getElementById('dy_correctionDetails')?.value || '-',
-                    approvalResult: document.getElementById('dy_approvalResult').value,
-                    approverInfo: document.getElementById('dy_approverInfo').value
+                    loomNo: document.getElementById('hw_loomNo').value,
+                    loomRounds: rounds
                 };
             } else if (dept === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                extra = {
-                    glueStart: document.getElementById('fn_glueStart').value,
-                    glueFinish: document.getElementById('fn_glueFinish').value,
-                    decorStart: document.getElementById('fn_decorStart').value,
-                    specMatch: document.getElementById('fn_specMatch').value,
-                    decorFinishDate: document.getElementById('fn_decorFinishDate').value,
-                    packagingInfo: document.getElementById('fn_packagingInfo').value,
-                    approvalSign: document.getElementById('fn_approvalSign').value
-                };
+                const rowDivs = document.querySelectorAll('#finishRowsContainer .dept-item-row');
+                const items = [];
+                rowDivs.forEach(r => {
+                    items.push({
+                        specMatch: r.querySelector('.row-specMatch').value,
+                        packagingInfo: r.querySelector('.row-packaging').value
+                    });
+                });
+                extra = { items };
             }
 
             const newItem = {
@@ -850,6 +1074,7 @@
                 status: document.getElementById('formStatus').value,
                 inspector: document.getElementById('formInspector').value,
                 stamp: document.getElementById('formStamp').value,
+                remark: remarkText,
                 extraData: extra
             };
 
@@ -890,43 +1115,48 @@
             document.getElementById('formStatus').value = item.status;
             document.getElementById('formInspector').value = item.inspector;
             document.getElementById('formStamp').value = item.stamp;
+            document.getElementById('formRemark').value = item.remark || '';
             
-            renderDepartmentFields();
+            renderDepartmentFields(item.extraData || {});
 
             setTimeout(() => {
                 const ex = item.extraData || {};
                 if (item.department === 'ดีไซน์/ขยายลาย') {
-                    if(document.getElementById('ds_idMatch')) document.getElementById('ds_idMatch').value = ex.designIdMatch || '';
-                    if(document.getElementById('ds_sizeMatch')) document.getElementById('ds_sizeMatch').value = ex.sizeMatch || '';
-                    if(document.getElementById('ds_colorCheck')) document.getElementById('ds_colorCheck').value = ex.colorCheck || '';
-                    if(document.getElementById('ds_yarnType')) document.getElementById('ds_yarnType').value = ex.yarnType || '';
-                    if(document.getElementById('ds_fixQty')) document.getElementById('ds_fixQty').value = ex.fixQty || 0;
-                    if(document.getElementById('ds_reason')) document.getElementById('ds_reason').value = ex.reason || '';
+                    const container = document.getElementById('designRowsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        const items = ex.items || [ex];
+                        items.forEach(i => addDesignRow(i));
+                    }
                 } else if (item.department === 'แผนกวางแผน') {
-                    if(document.getElementById('pl_receiveDate')) document.getElementById('pl_receiveDate').value = ex.receiveDate || '';
-                    if(document.getElementById('pl_colorMatch')) document.getElementById('pl_colorMatch').value = ex.colorMatch || '';
-                    if(document.getElementById('pl_weavingGrade')) document.getElementById('pl_weavingGrade').value = ex.weavingGrade || '';
-                    if(document.getElementById('pl_dueDate')) document.getElementById('pl_dueDate').value = ex.dueDate || '';
-                    if(document.getElementById('pl_weaverWorkload')) document.getElementById('pl_weaverWorkload').value = ex.weaverWorkload || '';
-                    if(document.getElementById('pl_dyeingOrder')) document.getElementById('pl_dyeingOrder').value = ex.dyeingOrder || '';
-                    if(document.getElementById('pl_delayReason')) document.getElementById('pl_delayReason').value = ex.delayReason || '';
+                    const container = document.getElementById('planRowsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        const items = ex.items || [ex];
+                        items.forEach(i => addPlanRow(i));
+                    }
                 } else if (item.department === 'แผนกย้อม') {
-                    if(document.getElementById('dy_codeAndQty')) document.getElementById('dy_codeAndQty').value = ex.codeAndQty || '';
-                    if(document.getElementById('dy_startDate')) document.getElementById('dy_startDate').value = ex.startDate || '';
-                    if(document.getElementById('dy_qtyMatch')) document.getElementById('dy_qtyMatch').value = ex.qtyMatch || '';
-                    if(document.getElementById('dy_colorMatch')) document.getElementById('dy_colorMatch').value = ex.colorMatch || '';
-                    toggleDyeingFailFields();
-                    if(document.getElementById('dy_correctionDetails')) document.getElementById('dy_correctionDetails').value = ex.correctionDetails || '';
-                    if(document.getElementById('dy_approvalResult')) document.getElementById('dy_approvalResult').value = ex.approvalResult || '';
-                    if(document.getElementById('dy_approverInfo')) document.getElementById('dy_approverInfo').value = ex.approverInfo || '';
+                    const container = document.getElementById('dyeRowsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        const items = ex.items || [ex];
+                        items.forEach(i => addDyeRow(i));
+                    }
+                } else if (item.department === 'แผนกทอมือ') {
+                    if(document.getElementById('hw_loomNo')) document.getElementById('hw_loomNo').value = ex.loomNo || '';
+                    const container = document.getElementById('loomRoundsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        const rounds = ex.loomRounds || [];
+                        rounds.forEach(r => addLoomRoundRow(r));
+                    }
                 } else if (item.department === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                    if(document.getElementById('fn_glueStart')) document.getElementById('fn_glueStart').value = ex.glueStart || '';
-                    if(document.getElementById('fn_glueFinish')) document.getElementById('fn_glueFinish').value = ex.glueFinish || '';
-                    if(document.getElementById('fn_decorStart')) document.getElementById('fn_decorStart').value = ex.decorStart || '';
-                    if(document.getElementById('fn_specMatch')) document.getElementById('fn_specMatch').value = ex.specMatch || '';
-                    if(document.getElementById('fn_decorFinishDate')) document.getElementById('fn_decorFinishDate').value = ex.decorFinishDate || '';
-                    if(document.getElementById('fn_packagingInfo')) document.getElementById('fn_packagingInfo').value = ex.packagingInfo || '';
-                    if(document.getElementById('fn_approvalSign')) document.getElementById('fn_approvalSign').value = ex.approvalSign || '';
+                    const container = document.getElementById('finishRowsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        const items = ex.items || [ex];
+                        items.forEach(i => addFinishRow(i));
+                    }
                 }
             }, 50);
 
@@ -965,9 +1195,9 @@
         }
 
         function exportToCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,ID,Date,Department,MO_SO,Status,Inspector,Stamp Pass\r\n";
+            let csvContent = "data:text/csv;charset=utf-8,ID,Date,Department,MO_SO,Status,Inspector,Stamp Pass,Remark\r\n";
             qcData.forEach(row => {
-                csvContent += `"${row.id}","${row.date}","${row.department}","${row.moSo}","${row.status}","${row.inspector}","${row.stamp}"\r\n`;
+                csvContent += `"${row.id}","${row.date}","${row.department}","${row.moSo}","${row.status}","${row.inspector}","${row.stamp}","${row.remark || ''}"\r\n`;
             });
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
