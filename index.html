@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Check Sheet - GitHub Pages Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    <!-- Google Fonts: Prompt -->
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm">
+                    <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">QC Workflow Dashboard (GitHub)</h1>
+                    <p class="text-xs text-indigo-200 flex items-center gap-1.5">
+                        <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                        <span id="syncStatusText">กำลังเชื่อมต่อฐานข้อมูล...</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <button onclick="forceSyncData()" class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate" id="syncIcon"></i> ซิงค์ข้อมูล
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+        <!-- Toast Status -->
+        <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300">
+            <i id="toast-icon" class="fa-solid fa-circle-info text-sky-400 text-lg"></i>
+            <span id="toast-msg" class="text-sm font-medium">ระบบกำลังทำงาน...</span>
+        </div>
+
+        <!-- Table Data Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-medium">
+                            <th class="p-4">QC ID</th>
+                            <th class="p-4">วันที่</th>
+                            <th class="p-4">แผนก</th>
+                            <th class="p-4">รายละเอียดสรุป</th>
+                            <th class="p-4 text-center">สถานะ</th>
+                            <th class="p-4">ผู้ตรวจสอบ</th>
+                            <th class="p-4 text-center">STAMP</th>
+                            <th class="p-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-50">
+                        <tr><td colspan="8" class="p-8 text-center text-slate-400">กำลังดาวน์โหลดข้อมูลตาราง...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ⚠️ วางลิงก์ Web App URL (จาก Google Apps Script รอบล่าสุดที่เพิ่งทำเสร็จ) ที่นี่ครับ
+        const BACKEND_API_URL = "https://google.com";
+
+        let globalData = [];
+
+        function forceSyncData() {
+            const syncIcon = document.getElementById('syncIcon');
+            if(syncIcon) syncIcon.classList.add('fa-spin');
+            
+            document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-amber-400 inline-block animate-pulse";
+            document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลจาก Sheets...";
+
+            fetch(`${BACKEND_API_URL}?action=get`)
+            .then(res => res.json())
+            .then(data => {
+                globalData = data;
+                renderTable(data);
+                document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                document.getElementById('syncStatusText').innerText = `ซิงค์สำเร็จ (${data.length} รายการ)`;
+                if(syncIcon) syncIcon.classList.remove('fa-spin');
+            })
+            .catch(err => {
+                document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-rose-500 inline-block";
+                document.getElementById('syncStatusText').innerText = "การเชื่อมต่อฐานข้อมูลล้มเหลว";
+                if(syncIcon) syncIcon.classList.remove('fa-spin');
+                showToast("เครื่องคุณไม่สามารถเข้าถึงฐานข้อมูลบริษัทได้", "error");
+                console.error(err);
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">ไม่พบรายการข้อมูลในระบบ</td></tr>`;
+                return;
+            }
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition duration-150";
+
+                let statusClass = "bg-amber-50 text-amber-700 border border-amber-200";
+                if(row.status === 'PASS') statusClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+                if(row.status === 'FAIL') statusClass = "bg-rose-50 text-rose-700 border border-rose-200";
+
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-indigo-600">${row.id || '-'}</td>
+                    <td class="p-4 text-slate-500">${row.date || '-'}</td>
+                    <td class="p-4 font-medium">${row.department || '-'}</td>
+                    <td class="p-4 text-slate-600">${row.details || '-'}</td>
+                    <td class="p-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusClass}">${row.status}</span></td>
+                    <td class="p-4 text-slate-500">${row.inspector || '-'}</td>
+                    <td class="p-4 text-center font-medium">${row.stamp || '-'}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteItem('${row.id}')" class="text-rose-500 hover:bg-rose-50 p-2 rounded-xl transition duration-200" title="ลบข้อมูล">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteItem(id) {
+            if (!id) return;
+            if (!confirm(`คุณต้องการลบรายการ QC ID: ${id} ใช่หรือไม่?`)) return;
+
+            showToast("ระบบหลังบ้านกำลังดำเนินการลบข้อมูล...", "info");
+
+            fetch(BACKEND_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'delete', id: id }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(res => res.json())
+            .then(response => {
+                if (response.result === 'success') {
+                    showToast("ลบข้อมูลรายการออกจาก Google Sheets แล้ว", "success");
+                    forceSyncData();
+                } else {
+                    showToast("เกิดข้อผิดพลาดจากฐานข้อมูล: " + response.message, "error");
+                }
+            })
+            .catch(err => {
+                showToast("ไม่สามารถส่งคำสั่งลบได้เนื่องจากระบบความปลอดภัยเครือข่าย", "error");
+                console.error(err);
+            });
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const text = document.getElementById('toast-msg');
+
+            text.innerText = msg;
+            icon.className = "fa-solid text-lg " + 
+                (type === 'success' ? 'fa-circle-check text-emerald-400' : 
+                 type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-sky-400');
+
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        window.addEventListener('DOMContentLoaded', forceSyncData);
+    </script>
+</body>
+</html>
