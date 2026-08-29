@@ -72,7 +72,7 @@
     </main>
 
     <script>
-        // ⚠️ วางลิงก์ Web App URL (จาก Google Apps Script รอบล่าสุดที่เพิ่งทำเสร็จ) ที่นี่ครับ
+        // 🔒 ลิงก์เชื่อมโยง API ของคุณ
         const BACKEND_API_URL = "https://google.com";
 
         let globalData = [];
@@ -84,7 +84,14 @@
             document.getElementById('syncStatusIndicator').className = "w-2 h-2 rounded-full bg-amber-400 inline-block animate-pulse";
             document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลจาก Sheets...";
 
-            fetch(`${BACKEND_API_URL}?action=get`)
+            // ใช้ระบบดึงข้อมูลอ้อมความปลอดภัยผ่านพารามิเตอร์แบบ JSONP หรือเปิด No-Cors
+            fetch(`${BACKEND_API_URL}?action=get`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
             .then(res => res.json())
             .then(data => {
                 globalData = data;
@@ -145,6 +152,7 @@
 
             fetch(BACKEND_API_URL, {
                 method: 'POST',
+                mode: 'cors',
                 body: JSON.stringify({ action: 'delete', id: id }),
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' }
             })
