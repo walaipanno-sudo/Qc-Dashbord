@@ -77,7 +77,17 @@
             document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลงานล่าสุด...";
 
             // สั่งเรียกข้อมูลผ่านคำสั่งข้ามค่ายตรงไปยัง Google Apps Script
-            fetch(`${BACKEND_API_URL}?action=get`)
+                    function forceSyncData() {
+            document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลงานล่าสุด...";
+
+            // ✅ บังคับเปิดโหมด cors และระบุการรับข้อมูลให้อะลุ่มอล่วยกับ Google Web App
+            fetch(`${BACKEND_API_URL}?action=get`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
             .then(res => {
                 if (!res.ok) throw new Error('Network response was not ok');
                 return res.json();
