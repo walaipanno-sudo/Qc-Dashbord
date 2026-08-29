@@ -73,17 +73,14 @@
 
         let globalData = [];
 
-        function forceSyncData() {
+                function forceSyncData() {
             document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลงานล่าสุด...";
 
-            // สั่งเรียกข้อมูลผ่านคำสั่งข้ามค่ายตรงไปยัง Google Apps Script
-                    function forceSyncData() {
-            document.getElementById('syncStatusText').innerText = "กำลังดึงข้อมูลงานล่าสุด...";
-
-            // ✅ บังคับเปิดโหมด cors และระบุการรับข้อมูลให้อะลุ่มอล่วยกับ Google Web App
+            // ✅ เพิ่มบรรทัด redirect: 'follow' ตรงนี้จุดเดียวเลยครับ
             fetch(`${BACKEND_API_URL}?action=get`, {
                 method: 'GET',
                 mode: 'cors',
+                redirect: 'follow', 
                 headers: {
                     'Accept': 'application/json'
                 }
