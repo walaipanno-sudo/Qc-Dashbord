@@ -1,7 +1,3 @@
-
-
-Qcdashboard · HTML
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -204,7 +200,7 @@ Qcdashboard · HTML
                             <th class="py-3.5 px-4 text-center">สถานะ</th>
                             <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
                             <th class="py-3.5 px-4 text-center">Stamp Pass</th>
-                            <th class="py-3.5 px-4 text-center action-col">จัดการ</th>
+                            <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
@@ -418,6 +414,48 @@ Qcdashboard · HTML
             'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์': 'ตกแต่ง/บรรจุ'
         };
 
+        // Normalizes a date value coming back from Google Sheets/Apps Script into a plain "YYYY-MM-DD" string.
+        // Google Sheets can return dates as ISO strings ("2026-08-31T00:00:00.000Z") or as a full JS Date
+        // toString() ("Mon Aug 31 2026 00:00:00 GMT+0700 ...") depending on the Apps Script code — handle both.
+        function normalizeDateString(raw) {
+            if (!raw) return '';
+            const str = String(raw).trim();
+            if (!str) return '';
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+            // Only treat "T" as the ISO date/time separator when it directly follows a YYYY-MM-DD date
+            // (avoids false matches on letters like the "T" in "GMT" or "Time" in a full JS Date string).
+            if (/^\d{4}-\d{2}-\d{2}T/.test(str)) return str.split('T')[0];
+
+            // Full JS Date.toString() format, e.g. "Mon Aug 31 2026 00:00:00 GMT+0700 (Indochina Time)"
+            // (this is what some Apps Script setups return). Parse the calendar date directly out of the
+            // text instead of re-parsing it with `new Date()`, which would re-interpret the embedded GMT
+            // offset against the browser's own local timezone and can shift the day by one.
+            const monthNames = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+            const jsDateMatch = str.match(/^\w{3} (\w{3}) (\d{1,2}) (\d{4})/);
+            if (jsDateMatch && monthNames[jsDateMatch[1]]) {
+                return `${jsDateMatch[3]}-${monthNames[jsDateMatch[1]]}-${String(jsDateMatch[2]).padStart(2, '0')}`;
+            }
+
+            // MM/DD/YYYY style
+            const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (slashMatch) {
+                return `${slashMatch[3]}-${String(slashMatch[1]).padStart(2, '0')}-${String(slashMatch[2]).padStart(2, '0')}`;
+            }
+
+            // Fallback: let the browser parse it, reading back the UTC components so we don't
+            // re-interpret any embedded timezone offset against the local machine's timezone.
+            const parsed = new Date(str);
+            if (!isNaN(parsed.getTime())) {
+                const y = parsed.getUTCFullYear();
+                const m = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(parsed.getUTCDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            return str;
+        }
+
         let qcData = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
@@ -535,7 +573,7 @@ Qcdashboard · HTML
 
                         return {
                             id: item.id || '',
-                            date: item.date ? String(item.date).split('T')[0] : '',
+                            date: normalizeDateString(item.date),
                             department: item.department || '',
                             moSo: item.moSo || '',
                             status: validStatus,
@@ -871,7 +909,7 @@ Qcdashboard · HTML
                 }
 
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
+                tr.className = 'group hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
                     <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
@@ -881,7 +919,7 @@ Qcdashboard · HTML
                     <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${escapeHtml(item.status)}</span></td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
                     <td class="py-3.5 px-4 text-center">${stampBadge}</td>
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap action-col ${isDisplayMode ? 'hidden' : ''}">
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap action-col sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 ${isDisplayMode ? 'hidden' : ''}">
                         <button onclick="printQCItem(${originalIndex})" class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 transition inline-flex items-center justify-center mr-1" title="ดู PDF / พิมพ์ใบตรวจสอบนี้">
                             <i class="fa-solid fa-file-pdf text-xs"></i>
                         </button>
@@ -1438,6 +1476,3 @@ Qcdashboard · HTML
     </script>
 </body>
 </html>
- 
-
-
