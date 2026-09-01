@@ -1,3 +1,7 @@
+
+
+Qcdashboard · HTML
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -106,7 +110,7 @@
         </div>
 
         <!-- Dashboard Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">รายการทั้งหมด</p>
@@ -192,8 +196,8 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">QC ID</th>
                             <th class="py-3.5 px-4">วันที่</th>
+                            <th class="py-3.5 px-4">QC ID</th>
                             <th class="py-3.5 px-4">แผนก</th>
                             <th class="py-3.5 px-4">M/O, S/O</th>
                             <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
@@ -228,7 +232,8 @@
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
                             <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">แผนกที่ผ่านการตรวจแล้ว</th>
+                            <th class="py-3.5 px-4">สถานะแต่ละแผนก</th>
+                            <th class="py-3.5 px-4">ความคืบหน้า</th>
                             <th class="py-3.5 px-4 text-center">จำนวนครั้งที่ตรวจ</th>
                             <th class="py-3.5 px-4 text-center">สถานะภาพรวม</th>
                             <th class="py-3.5 px-4">ผู้ตรวจสอบล่าสุด</th>
@@ -403,6 +408,16 @@
     <div id="printArea"></div>
 
     <script>
+        // Fixed production workflow: an M/O, S/O is only "Complete 100%" once it has PASSed every one of these departments.
+        const ALL_DEPARTMENTS = ['ดีไซน์/ขยายลาย', 'แผนกวางแผน', 'แผนกย้อม', 'แผนกทอมือ', 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์'];
+        const DEPT_SHORT_LABELS = {
+            'ดีไซน์/ขยายลาย': 'ดีไซน์',
+            'แผนกวางแผน': 'วางแผน',
+            'แผนกย้อม': 'ย้อม',
+            'แผนกทอมือ': 'ทอมือ',
+            'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์': 'ตกแต่ง/บรรจุ'
+        };
+
         let qcData = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
@@ -858,8 +873,8 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
+                    <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
                     <td class="py-3.5 px-4 font-medium text-xs">${escapeHtml(item.department)}</td>
                     <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${escapeHtml(item.moSo)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate" title="${escapeHtml(summaryText)}">${escapeHtml(summaryText)}</td>
@@ -888,32 +903,33 @@
             const countBadge = document.getElementById('summaryCountBadge');
             tbody.innerHTML = '';
 
-            // Group data by M/O, S/O
+            // Group data by M/O, S/O, tracking the worst-case status per department
+            // (FAIL beats PENDING beats PASS) so multiple QC checks on the same department are handled correctly.
+            const statusRank = { FAIL: 3, PENDING: 2, PASS: 1 };
             const summaryMap = {};
             dataToRender.forEach(item => {
                 const key = (item.moSo || 'ไม่ระบุ M/O').trim();
                 if (!summaryMap[key]) {
                     summaryMap[key] = {
                         moSo: key,
-                        departments: new Set(),
+                        deptStatus: {}, // { departmentName: 'PASS' | 'FAIL' | 'PENDING' }
                         totalChecks: 0,
-                        hasFail: false,
-                        hasPending: false,
                         lastInspector: item.inspector,
                         lastDate: item.date
                     };
                 }
+                const rec = summaryMap[key];
+                rec.totalChecks++;
                 if (item.department) {
-                    summaryMap[key].departments.add(item.department);
+                    const existing = rec.deptStatus[item.department];
+                    if (!existing || (statusRank[item.status] || 0) > (statusRank[existing] || 0)) {
+                        rec.deptStatus[item.department] = item.status;
+                    }
                 }
-                summaryMap[key].totalChecks++;
-                if (item.status === 'FAIL') summaryMap[key].hasFail = true;
-                if (item.status === 'PENDING') summaryMap[key].hasPending = true;
-
                 // Keep latest date/inspector if newer
-                if (item.date >= summaryMap[key].lastDate) {
-                    summaryMap[key].lastDate = item.date;
-                    summaryMap[key].lastInspector = item.inspector;
+                if (item.date >= rec.lastDate) {
+                    rec.lastDate = item.date;
+                    rec.lastInspector = item.inspector;
                 }
             });
 
@@ -928,23 +944,49 @@
             }
 
             summaryArray.forEach(sum => {
-                let statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">PASS (ผ่านทุกแผนก)</span>';
-                if (sum.hasFail) {
-                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">FAIL (มีจุดต้องแก้ไข)</span>';
-                } else if (sum.hasPending) {
-                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">PENDING (กำลังตรวจสอบ)</span>';
+                const passCount = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'PASS').length;
+                const failDepts = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'FAIL');
+                const percent = Math.round((passCount / ALL_DEPARTMENTS.length) * 100);
+
+                let statusBadge;
+                let barColor;
+                if (failDepts.length > 0) {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>มีจุดต้องแก้ไข (${failDepts.map(d => escapeHtml(DEPT_SHORT_LABELS[d] || d)).join(', ')})</span>`;
+                    barColor = 'bg-rose-500';
+                } else if (percent >= 100) {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>Complete 100%</span>`;
+                    barColor = 'bg-emerald-500';
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"><i class="fa-solid fa-hourglass-half mr-1"></i>กำลังดำเนินการ ${percent}%</span>`;
+                    barColor = 'bg-amber-500';
                 }
 
-                // Department badges list
-                const deptListHtml = Array.from(sum.departments).map(d => 
-                    `<span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md text-[11px] font-medium mr-1 mb-1">${escapeHtml(d)}</span>`
-                ).join('') || '<span class="text-slate-400">-</span>';
+                // Per-department status chips, always in the fixed workflow order (shows which department is done / pending / not started yet)
+                const deptChipsHtml = ALL_DEPARTMENTS.map(d => {
+                    const st = sum.deptStatus[d];
+                    let chipCls = 'bg-slate-100 text-slate-400 border-slate-200';
+                    let icon = 'fa-minus';
+                    if (st === 'PASS') { chipCls = 'bg-emerald-50 text-emerald-700 border-emerald-200'; icon = 'fa-check'; }
+                    else if (st === 'FAIL') { chipCls = 'bg-rose-50 text-rose-700 border-rose-200'; icon = 'fa-xmark'; }
+                    else if (st === 'PENDING') { chipCls = 'bg-amber-50 text-amber-700 border-amber-200'; icon = 'fa-clock'; }
+                    const label = DEPT_SHORT_LABELS[d] || d;
+                    const titleText = st ? `${d} - ${st}` : `${d} - ยังไม่ตรวจ`;
+                    return `<span class="inline-flex items-center gap-1 border ${chipCls} px-2 py-0.5 rounded-md text-[11px] font-medium mr-1 mb-1" title="${escapeHtml(titleText)}"><i class="fa-solid ${icon} text-[9px]"></i>${escapeHtml(label)}</span>`;
+                }).join('');
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/85 transition border-b border-slate-100';
                 tr.innerHTML = `
                     <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(sum.moSo)}</td>
-                    <td class="py-3.5 px-4 text-xs">${deptListHtml}</td>
+                    <td class="py-3.5 px-4 text-xs">${deptChipsHtml}</td>
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center gap-2 min-w-[110px]">
+                            <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-600 whitespace-nowrap">${percent}%</span>
+                        </div>
+                    </td>
                     <td class="py-3.5 px-4 text-center text-xs font-semibold text-slate-700">${sum.totalChecks} ครั้ง</td>
                     <td class="py-3.5 px-4 text-center">${statusBadge}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(sum.lastInspector || '-')}</td>
@@ -1396,3 +1438,6 @@
     </script>
 </body>
 </html>
+ 
+
+
