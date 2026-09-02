@@ -1,9 +1,6 @@
+
+
 <!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QC Check Sheet - Comprehensive Textile Workflow</title><!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -153,8 +150,14 @@
         <!-- View Switcher & Filter Section -->
         <div class="no-print bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
             <!-- View Tabs -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition">
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto flex-wrap">
+                <button onclick="switchView('overview')" id="tabOverviewBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition">
+                    <i class="fa-solid fa-diagram-project mr-1.5"></i> ภาพรวมการผลิต
+                </button>
+                <button onclick="switchView('board')" id="tabBoardBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-table-columns mr-1.5"></i> แผนผังการผลิต
+                </button>
+                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-list mr-1.5"></i> รายการ QC ทั้งหมด
                 </button>
                 <button onclick="switchView('summary')" id="tabSummaryBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
@@ -195,8 +198,77 @@
             </div>
         </div>
 
+        <!-- Production Overview: every M/O, S/O and which stage it's currently at across the whole workflow -->
+        <div id="overviewViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-diagram-project mr-2 text-indigo-600"></i> ภาพรวมสถานะการผลิตของแต่ละ M/O, S/O (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
+                <span id="overviewCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 M/O ในสายการผลิต</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                            <th class="py-3.5 px-4">M/O, S/O</th>
+                            <th class="py-3.5 px-4">กำหนดเสร็จ</th>
+                            <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
+                            <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
+                        </tr>
+                    </thead>
+                    <tbody id="overviewTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Overview rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyOverviewState" class="hidden py-16 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-solid fa-diagram-project"></i>
+                </div>
+                <p class="text-slate-500 font-medium">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+            </div>
+        </div>
+
+        <!-- Production Board: Kanban-style board, one column per department, showing M/O currently at that stage -->
+        <div id="boardViewContainer" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <p class="text-xs text-slate-500">คลิก "+ เพิ่ม M/O ใหม่" เพื่อเริ่มสั่งงานที่แผนกวางแผน จากนั้นกด "โอนงาน" เมื่อแต่ละแผนกทำงานเสร็จ เพื่อส่งต่อให้แผนกถัดไปโดยอัตโนมัติ</p>
+                <button onclick="openNewOrderModal()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O ใหม่
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                    <div class="flex items-center justify-between px-1">
+                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-indigo-500"></i> วางแผน</h4>
+                        <span id="boardCount-planning" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                    </div>
+                    <div id="boardColumn-planning" class="flex flex-col gap-3"></div>
+                </div>
+                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                    <div class="flex items-center justify-between px-1">
+                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-droplet text-indigo-500"></i> ย้อม</h4>
+                        <span id="boardCount-dyeing" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                    </div>
+                    <div id="boardColumn-dyeing" class="flex flex-col gap-3"></div>
+                </div>
+                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                    <div class="flex items-center justify-between px-1">
+                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-indigo-500"></i> ทอ</h4>
+                        <span id="boardCount-weaving" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                    </div>
+                    <div id="boardColumn-weaving" class="flex flex-col gap-3"></div>
+                </div>
+                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                    <div class="flex items-center justify-between px-1">
+                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-indigo-500"></i> ตกแต่ง/บรรจุ</h4>
+                        <span id="boardCount-finishing" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                    </div>
+                    <div id="boardColumn-finishing" class="flex flex-col gap-3"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Records View Table -->
-        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -324,6 +396,25 @@
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeShipModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
                 <button type="button" onclick="confirmShipItem()" class="w-1/2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl transition shadow">ยืนยันส่งแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Production Order Modal -->
+    <div id="newOrderModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O ใหม่เข้าสายการผลิต</h3>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
+                <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">กำหนดเสร็จ</label>
+                <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่ม M/O</button>
             </div>
         </div>
     </div>
@@ -513,20 +604,42 @@
         }
 
         let qcData = [];
+        let productionOrders = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
-        let currentView = 'records'; // 'records' or 'summary'
+        let currentView = 'overview'; // 'overview' | 'board' | 'records' | 'summary' | 'shipping'
+
+        // Manual stages tracked on each production order; 'ready_to_ship' and 'shipped' are derived
+        // live from the existing QC/shipping data (packaging department PASS + the "ยืนยันส่งแล้ว" flag),
+        // so they don't need their own field on the order object.
+        const ORDER_STAGES = ['planning', 'dyeing', 'weaving', 'finishing'];
+        const ALL_STAGES = ['planning', 'dyeing', 'weaving', 'finishing', 'ready_to_ship', 'shipped'];
+        const STAGE_LABELS = {
+            planning: 'วางแผน',
+            dyeing: 'ย้อม',
+            weaving: 'ทอ',
+            finishing: 'ตกแต่ง/บรรจุ',
+            ready_to_ship: 'รอส่ง',
+            shipped: 'ส่งแล้ว'
+        };
+        const NEXT_STAGE = { planning: 'dyeing', dyeing: 'weaving', weaving: 'finishing' };
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedLocal = localStorage.getItem('qc_comprehensive_data_v2');
             if (savedLocal) {
                 try { qcData = JSON.parse(savedLocal); } catch(e) {}
             }
+            const savedOrders = localStorage.getItem('qc_production_orders_v1');
+            if (savedOrders) {
+                try { productionOrders = JSON.parse(savedOrders); } catch(e) {}
+            }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
+            switchView('overview');
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
+                fetchOrdersFromGoogleSheet(false);
             } else {
                 updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
                 openConfigModal();
@@ -537,37 +650,46 @@
             localStorage.setItem('qc_comprehensive_data_v2', JSON.stringify(qcData));
         }
 
+        function saveOrdersToLocal() {
+            localStorage.setItem('qc_production_orders_v1', JSON.stringify(productionOrders));
+        }
+
         function initApp() {
             renderTable(qcData);
             renderSummaryTable(qcData);
             renderShippingTable(qcData);
+            renderProductionOverview();
+            renderProductionBoard();
             updateStats();
         }
 
         function switchView(view) {
             currentView = view;
-            const recordsBtn = document.getElementById('tabRecordsBtn');
-            const summaryBtn = document.getElementById('tabSummaryBtn');
-            const shippingBtn = document.getElementById('tabShippingBtn');
-            const recordsContainer = document.getElementById('recordsViewContainer');
-            const summaryContainer = document.getElementById('summaryViewContainer');
-            const shippingContainer = document.getElementById('shippingViewContainer');
-            const deptFilterWrapper = document.getElementById('deptFilterWrapper');
-
+            const tabs = {
+                overview: { btn: 'tabOverviewBtn', container: 'overviewViewContainer' },
+                board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
+                records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
+                summary: { btn: 'tabSummaryBtn', container: 'summaryViewContainer' },
+                shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' }
+            };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
 
-            recordsBtn.className = view === 'records' ? activeTabCls : inactiveTabCls;
-            summaryBtn.className = view === 'summary' ? activeTabCls : inactiveTabCls;
-            shippingBtn.className = view === 'shipping' ? activeTabCls : inactiveTabCls;
+            Object.keys(tabs).forEach(key => {
+                const { btn, container } = tabs[key];
+                const btnEl = document.getElementById(btn);
+                const containerEl = document.getElementById(container);
+                if (btnEl) btnEl.className = view === key ? activeTabCls : inactiveTabCls;
+                if (containerEl) containerEl.classList.toggle('hidden', view !== key);
+            });
 
-            recordsContainer.classList.toggle('hidden', view !== 'records');
-            summaryContainer.classList.toggle('hidden', view !== 'summary');
-            shippingContainer.classList.toggle('hidden', view !== 'shipping');
+            const deptFilterWrapper = document.getElementById('deptFilterWrapper');
             deptFilterWrapper.classList.toggle('hidden', view !== 'records');
 
             if (view === 'summary') renderSummaryTable(qcData);
             if (view === 'shipping') renderShippingTable(qcData);
+            if (view === 'overview') renderProductionOverview();
+            if (view === 'board') renderProductionBoard();
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -587,6 +709,7 @@
             icon.classList.add('fa-spin');
             showToast('กำลังซิงค์ข้อมูลกับ Google Sheets...');
             await fetchDataFromGoogleSheet(true);
+            await fetchOrdersFromGoogleSheet(false);
             setTimeout(() => icon.classList.remove('fa-spin'), 600);
         }
 
@@ -1194,1633 +1317,338 @@
             }
         }
 
-        function updateStats() {
-            document.getElementById('stat-total').textContent = qcData.length;
-            document.getElementById('stat-pass').textContent = qcData.filter(d => d.status === 'PASS').length;
-            document.getElementById('stat-fail').textContent = qcData.filter(d => d.status === 'FAIL').length;
-            document.getElementById('stat-pending').textContent = qcData.filter(d => d.status === 'PENDING').length;
+        // =========================================================================================
+        // Production Pipeline: tracks each M/O, S/O's journey across departments (วางแผน -> ย้อม ->
+        // ทอ -> ตกแต่ง/บรรจุ), with the last two stages (รอส่ง / ส่งแล้ว) derived live from the
+        // existing QC "packaging PASS" + "ยืนยันส่งแล้ว" data already built above, so they never
+        // fall out of sync with the QC records.
+        // =========================================================================================
+
+        async function fetchOrdersFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getOrders' : gasWebAppUrl + '?action=getOrders';
+                const response = await fetch(fetchUrl);
+                const text = await response.text();
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    // Backend doesn't support order sync yet — fail silently, keep working from localStorage.
+                    return;
+                }
+                let result;
+                try { result = JSON.parse(text); } catch(e) { return; }
+                if (Array.isArray(result)) {
+                    productionOrders = result.map(o => normalizeOrder(o));
+                    saveOrdersToLocal();
+                    renderProductionOverview();
+                    renderProductionBoard();
+                    if (isManual) showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`);
+                }
+            } catch(e) {
+                console.error("Fetch production orders error (backend may not support order sync yet):", e);
+            }
         }
 
-        function filterTable() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const statusVal = document.getElementById('statusFilter').value;
-            const deptVal = document.getElementById('deptFilter').value;
+        function normalizeOrder(raw) {
+            const parseField = (v, fallback) => {
+                if (v && typeof v === 'object') return v;
+                if (typeof v === 'string' && v.trim().startsWith('{')) {
+                    try { return JSON.parse(v); } catch(e) { return fallback; }
+                }
+                return fallback;
+            };
+            return {
+                moSo: raw.moSo || '',
+                dueDate: normalizeDateString(raw.dueDate),
+                currentStage: ORDER_STAGES.includes(raw.currentStage) ? raw.currentStage : 'planning',
+                planning: Object.assign({ percent: 0 }, parseField(raw.planning, {})),
+                dyeing: Object.assign({ colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0 }, parseField(raw.dyeing, {})),
+                weaving: Object.assign({ receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0 }, parseField(raw.weaving, {})),
+                finishing: Object.assign({ status: 'waiting', percent: 0 }, parseField(raw.finishing, {})),
+                lastUpdated: normalizeDateString(raw.lastUpdated) || ''
+            };
+        }
 
-            const filtered = qcData.filter(item => {
-                const matchQuery = String(item.id).toLowerCase().includes(query) ||
-                                   String(item.moSo).toLowerCase().includes(query) ||
-                                   String(item.department).toLowerCase().includes(query) ||
-                                   String(item.inspector).toLowerCase().includes(query) ||
-                                   String(item.remark || '').toLowerCase().includes(query);
-                
-                const matchStatus = statusVal === '' || item.status === statusVal;
-                const matchDept = deptVal === '' || item.department === deptVal;
+        async function syncOrderToSheet(order) {
+            if (!gasWebAppUrl) return;
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=order' : gasWebAppUrl + '?type=order';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(order)
+                });
+            } catch(err) {
+                console.error("Error syncing production order to Google Sheet:", err);
+            }
+        }
 
-                return matchQuery && matchStatus && matchDept;
+        // Figures out the real current stage of an M/O, checking the existing QC/shipping data first
+        // (since "รอส่ง"/"ส่งแล้ว" are owned by that system, not by the production order object).
+        function getEffectiveStage(order) {
+            const key = (order.moSo || '').trim();
+            let latestPackaging = null;
+            qcData.forEach(d => {
+                if (d.department !== PACKAGING_DEPARTMENT) return;
+                if ((d.moSo || '').trim() !== key) return;
+                if (!latestPackaging || d.date >= latestPackaging.date) latestPackaging = d;
             });
-
-            renderTable(filtered);
-            renderSummaryTable(filtered);
-            renderShippingTable(filtered);
+            if (latestPackaging && latestPackaging.status === 'PASS') {
+                return (latestPackaging.extraData && latestPackaging.extraData.shipped) ? 'shipped' : 'ready_to_ship';
+            }
+            return order.currentStage;
         }
 
-        function resetFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('deptFilter').value = '';
-            renderTable(qcData);
-            renderSummaryTable(qcData);
-            renderShippingTable(qcData);
+        function renderStageStepper(effectiveStage) {
+            const idx = ALL_STAGES.indexOf(effectiveStage);
+            const dots = ALL_STAGES.map((s, i) => {
+                let cls = 'bg-slate-100 text-slate-400 border-slate-200';
+                let content = i + 1;
+                if (i < idx) { cls = 'bg-emerald-500 text-white border-emerald-500'; content = '<i class="fa-solid fa-check text-[9px]"></i>'; }
+                else if (i === idx) { cls = 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200'; }
+                const dot = `<div class="w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold ${cls}" title="${escapeHtml(STAGE_LABELS[s])}">${content}</div>`;
+                const connector = i < ALL_STAGES.length - 1 ? `<div class="w-3 sm:w-5 h-0.5 ${i < idx ? 'bg-emerald-400' : 'bg-slate-200'}"></div>` : '';
+                return dot + connector;
+            }).join('');
+            return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold text-indigo-700 mt-1.5">${escapeHtml(STAGE_LABELS[effectiveStage])}</div>`;
         }
 
-        function openModal() {
-            document.getElementById('qcModal').classList.remove('hidden');
-            document.getElementById('modalTitle').textContent = 'เพิ่มบันทึก QC ตามแผนก';
-            document.getElementById('qcForm').reset();
-            document.getElementById('editIndex').value = '';
-            document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('formId').value = 'QC-' + Math.floor(100000 + Math.random() * 900000);
+        function renderProductionOverview() {
+            const tbody = document.getElementById('overviewTableBody');
+            const emptyState = document.getElementById('emptyOverviewState');
+            const countBadge = document.getElementById('overviewCountBadge');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            countBadge.textContent = `${productionOrders.length} M/O ในสายการผลิต`;
+
+            if (productionOrders.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            productionOrders.forEach(order => {
+                const effectiveStage = getEffectiveStage(order);
+                const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
+                const dueDateHtml = order.dueDate
+                    ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
+                    : '<span class="text-slate-400">-</span>';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">${dueDateHtml}</td>
+                    <td class="py-3.5 px-4">${renderStageStepper(effectiveStage)}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.lastUpdated || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderProductionBoard() {
+            ORDER_STAGES.forEach(stage => {
+                const column = document.getElementById(`boardColumn-${stage}`);
+                const countEl = document.getElementById(`boardCount-${stage}`);
+                if (!column) return;
+                column.innerHTML = '';
+
+                const ordersHere = productionOrders.filter(o => getEffectiveStage(o) === stage);
+                countEl.textContent = ordersHere.length;
+
+                if (ordersHere.length === 0) {
+                    column.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">ไม่มีรายการ</p>';
+                    return;
+                }
+
+                ordersHere.forEach(order => {
+                    const orderIndex = productionOrders.indexOf(order);
+                    column.appendChild(buildOrderCard(order, orderIndex, stage));
+                });
+            });
+        }
+
+        function buildOrderCard(order, orderIndex, stage) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm p-3 space-y-2.5';
+
+            const headerHtml = `
+                <div>
+                    <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
+                    <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                </div>
+            `;
+
+            let bodyHtml = '';
+            let footerHtml = '';
+
+            if (stage === 'planning') {
+                bodyHtml = `
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">% ความคืบหน้าวางแผน</label>
+                        <input type="number" min="0" max="100" value="${order.planning.percent || 0}" onchange="updateOrderField(${orderIndex}, 'planning.percent', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5 font-semibold">สั่งย้อมกี่สี (จำเป็นก่อนโอนงาน)</label>
+                        <input type="number" min="0" value="${order.dyeing.colorsOrdered || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsOrdered', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                `;
+                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'planning', 'dyeing')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกย้อม</button>`;
+            } else if (stage === 'dyeing') {
+                bodyHtml = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">สั่งย้อม (สี)</label>
+                            <input type="number" min="0" value="${order.dyeing.colorsOrdered || 0}" disabled class="w-full p-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมได้/วัน (สี)</label>
+                            <input type="number" min="0" value="${order.dyeing.colorsPerDay || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsPerDay', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมเสร็จแล้ว (สี)</label>
+                        <input type="number" min="0" value="${order.dyeing.colorsCompleted || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsCompleted', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-indigo-500 h-2 rounded-full" style="width:${order.dyeing.percent || 0}%"></div></div>
+                        <span class="text-[11px] font-semibold text-slate-600">${order.dyeing.percent || 0}%</span>
+                    </div>
+                `;
+                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'dyeing', 'weaving')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกทอ</button>`;
+            } else if (stage === 'weaving') {
+                bodyHtml = `
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.receivedPrintedFabric ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.receivedPrintedFabric', this.checked)" class="rounded"> ได้รับผ้าปั๊มลายแล้ว</label>
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.yarnComplete ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.yarnComplete', this.checked)" class="rounded"> ไหมครบสำหรับทอ</label>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">สถานะการทอ</label>
+                        <select onchange="updateOrderField(${orderIndex}, 'weaving.status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="waiting" ${order.weaving.status === 'waiting' ? 'selected' : ''}>รอทอ</option>
+                            <option value="in_progress" ${order.weaving.status === 'in_progress' ? 'selected' : ''}>กำลังทอ</option>
+                            <option value="done" ${order.weaving.status === 'done' ? 'selected' : ''}>เสร็จแล้ว</option>
+                        </select>
+                    </div>
+                `;
+                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'weaving', 'finishing')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกตกแต่ง</button>`;
+            } else if (stage === 'finishing') {
+                bodyHtml = `
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">สถานะการตกแต่ง/บรรจุ</label>
+                        <select onchange="updateOrderField(${orderIndex}, 'finishing.status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="waiting" ${order.finishing.status === 'waiting' ? 'selected' : ''}>รอแต่ง</option>
+                            <option value="in_progress" ${order.finishing.status === 'in_progress' ? 'selected' : ''}>กำลังแต่ง</option>
+                            <option value="done" ${order.finishing.status === 'done' ? 'selected' : ''}>บรรจุเสร็จแล้ว</option>
+                        </select>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">เมื่อบรรจุเสร็จ ให้บันทึกผล QC แผนกตกแต่ง/บรรจุภัณฑ์เป็น PASS ระบบจะย้ายไป "รายการรอส่ง" ให้อัตโนมัติ</p>
+                `;
+                footerHtml = `<button onclick="openQCModalForOrder('${order.moSo.replace(/'/g, "\\'")}', '${PACKAGING_DEPARTMENT}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์</button>`;
+            }
+
+            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1">${footerHtml}</div>`;
+            return card;
+        }
+
+        function updateOrderField(orderIndex, path, value) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const parts = path.split('.');
+            let obj = order;
+            for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+            obj[parts[parts.length - 1]] = value;
+
+            // Convenience auto-calculations so staff don't have to compute % by hand.
+            if (path === 'dyeing.colorsCompleted' || path === 'dyeing.colorsOrdered') {
+                const d = order.dyeing;
+                d.percent = d.colorsOrdered > 0 ? Math.min(100, Math.round((d.colorsCompleted / d.colorsOrdered) * 100)) : 0;
+            }
+            if (path === 'weaving.status') {
+                order.weaving.percent = value === 'done' ? 100 : value === 'in_progress' ? 50 : 0;
+            }
+            if (path === 'finishing.status') {
+                order.finishing.percent = value === 'done' ? 100 : value === 'in_progress' ? 50 : 0;
+            }
+
+            order.lastUpdated = new Date().toISOString().split('T')[0];
+            saveOrdersToLocal();
+            syncOrderToSheet(order);
+            renderProductionBoard();
+            renderProductionOverview();
+        }
+
+        function transferOrderStage(orderIndex, fromStage, toStage) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+
+            if (fromStage === 'planning' && (!order.dyeing.colorsOrdered || order.dyeing.colorsOrdered <= 0)) {
+                showToast('กรุณาระบุจำนวนสีที่สั่งย้อมก่อนโอนงาน', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (fromStage === 'dyeing' && order.dyeing.colorsCompleted < order.dyeing.colorsOrdered) {
+                showToast('ย้อมยังไม่ครบทุกสี ยังโอนงานไม่ได้', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (fromStage === 'weaving' && order.weaving.status !== 'done') {
+                showToast('ทอยังไม่เสร็จ ยังโอนงานไม่ได้', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            order.currentStage = toStage;
+            order.lastUpdated = new Date().toISOString().split('T')[0];
+            saveOrdersToLocal();
+            syncOrderToSheet(order);
+            renderProductionBoard();
+            renderProductionOverview();
+            showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
+        }
+
+        function openQCModalForOrder(moSo, dept) {
+            openModal();
+            document.getElementById('formMoSo').value = moSo;
+            document.getElementById('formDept').value = dept;
             renderDepartmentFields();
         }
 
-        function closeModal() {
-            document.getElementById('qcModal').classList.add('hidden');
+        function openNewOrderModal() {
+            document.getElementById('newOrderMoSo').value = '';
+            document.getElementById('newOrderDueDate').value = '';
+            document.getElementById('newOrderModal').classList.remove('hidden');
         }
 
-        function openConfigModal() {
-            document.getElementById('gasUrlInput').value = gasWebAppUrl;
-            document.getElementById('configModal').classList.remove('hidden');
+        function closeNewOrderModal() {
+            document.getElementById('newOrderModal').classList.add('hidden');
         }
 
-        function closeConfigModal() {
-            document.getElementById('configModal').classList.add('hidden');
-        }
-
-        function openShareModal() {
-            const shareUrl = window.location.href;
-            document.getElementById('shareUrlInput').value = shareUrl;
-            document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}`;
-            document.getElementById('shareModal').classList.remove('hidden');
-        }
-
-        function closeShareModal() {
-            document.getElementById('shareModal').classList.add('hidden');
-        }
-
-        function copyShareUrl() {
-            const input = document.getElementById('shareUrlInput');
-            input.select();
-            document.execCommand('copy');
-            showToast('คัดลอกลิงก์สำเร็จ!');
-        }
-
-        function toggleDisplayMode() {
-            isDisplayMode = !isDisplayMode;
-            const header = document.getElementById('mainHeader');
-            const addBtn = document.getElementById('addBtn');
-            const displayBtn = document.getElementById('displayModeBtn');
-            const actionCols = document.querySelectorAll('.action-col');
-
-            if (isDisplayMode) {
-                header.className = "no-print bg-slate-900 text-white shadow-md sticky top-0 z-30 transition-all duration-300";
-                addBtn.classList.add('hidden');
-                displayBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> โหมดจัดการ';
-                actionCols.forEach(el => el.classList.add('hidden'));
-                showToast('เข้าสู่โหมดหน้าจอแสดงผล');
-            } else {
-                header.className = "no-print bg-indigo-700 text-white shadow-md sticky top-0 z-30 transition-all duration-300";
-                addBtn.classList.remove('hidden');
-                displayBtn.innerHTML = '<i class="fa-solid fa-tv"></i> โหมดจอแสดงผล';
-                actionCols.forEach(el => el.classList.remove('hidden'));
-                showToast('กลับสู่โหมดจัดการ');
+        function submitNewOrder() {
+            const moSo = document.getElementById('newOrderMoSo').value.trim();
+            const dueDate = document.getElementById('newOrderDueDate').value;
+            if (!moSo) {
+                showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
+                return;
             }
-            renderTable(qcData);
-        }
-
-        function saveGasConfig() {
-            gasWebAppUrl = document.getElementById('gasUrlInput').value.trim();
-            localStorage.setItem('qc_gas_url', gasWebAppUrl);
-            closeConfigModal();
-            showToast('บันทึก URL สำเร็จ กำลังซิงค์...');
-            if (gasWebAppUrl) fetchDataFromGoogleSheet(true);
-        }
-
-        async function saveQCItem(e) {
-            e.preventDefault();
-            const editIndex = document.getElementById('editIndex').value;
-            const dept = document.getElementById('formDept').value;
-            const remarkText = document.getElementById('formRemark').value;
-            
-            let extra = {};
-            if (dept === 'ดีไซน์/ขยายลาย') {
-                const rowDivs = document.querySelectorAll('#designRowsContainer .dept-item-row');
-                const items = [];
-                rowDivs.forEach(r => {
-                    items.push({
-                        designIdMatch: r.querySelector('.row-idMatch').value,
-                        sizeMatch: r.querySelector('.row-sizeMatch').value,
-                        colorCheck: r.querySelector('.row-colorCheck').value,
-                        fixQty: r.querySelector('.row-fixQty').value,
-                        reason: r.querySelector('.row-reason').value
-                    });
-                });
-                extra = { items };
-            } else if (dept === 'แผนกวางแผน') {
-                const rowDivs = document.querySelectorAll('#planRowsContainer .dept-item-row');
-                const items = [];
-                rowDivs.forEach(r => {
-                    items.push({
-                        weavingGrade: r.querySelector('.row-weavingGrade').value,
-                        dueDate: r.querySelector('.row-dueDate').value,
-                        weaverWorkload: r.querySelector('.row-workload').value
-                    });
-                });
-                extra = { items };
-            } else if (dept === 'แผนกย้อม') {
-                const rowDivs = document.querySelectorAll('#dyeRowsContainer .dept-item-row');
-                const items = [];
-                rowDivs.forEach(r => {
-                    items.push({
-                        moSo: r.querySelector('.row-dyeMoSo').value,
-                        colorCode: r.querySelector('.row-colorCode').value,
-                        quantity: r.querySelector('.row-quantity').value,
-                        colorMatch: r.querySelector('.row-colorMatch').value,
-                        approverInfo: r.querySelector('.row-approver').value
-                    });
-                });
-                extra = { items };
-            } else if (dept === 'แผนกทอมือ') {
-                const roundRows = document.querySelectorAll('.loom-round-row');
-                const rounds = [];
-                roundRows.forEach(row => {
-                    rounds.push({
-                        start: row.querySelector('.round-start').value,
-                        end: row.querySelector('.round-end').value,
-                        problem: row.querySelector('.round-problem').value,
-                        solution: row.querySelector('.round-solution').value
-                    });
-                });
-                extra = {
-                    loomNo: document.getElementById('hw_loomNo').value,
-                    loomRounds: rounds
-                };
-            } else if (dept === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                const rowDivs = document.querySelectorAll('#finishRowsContainer .dept-item-row');
-                const items = [];
-                rowDivs.forEach(r => {
-                    items.push({
-                        specMatch: r.querySelector('.row-specMatch').value,
-                        packagingInfo: r.querySelector('.row-packaging').value
-                    });
-                });
-                extra = { items };
+            if (productionOrders.some(o => o.moSo.trim() === moSo)) {
+                showToast('มี M/O, S/O นี้อยู่ในสายการผลิตแล้ว', 'fa-circle-exclamation', 'text-amber-400');
+                return;
             }
-
-            const newItem = {
-                id: document.getElementById('formId').value,
-                date: document.getElementById('formDate').value,
-                department: dept,
-                moSo: document.getElementById('formMoSo').value,
-                status: document.getElementById('formStatus').value,
-                inspector: document.getElementById('formInspector').value,
-                stamp: document.getElementById('formStamp').value,
-                remark: remarkText,
-                extraData: extra
+            const order = {
+                moSo: moSo,
+                dueDate: dueDate,
+                currentStage: 'planning',
+                planning: { percent: 0 },
+                dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0 },
+                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0 },
+                finishing: { status: 'waiting', percent: 0 },
+                lastUpdated: new Date().toISOString().split('T')[0]
             };
-
-            if (editIndex !== '') {
-                qcData[editIndex] = newItem;
-                showToast('อัปเดตข้อมูลเรียบร้อยแล้ว');
-            } else {
-                qcData.unshift(newItem);
-                showToast('เพิ่มรายการ QC ใหม่สำเร็จ');
-            }
-
-            saveToLocal();
-            initApp();
-            closeModal();
-
-            if (gasWebAppUrl) {
-                try {
-                    await fetch(gasWebAppUrl, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newItem)
-                    });
-                } catch(err) {
-                    console.error("Error syncing to Google Sheet:", err);
-                }
-            }
-        }
-
-        function editItem(index) {
-            const item = qcData[index];
-            document.getElementById('modalTitle').textContent = 'แก้ไขบันทึก QC';
-            document.getElementById('editIndex').value = index;
-            document.getElementById('formId').value = item.id;
-            document.getElementById('formDate').value = item.date;
-            document.getElementById('formDept').value = item.department;
-            document.getElementById('formMoSo').value = item.moSo;
-            document.getElementById('formStatus').value = item.status;
-            document.getElementById('formInspector').value = item.inspector;
-            document.getElementById('formStamp').value = item.stamp;
-            document.getElementById('formRemark').value = item.remark || '';
-            
-            renderDepartmentFields(item.extraData || {});
-
-            setTimeout(() => {
-                const ex = item.extraData || {};
-                if (item.department === 'ดีไซน์/ขยายลาย') {
-                    const container = document.getElementById('designRowsContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        const items = ex.items || [ex];
-                        items.forEach(i => addDesignRow(i));
-                    }
-                } else if (item.department === 'แผนกวางแผน') {
-                    const container = document.getElementById('planRowsContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        const items = ex.items || [ex];
-                        items.forEach(i => addPlanRow(i));
-                    }
-                } else if (item.department === 'แผนกย้อม') {
-                    const container = document.getElementById('dyeRowsContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        const items = ex.items || [ex];
-                        items.forEach(i => addDyeRow(i));
-                    }
-                } else if (item.department === 'แผนกทอมือ') {
-                    if(document.getElementById('hw_loomNo')) document.getElementById('hw_loomNo').value = ex.loomNo || '';
-                    const container = document.getElementById('loomRoundsContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        const rounds = ex.loomRounds || [];
-                        rounds.forEach(r => addLoomRoundRow(r));
-                    }
-                } else if (item.department === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                    const container = document.getElementById('finishRowsContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        const items = ex.items || [ex];
-                        items.forEach(i => addFinishRow(i));
-                    }
-                }
-            }, 50);
-
-            document.getElementById('qcModal').classList.remove('hidden');
-        }
-
-        function promptDeleteItem(index) {
-            document.getElementById('deleteTargetIndex').value = index;
-            document.getElementById('deleteModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-        }
-
-        async function confirmDeleteItem() {
-            const index = parseInt(document.getElementById('deleteTargetIndex').value);
-            closeDeleteModal();
-
-            if (isNaN(index) || index < 0 || index >= qcData.length) return;
-
-            const deletedItem = qcData[index];
-            qcData.splice(index, 1);
-            saveToLocal();
-            initApp();
-            showToast('ลบรายการสำเร็จ', 'fa-circle-xmark', 'text-rose-400');
-
-            if (gasWebAppUrl && deletedItem.id) {
-                try {
-                    const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=delete&id=' + encodeURIComponent(deletedItem.id);
-                    await fetch(deleteUrl);
-                } catch(err) {
-                    console.error("Error deleting from Google Sheet:", err);
-                }
-            }
-        }
-
-        function exportToCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,ID,Date,Department,MO_SO,Status,Inspector,Stamp Pass,Remark\r\n";
-            qcData.forEach(row => {
-                csvContent += `"${row.id}","${row.date}","${row.department}","${row.moSo}","${row.status}","${row.inspector}","${row.stamp}","${row.remark || ''}"\r\n`;
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "qc_comprehensive_export.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast('ส่งออกข้อมูลเป็น CSV สำเร็จ');
-        }
-
-        // ===== Print & PDF ("View PDF" is achieved via the browser's Print > Save as PDF) =====
-
-        function printList() {
-            // Prints the currently visible list/summary table (respects active filters).
-            // Header, filters, toast, and action buttons are hidden automatically via .no-print / .action-col in print CSS.
-            const printDateEl = document.getElementById('printDateNow');
-            if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
-            document.body.classList.remove('print-single-mode');
-            showToast('กำลังเปิดหน้าต่างพิมพ์... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
-            setTimeout(() => window.print(), 200);
-        }
-
-        function printQCItem(index) {
-            const item = qcData[index];
-            if (!item) return;
-            const printArea = document.getElementById('printArea');
-            printArea.innerHTML = buildPrintDetailHTML(item);
-            document.body.classList.add('print-single-mode');
-            showToast('กำลังเปิดหน้าต่างพิมพ์ใบตรวจสอบ... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-file-pdf', 'text-sky-400');
-            setTimeout(() => window.print(), 150);
-        }
-
-        window.addEventListener('afterprint', () => {
-            document.body.classList.remove('print-single-mode');
-        });
-
-        function buildPrintDetailHTML(item) {
-            const ex = item.extraData || {};
-            const statusLabelMap = { PASS: 'ผ่าน (PASS)', FAIL: 'ไม่ผ่าน (FAIL)', PENDING: 'รอตรวจสอบ (PENDING)' };
-            const statusLabel = statusLabelMap[item.status] || item.status;
-            let deptDetailHtml = '';
-
-            if (item.department === 'ดีไซน์/ขยายลาย') {
-                const items = ex.items || [];
-                deptDetailHtml = `
-                    <table class="print-detail-table">
-                        <thead><tr><th>#</th><th>Design ID ตรงกับ M/O</th><th>ขนาดตรงตาม PO</th><th>โค้ดสี/จำนวนสี/รหัส</th><th>จำนวนแก้ไข (ชิ้น)</th><th>สาเหตุ/หมายเหตุ</th></tr></thead>
-                        <tbody>${items.map((it, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(it.designIdMatch || '-')}</td><td>${escapeHtml(it.sizeMatch || '-')}</td><td>${escapeHtml(it.colorCheck || '-')}</td><td>${escapeHtml(it.fixQty || '0')}</td><td>${escapeHtml(it.reason || '-')}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">ไม่มีข้อมูล</td></tr>'}</tbody>
-                    </table>`;
-            } else if (item.department === 'แผนกวางแผน') {
-                const items = ex.items || [];
-                deptDetailHtml = `
-                    <table class="print-detail-table">
-                        <thead><tr><th>#</th><th>เกรดการทอ</th><th>กำหนดเสร็จ (Due Date)</th><th>ภาระงานพนักงาน</th></tr></thead>
-                        <tbody>${items.map((it, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(it.weavingGrade || '-')}</td><td>${escapeHtml(it.dueDate || '-')}</td><td>${escapeHtml(it.weaverWorkload || '-')}</td></tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">ไม่มีข้อมูล</td></tr>'}</tbody>
-                    </table>`;
-            } else if (item.department === 'แผนกย้อม') {
-                const items = ex.items || [];
-                deptDetailHtml = `
-                    <table class="print-detail-table">
-                        <thead><tr><th>#</th><th>เลขที่ M/O, S/O</th><th>Code สี</th><th>จำนวน</th><th>ผลการเทียบสี</th><th>รายละเอียดแก้ไข/ผู้อนุมัติ</th></tr></thead>
-                        <tbody>${items.map((it, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(it.moSo || item.moSo || '-')}</td><td>${escapeHtml(it.colorCode || it.codeAndQty || '-')}</td><td>${escapeHtml(it.quantity || '-')}</td><td>${escapeHtml(it.colorMatch || '-')}</td><td>${escapeHtml(it.approverInfo || '-')}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">ไม่มีข้อมูล</td></tr>'}</tbody>
-                    </table>`;
-            } else if (item.department === 'แผนกทอมือ') {
-                const rounds = ex.loomRounds || [];
-                deptDetailHtml = `
-                    <p style="font-size:12px;margin-bottom:8px;"><strong>ทอที่จอ/เครื่องทอ:</strong> ${escapeHtml(ex.loomNo || '-')}</p>
-                    <table class="print-detail-table">
-                        <thead><tr><th>รอบที่</th><th>เวลาเริ่ม</th><th>เวลาเสร็จ</th><th>ปัญหาที่พบ</th><th>วิธีแก้ไข</th></tr></thead>
-                        <tbody>${rounds.map((r, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(r.start || '-')}</td><td>${escapeHtml(r.end || '-')}</td><td>${escapeHtml(r.problem || '-')}</td><td>${escapeHtml(r.solution || '-')}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">ไม่มีข้อมูล</td></tr>'}</tbody>
-                    </table>`;
-            } else if (item.department === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                const items = ex.items || [];
-                deptDetailHtml = `
-                    <table class="print-detail-table">
-                        <thead><tr><th>#</th><th>ขนาดพรม / Spec</th><th>บรรจุภัณฑ์ & ความสะอาด</th></tr></thead>
-                        <tbody>${items.map((it, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(it.specMatch || '-')}</td><td>${escapeHtml(it.packagingInfo || '-')}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">ไม่มีข้อมูล</td></tr>'}</tbody>
-                    </table>`;
-            }
-
-            return `
-                <div class="print-sheet">
-                    <div class="print-header">
-                        <h1>ใบตรวจสอบคุณภาพ (QC Check Sheet)</h1>
-                        <p>QC &amp; Production Dashboard</p>
-                    </div>
-                    <table class="print-info-table">
-                        <tr><th>QC ID</th><td>${escapeHtml(item.id)}</td><th>วันที่</th><td>${escapeHtml(item.date)}</td></tr>
-                        <tr><th>แผนก</th><td>${escapeHtml(item.department)}</td><th>เลขที่ M/O, S/O</th><td>${escapeHtml(item.moSo)}</td></tr>
-                        <tr><th>สถานะ QC</th><td>${escapeHtml(statusLabel)}</td><th>Stamp Pass</th><td>${escapeHtml(item.stamp)}</td></tr>
-                        <tr><th>ผู้ตรวจสอบ</th><td colspan="3">${escapeHtml(item.inspector)}</td></tr>
-                    </table>
-                    <h3 class="print-section-title">รายละเอียดการตรวจสอบ</h3>
-                    ${deptDetailHtml || '<p style="font-size:12px;color:#94a3b8;">ไม่มีข้อมูลรายละเอียดเพิ่มเติม</p>'}
-                    ${item.remark ? `<h3 class="print-section-title">หมายเหตุ</h3><p class="print-remark">${escapeHtml(item.remark)}</p>` : ''}
-                    <div class="print-signature-row">
-                        <div class="print-signature-box"><p>ผู้ตรวจสอบ (Inspector)</p><div class="print-sign-line"></div><p>${escapeHtml(item.inspector || '')}</p></div>
-                        <div class="print-signature-box"><p>ผู้อนุมัติ (Approved by)</p><div class="print-sign-line"></div><p>วันที่ ......../......../..........</p></div>
-                    </div>
-                    <p class="print-footer-note">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
-                </div>
-            `;
-        }
-
-        function showToast(message, iconClass = 'fa-circle-check', iconColor = 'text-emerald-400') {
-            const toast = document.getElementById('toast');
-            const msgEl = document.getElementById('toast-msg');
-            const iconEl = document.getElementById('toast-icon');
-
-            msgEl.textContent = message;
-            iconEl.className = `fa-solid ${iconClass} ${iconColor} text-lg`;
-
-            toast.classList.remove('hidden', 'translate-y-10', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.classList.add('hidden'), 300);
-            }, 3000);
-        }
-
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
-        }
-    </script>
-</body>
-</html>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Prompt -->
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Prompt', sans-serif; }
-
-        /* ===== Print-only header (shown only when printing the full list) ===== */
-        .print-only-header { display: none; }
-
-        /* ===== Single-record printable QC sheet ===== */
-        #printArea { display: none; }
-        .print-sheet { font-family: 'Prompt', sans-serif; color: #1e293b; padding: 10px; }
-        .print-sheet .print-header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #334155; padding-bottom: 10px; }
-        .print-sheet .print-header h1 { font-size: 20px; font-weight: 700; margin: 0; }
-        .print-sheet .print-header p { font-size: 12px; color: #64748b; margin: 2px 0 0; }
-        .print-info-table, .print-detail-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; }
-        .print-info-table th, .print-info-table td, .print-detail-table th, .print-detail-table td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
-        .print-info-table th { background: #f1f5f9; width: 110px; font-weight: 600; white-space: nowrap; }
-        .print-detail-table th { background: #f1f5f9; font-weight: 600; }
-        .print-section-title { font-size: 13px; font-weight: 700; margin: 14px 0 6px; color: #3730a3; }
-        .print-remark { font-size: 12px; border: 1px solid #cbd5e1; padding: 8px; border-radius: 4px; background: #f8fafc; white-space: pre-wrap; }
-        .print-signature-row { display: flex; justify-content: space-between; margin-top: 40px; gap: 40px; }
-        .print-signature-box { flex: 1; text-align: center; font-size: 12px; }
-        .print-sign-line { border-bottom: 1px solid #334155; height: 40px; margin: 20px 0 6px; }
-        .print-footer-note { text-align: right; font-size: 10px; color: #94a3b8; margin-top: 20px; }
-
-        @media print {
-            @page { size: A4; margin: 12mm; }
-            .no-print, .action-col { display: none !important; }
-            .overflow-x-auto { overflow: visible !important; }
-            body { background: #fff !important; }
-            #recordsViewContainer, #summaryViewContainer { box-shadow: none !important; border: none !important; }
-            .print-only-header { display: block !important; text-align: center; margin-bottom: 16px; }
-            .print-only-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
-            .print-only-header p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
-
-            /* When printing a single QC record detail sheet, hide everything else */
-            body.print-single-mode > *:not(#printArea) { display: none !important; }
-            body.print-single-mode #printArea { display: block !important; }
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
-
-    <header id="mainHeader" class="bg-indigo-700 text-white shadow-md sticky top-0 z-30 transition-all duration-300 no-print">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm">
-                    <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-wide">QC & Production Dashboard (GitHub Pages)</h1>
-                    <p class="text-xs text-indigo-200 flex items-center gap-1.5">
-                        <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                        <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อ...</span>
-                    </p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
-                <button onclick="forceSyncData()" class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-3.5 py-2 rounded-xl shadow transition duration-200 text-sm flex items-center gap-1.5" title="ดึงข้อมูลล่าสุดจาก Google Sheets">
-                    <i class="fa-solid fa-rotate" id="syncIcon"></i> ซิงค์ข้อมูล
-                </button>
-                <button onclick="openShareModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-3.5 py-2 rounded-xl shadow transition duration-200 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-share-nodes"></i> แชร์ & QR
-                </button>
-                <button onclick="toggleDisplayMode()" id="displayModeBtn" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-tv"></i> โหมดจอแสดงผล
-                </button>
-                <button onclick="openConfigModal()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-link"></i> ตั้งค่าลิงก์
-                </button>
-                <button onclick="openModal()" id="addBtn" class="bg-indigo-600 hover:bg-indigo-800 text-white font-medium px-4 py-2 rounded-xl shadow transition duration-200 flex items-center gap-2 text-sm border border-indigo-400">
-                    <i class="fa-solid fa-plus-circle"></i> เพิ่มบันทึก QC
-                </button>
-                <button onclick="exportToCSV()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3.5 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-download"></i> ส่งออก
-                </button>
-                <button onclick="printList()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3.5 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5" title="พิมพ์รายการทั้งหมด หรือบันทึกเป็น PDF">
-                    <i class="fa-solid fa-print"></i> พิมพ์ / PDF
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
-
-        <!-- Notification Toast -->
-        <div id="toast" class="hidden no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-10 opacity-0">
-            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
-            <span id="toast-msg" class="text-sm font-medium">บันทึกข้อมูลสำเร็จ</span>
-        </div>
-
-        <!-- Print-only header: shows only on the printed page, not on screen -->
-        <div class="print-only-header">
-            <h1>รายงานรายการตรวจสอบคุณภาพ (QC Check Sheet Report)</h1>
-            <p>วันที่พิมพ์: <span id="printDateNow"></span></p>
-        </div>
-
-        <!-- Dashboard Stats Cards -->
-        <div class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">รายการทั้งหมด</p>
-                    <h3 id="stat-total" class="text-2xl font-bold text-slate-700 mt-1">0</h3>
-                </div>
-                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-layer-group"></i>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">ผ่านการตรวจสอบ (PASS)</p>
-                    <h3 id="stat-pass" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
-                </div>
-                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">ไม่ผ่าน/ต้องแก้ไข (FAIL/FIX)</p>
-                    <h3 id="stat-fail" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
-                </div>
-                <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-circle-xmark"></i>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">รอตรวจสอบ (PENDING)</p>
-                    <h3 id="stat-pending" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
-                </div>
-                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- View Switcher & Filter Section -->
-        <div class="no-print bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
-            <!-- View Tabs -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition">
-                    <i class="fa-solid fa-list mr-1.5"></i> รายการ QC ทั้งหมด
-                </button>
-                <button onclick="switchView('summary')" id="tabSummaryBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
-                    <i class="fa-solid fa-chart-pie mr-1.5"></i> สรุปภาพรวมตาม M/O, S/O
-                </button>
-                <button onclick="switchView('shipping')" id="tabShippingBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
-                    <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
-                    <span id="shippingCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
-                </button>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-                <div class="relative w-full sm:w-64">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                        <i class="fa-solid fa-search"></i>
-                    </span>
-                    <input type="text" id="searchInput" oninput="filterTable()" placeholder="ค้นหา ID, M/O, แผนก..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                </div>
-                <div id="deptFilterWrapper" class="flex items-center gap-2">
-                    <select id="statusFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="PASS">PASS</option>
-                        <option value="FAIL">FAIL</option>
-                        <option value="PENDING">PENDING</option>
-                    </select>
-                    <select id="deptFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">ทุกแผนก</option>
-                        <option value="ดีไซน์/ขยายลาย">ดีไซน์/ขยายลาย</option>
-                        <option value="แผนกวางแผน">แผนกวางแผน</option>
-                        <option value="แผนกย้อม">แผนกย้อม</option>
-                        <option value="แผนกทอมือ">แผนกทอมือ</option>
-                        <option value="แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์">แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์</option>
-                    </select>
-                </div>
-                <button onclick="resetFilters()" class="text-slate-500 hover:text-indigo-600 text-xs font-medium px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> รีเซ็ต
-                </button>
-            </div>
-        </div>
-
-        <!-- Records View Table -->
-        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">วันที่</th>
-                            <th class="py-3.5 px-4">QC ID</th>
-                            <th class="py-3.5 px-4">แผนก</th>
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
-                            <th class="py-3.5 px-4 text-center">สถานะ</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
-                            <th class="py-3.5 px-4 text-center">Stamp Pass</th>
-                            <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Data rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-folder-open"></i>
-                </div>
-                <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
-            </div>
-        </div>
-
-        <!-- M/O, S/O Summary View Table -->
-        <div id="summaryViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-chart-pie mr-2 text-indigo-600"></i> สรุปสถานะความคืบหน้าการผลิตและ QC แยกตามหมายเลข M/O, S/O</h3>
-                <span id="summaryCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full">0 รายการ M/O, S/O</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">สถานะแต่ละแผนก</th>
-                            <th class="py-3.5 px-4">ความคืบหน้า</th>
-                            <th class="py-3.5 px-4 text-center">จำนวนครั้งที่ตรวจ</th>
-                            <th class="py-3.5 px-4 text-center">สถานะภาพรวม</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบล่าสุด</th>
-                            <th class="py-3.5 px-4">วันที่อัปเดตล่าสุด</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summaryTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Summary rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty Summary State -->
-            <div id="emptySummaryState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-chart-simple"></i>
-                </div>
-                <p class="text-slate-500 font-medium">ยังไม่มีข้อมูล M/O, S/O ในระบบ</p>
-            </div>
-        </div>
-
-        <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
-        <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-truck-fast mr-2 text-emerald-600"></i> รายการที่บรรจุภัณฑ์เรียบร้อยแล้ว รอส่งมอบ</h3>
-                <span id="shippingListCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">0 รายการรอส่ง</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">วันที่ตรวจผ่านบรรจุภัณฑ์</th>
-                            <th class="py-3.5 px-4">รายละเอียดบรรจุภัณฑ์</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
-                            <th class="py-3.5 px-4 text-center action-col">การจัดส่ง</th>
-                        </tr>
-                    </thead>
-                    <tbody id="shippingTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Ready-to-ship rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty Shipping State -->
-            <div id="emptyShippingState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-box-open"></i>
-                </div>
-                <p class="text-slate-500 font-medium">ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง</p>
-            </div>
-        </div>
-
-    </main>
-
-    <footer class="no-print bg-white border-t border-slate-100 py-4 mt-auto text-center text-xs text-slate-400">
-        <p>QC Check Sheet GitHub Pages Edition &copy; 2026. All rights reserved.</p>
-    </footer>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
-            <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <h3 class="font-bold text-lg text-slate-800">ยืนยันการลบรายการ</h3>
-            <p class="text-xs text-slate-500">คุณต้องการลบรายการ QC นี้ออกจากระบบและ Google Sheets ใช่หรือไม่?</p>
-            <input type="hidden" id="deleteTargetIndex" value="">
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeDeleteModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
-                <button type="button" onclick="confirmDeleteItem()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-xl transition shadow">ลบข้อมูล</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Ship Confirmation Modal -->
-    <div id="shipModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
-            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl">
-                <i class="fa-solid fa-truck-fast"></i>
-            </div>
-            <h3 class="font-bold text-lg text-slate-800">ยืนยันการส่งมอบสินค้า</h3>
-            <p class="text-xs text-slate-500">ยืนยันว่ารายการ M/O, S/O นี้ได้ส่งมอบเรียบร้อยแล้วใช่หรือไม่? รายการจะถูกย้ายออกจากแท็บ "รายการรอส่ง"</p>
-            <input type="hidden" id="shipTargetIndex" value="">
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeShipModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
-                <button type="button" onclick="confirmShipItem()" class="w-1/2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl transition shadow">ยืนยันส่งแล้ว</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Share Modal -->
-    <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all text-center p-6 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-share-nodes text-emerald-600 mr-2"></i> แชร์เว็บแอป</h3>
-                <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-600 text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <p class="text-xs text-slate-500">สแกน QR Code หรือคัดลอกลิงก์ด้านล่างเพื่อเปิดใช้งานจากเครื่องอื่น</p>
-            
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 inline-block mx-auto">
-                <img id="qrCodeImg" src="" alt="QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1 text-left">ลิงก์หน้าเว็บ (URL):</label>
-                <div class="flex gap-2">
-                    <input type="text" id="shareUrlInput" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none">
-                    <button onclick="copyShareUrl()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition shadow flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-copy"></i> คัดลอก
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add / Edit Modal -->
-    <div id="qcModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
-            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
-                <h3 id="modalTitle" class="font-bold text-lg">เพิ่มบันทึก QC ตามแผนก</h3>
-                <button onclick="closeModal()" class="text-indigo-200 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <form id="qcForm" onsubmit="saveQCItem(event)" class="p-6 space-y-4 overflow-y-auto flex-grow text-sm">
-                <input type="hidden" id="editIndex" value="">
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">QC ID</label>
-                        <input type="text" id="formId" required placeholder="เช่น QC-2026-001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่</label>
-                        <input type="date" id="formDate" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลือกแผนก</label>
-                        <select id="formDept" onchange="renderDepartmentFields()" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-indigo-700">
-                            <option value="ดีไซน์/ขยายลาย">ดีไซน์/ขยายลาย</option>
-                            <option value="แผนกวางแผน">แผนกวางแผน</option>
-                            <option value="แผนกย้อม">แผนกย้อม</option>
-                            <option value="แผนกทอมือ">แผนกทอมือ</option>
-                            <option value="แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์">แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
-                    <input type="text" id="formMoSo" required placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <!-- Dynamic Department Fields -->
-                <div id="departmentSpecificFields" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4"></div>
-
-                <!-- Universal Remark Field for All Departments -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1"><i class="fa-solid fa-note-sticky mr-1 text-indigo-600"></i> หมายเหตุ / ข้อมูลเพิ่มเติม (ทุกแผนก)</label>
-                    <textarea id="formRemark" rows="2" placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">สถานะ QC</label>
-                        <select id="formStatus" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
-                            <option value="PASS">PASS</option>
-                            <option value="FAIL">FAIL (ไม่ผ่าน)</option>
-                            <option value="PENDING">PENDING (รอพิจารณา)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Stamp Pass</label>
-                        <select id="formStamp" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="PASS">PASS</option>
-                            <option value="-">-</option>
-                            <option value="FAIL">FAIL</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ผู้ตรวจสอบ (Inspector)</label>
-                        <input type="text" id="formInspector" required placeholder="ชื่อ-นามสกุล ผู้ตรวจสอบ" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm rounded-xl transition">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Configuration Modal -->
-    <div id="configModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden transform transition-all flex flex-col">
-            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-brands fa-google mr-2"></i> ตั้งค่าเชื่อมต่อ Google Apps Script</h3>
-                <button onclick="closeConfigModal()" class="text-indigo-200 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 text-sm text-slate-600">
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Google Apps Script Web App URL:</label>
-                    <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <p class="text-xs text-slate-400 mt-1">วางลิงก์ Web App จาก Google Apps Script เพื่อให้ทุกเครื่องที่เปิดผ่าน GitHub ดึงและบันทึกข้อมูลลง Google Sheet เดียวกัน</p>
-                </div>
-            </div>
-            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <button type="button" onclick="closeConfigModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium text-sm rounded-xl transition">ปิด</button>
-                <button type="button" onclick="saveGasConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึก</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Printable single-record QC sheet (hidden on screen, shown only during single-record print) -->
-    <div id="printArea"></div>
-
-    <script>
-        // Fixed production workflow: an M/O, S/O is only "Complete 100%" once it has PASSed every one of these departments.
-        const ALL_DEPARTMENTS = ['ดีไซน์/ขยายลาย', 'แผนกวางแผน', 'แผนกย้อม', 'แผนกทอมือ', 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์'];
-        const DEPT_SHORT_LABELS = {
-            'ดีไซน์/ขยายลาย': 'ดีไซน์',
-            'แผนกวางแผน': 'วางแผน',
-            'แผนกย้อม': 'ย้อม',
-            'แผนกทอมือ': 'ทอมือ',
-            'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์': 'ตกแต่ง/บรรจุ'
-        };
-
-        // Normalizes a date value coming back from Google Sheets/Apps Script into a plain "YYYY-MM-DD" string.
-        // Google Sheets can return dates as ISO strings ("2026-08-31T00:00:00.000Z") or as a full JS Date
-        // toString() ("Mon Aug 31 2026 00:00:00 GMT+0700 ...") depending on the Apps Script code — handle both.
-        function normalizeDateString(raw) {
-            if (!raw) return '';
-            const str = String(raw).trim();
-            if (!str) return '';
-
-            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-
-            // Only treat "T" as the ISO date/time separator when it directly follows a YYYY-MM-DD date
-            // (avoids false matches on letters like the "T" in "GMT" or "Time" in a full JS Date string).
-            if (/^\d{4}-\d{2}-\d{2}T/.test(str)) return str.split('T')[0];
-
-            // Full JS Date.toString() format, e.g. "Mon Aug 31 2026 00:00:00 GMT+0700 (Indochina Time)"
-            // (this is what some Apps Script setups return). Parse the calendar date directly out of the
-            // text instead of re-parsing it with `new Date()`, which would re-interpret the embedded GMT
-            // offset against the browser's own local timezone and can shift the day by one.
-            const monthNames = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
-            const jsDateMatch = str.match(/^\w{3} (\w{3}) (\d{1,2}) (\d{4})/);
-            if (jsDateMatch && monthNames[jsDateMatch[1]]) {
-                return `${jsDateMatch[3]}-${monthNames[jsDateMatch[1]]}-${String(jsDateMatch[2]).padStart(2, '0')}`;
-            }
-
-            // MM/DD/YYYY style
-            const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-            if (slashMatch) {
-                return `${slashMatch[3]}-${String(slashMatch[1]).padStart(2, '0')}-${String(slashMatch[2]).padStart(2, '0')}`;
-            }
-
-            // Fallback: let the browser parse it, reading back the UTC components so we don't
-            // re-interpret any embedded timezone offset against the local machine's timezone.
-            const parsed = new Date(str);
-            if (!isNaN(parsed.getTime())) {
-                const y = parsed.getUTCFullYear();
-                const m = String(parsed.getUTCMonth() + 1).padStart(2, '0');
-                const d = String(parsed.getUTCDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            }
-            return str;
-        }
-
-        let qcData = [];
-        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
-        let isDisplayMode = false;
-        let currentView = 'records'; // 'records' or 'summary'
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedLocal = localStorage.getItem('qc_comprehensive_data_v2');
-            if (savedLocal) {
-                try { qcData = JSON.parse(savedLocal); } catch(e) {}
-            }
-            const printDateEl = document.getElementById('printDateNow');
-            if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
-            initApp();
-            if (gasWebAppUrl) {
-                fetchDataFromGoogleSheet(false);
-            } else {
-                updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
-                openConfigModal();
-            }
-        });
-
-        function saveToLocal() {
-            localStorage.setItem('qc_comprehensive_data_v2', JSON.stringify(qcData));
-        }
-
-        function initApp() {
-            renderTable(qcData);
-            renderSummaryTable(qcData);
-            renderShippingTable(qcData);
-            updateStats();
-        }
-
-        function switchView(view) {
-            currentView = view;
-            const recordsBtn = document.getElementById('tabRecordsBtn');
-            const summaryBtn = document.getElementById('tabSummaryBtn');
-            const shippingBtn = document.getElementById('tabShippingBtn');
-            const recordsContainer = document.getElementById('recordsViewContainer');
-            const summaryContainer = document.getElementById('summaryViewContainer');
-            const shippingContainer = document.getElementById('shippingViewContainer');
-            const deptFilterWrapper = document.getElementById('deptFilterWrapper');
-
-            const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
-            const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
-
-            recordsBtn.className = view === 'records' ? activeTabCls : inactiveTabCls;
-            summaryBtn.className = view === 'summary' ? activeTabCls : inactiveTabCls;
-            shippingBtn.className = view === 'shipping' ? activeTabCls : inactiveTabCls;
-
-            recordsContainer.classList.toggle('hidden', view !== 'records');
-            summaryContainer.classList.toggle('hidden', view !== 'summary');
-            shippingContainer.classList.toggle('hidden', view !== 'shipping');
-            deptFilterWrapper.classList.toggle('hidden', view !== 'records');
-
-            if (view === 'summary') renderSummaryTable(qcData);
-            if (view === 'shipping') renderShippingTable(qcData);
-        }
-
-        function updateSyncStatus(isConnected, message) {
-            const indicator = document.getElementById('syncStatusIndicator');
-            const text = document.getElementById('syncStatusText');
-            if (isConnected) {
-                indicator.className = "w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse";
-                text.textContent = message || "เชื่อมต่อ Google Sheets แล้ว";
-            } else {
-                indicator.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
-                text.textContent = message || "ไม่ได้เชื่อมต่อ Google Sheet";
-            }
-        }
-
-        async function forceSyncData() {
-            const icon = document.getElementById('syncIcon');
-            icon.classList.add('fa-spin');
-            showToast('กำลังซิงค์ข้อมูลกับ Google Sheets...');
-            await fetchDataFromGoogleSheet(true);
-            setTimeout(() => icon.classList.remove('fa-spin'), 600);
-        }
-
-        async function fetchDataFromGoogleSheet(isManual = false) {
-            if (!gasWebAppUrl) {
-                if (isManual) {
-                    showToast('โปรดตั้งค่า Google Apps Script Web App URL ก่อน', 'fa-circle-xmark', 'text-rose-400');
-                    openConfigModal();
-                }
-                return;
-            }
-
-            try {
-                const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=get' : gasWebAppUrl + '?action=get';
-                const response = await fetch(fetchUrl);
-                const text = await response.text();
-                
-                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                    if (isManual) showToast('ข้อผิดพลาด: URL ที่ระบุไม่ถูกต้อง', 'fa-circle-xmark', 'text-rose-400');
-                    updateSyncStatus(false, 'เชื่อมต่อไม่สำเร็จ');
-                    return;
-                }
-
-                let result;
-                try {
-                    result = JSON.parse(text);
-                } catch(err) {
-                    if (isManual) showToast('ไม่สามารถแปลงข้อมูล JSON ได้', 'fa-circle-xmark', 'text-rose-400');
-                    return;
-                }
-
-                if (Array.isArray(result)) {
-                    qcData = result.map(item => {
-                        let parsedExtra = {};
-                        try {
-                            parsedExtra = typeof item.extraData === 'string' ? JSON.parse(item.extraData) : (item.extraData || {});
-                        } catch(e) { parsedExtra = {}; }
-
-                        let validStatus = item.status;
-                        if (!validStatus || typeof validStatus === 'string' && validStatus.startsWith('{')) {
-                            validStatus = 'PASS';
-                        }
-
-                        return {
-                            id: item.id || '',
-                            date: normalizeDateString(item.date),
-                            department: item.department || '',
-                            moSo: item.moSo || '',
-                            status: validStatus,
-                            inspector: item.inspector || '',
-                            stamp: item.stamp || '-',
-                            remark: item.remark || parsedExtra.remark || '',
-                            extraData: parsedExtra
-                        };
-                    });
-                    saveToLocal();
-                    initApp();
-                    updateSyncStatus(true, `ซิงค์สำเร็จ (${qcData.length} รายการ)`);
-                    if (isManual) showToast(`ซิงค์ข้อมูลสำเร็จ! โหลด ${qcData.length} รายการ`);
-                }
-            } catch(e) {
-                console.error("Fetch error:", e);
-                updateSyncStatus(false, 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
-                if (isManual) showToast('เชื่อมต่อล้มเหลว', 'fa-circle-xmark', 'text-rose-400');
-            }
-        }
-
-        function renderDepartmentFields(existingExtra = {}) {
-            const dept = document.getElementById('formDept').value;
-            const container = document.getElementById('departmentSpecificFields');
-            container.innerHTML = '';
-
-            if (dept === 'ดีไซน์/ขยายลาย') {
-                container.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-pen-ruler mr-1"></i> รายการตรวจสอบแผนกดีไซน์ / ขยายลาย (เพิ่มได้หลายรายการ)</h4>
-                        <button type="button" onclick="addDesignRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                        </button>
-                    </div>
-                    <div id="designRowsContainer" class="space-y-2"></div>
-                `;
-                const items = existingExtra.items || (existingExtra.designIdMatch ? [existingExtra] : []);
-                if (items.length === 0) addDesignRow();
-                else items.forEach(item => addDesignRow(item));
-            } else if (dept === 'แผนกวางแผน') {
-                container.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-calendar-days mr-1"></i> รายการตรวจสอบแผนกวางแผน (เพิ่มได้หลายรายการ)</h4>
-                        <button type="button" onclick="addPlanRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                        </button>
-                    </div>
-                    <div id="planRowsContainer" class="space-y-2"></div>
-                `;
-                const items = existingExtra.items || (existingExtra.weavingGrade ? [existingExtra] : []);
-                if (items.length === 0) addPlanRow();
-                else items.forEach(item => addPlanRow(item));
-            } else if (dept === 'แผนกย้อม') {
-                container.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-droplet mr-1"></i> รายการตรวจสอบแผนกย้อม (เพิ่มได้หลายรายการ)</h4>
-                        <button type="button" onclick="addDyeRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                        </button>
-                    </div>
-                    <div id="dyeRowsContainer" class="space-y-2"></div>
-                `;
-                const items = existingExtra.items || ((existingExtra.codeAndQty || existingExtra.colorCode) ? [existingExtra] : []);
-                if (items.length === 0) addDyeRow();
-                else items.forEach(item => addDyeRow(item));
-            } else if (dept === 'แผนกทอมือ') {
-                container.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-hand-holding-heart mr-1"></i> รายการตรวจสอบแผนกทอมือ (รอบการตรวจ)</h4>
-                        <button type="button" onclick="addLoomRoundRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรอบตรวจ
-                        </button>
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-medium text-slate-600 mb-1">ทอที่จอไหน / เครื่องทอไหน</label>
-                        <input type="text" id="hw_loomNo" placeholder="เช่น จอที่ 2 / เครื่องทอ A1" value="${existingExtra.loomNo || ''}" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs">
-                    </div>
-                    <div id="loomRoundsContainer" class="space-y-2"></div>
-                `;
-                const rounds = existingExtra.loomRounds || [];
-                if (rounds.length === 0) addLoomRoundRow();
-                else rounds.forEach(r => addLoomRoundRow(r));
-            } else if (dept === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                container.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-indigo-700 text-xs uppercase"><i class="fa-solid fa-box-archive mr-1"></i> รายการตรวจสอบแผนกตกแต่ง / บรรจุภัณฑ์ (เพิ่มได้หลายรายการ)</h4>
-                        <button type="button" onclick="addFinishRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                        </button>
-                    </div>
-                    <div id="finishRowsContainer" class="space-y-2"></div>
-                `;
-                const items = existingExtra.items || (existingExtra.packagingInfo || existingExtra.specMatch ? [existingExtra] : []);
-                if (items.length === 0) addFinishRow();
-                else items.forEach(item => addFinishRow(item));
-            }
-        }
-
-        function addDesignRow(data = {}) {
-            const container = document.getElementById('designRowsContainer');
-            if (!container) return;
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-indigo-600">รายการลายผ้า</span>
-                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">Design ID ตรงกับ M/O ไหม?</label>
-                        <select class="row-idMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="ถูกต้องตรงกับ M/O" ${data.designIdMatch === 'ถูกต้องตรงกับ M/O' ? 'selected' : ''}>ถูกต้องตรงกับ M/O</option>
-                            <option value="ไม่ถูกต้อง" ${data.designIdMatch === 'ไม่ถูกต้อง' ? 'selected' : ''}>ไม่ถูกต้อง</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ขนาดตรงตาม PO ลูกค้าไหม?</label>
-                        <select class="row-sizeMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="ตรงตาม PO ลูกค้า" ${data.sizeMatch === 'ตรงตาม PO ลูกค้า' ? 'selected' : ''}>ตรงตาม PO ลูกค้า</option>
-                            <option value="ขนาดไม่ตรง" ${data.sizeMatch === 'ขนาดไม่ตรง' ? 'selected' : ''}>ขนาดไม่ตรง</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">โค้ดสี/จำนวนสี/รหัส</label>
-                        <input type="text" class="row-colorCheck w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ถูกต้องครบถ้วน" value="${data.colorCheck || 'ถูกต้องครบถ้วน'}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">จำนวนที่ต้องแก้ไข (ชิ้น)</label>
-                        <input type="number" class="row-fixQty w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.fixQty || 0}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">สาเหตุ/หมายเหตุย่อย</label>
-                        <input type="text" class="row-reason w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ระบุ..." value="${data.reason || ''}">
-                    </div>
-                </div>
-            `;
-            container.appendChild(rowDiv);
-        }
-
-        function addPlanRow(data = {}) {
-            const container = document.getElementById('planRowsContainer');
-            if (!container) return;
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-indigo-600">รายการวางแผน</span>
-                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">เกรดการทอ</label>
-                        <input type="text" class="row-weavingGrade w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="เกรด A" value="${data.weavingGrade || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">กำหนดเสร็จ (Due Date)</label>
-                        <input type="date" class="row-dueDate w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.dueDate || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ภาระงานพนักงาน</label>
-                        <input type="text" class="row-workload w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ช่างสมชาย 100 ตร.ม." value="${data.weaverWorkload || ''}">
-                    </div>
-                </div>
-            `;
-            container.appendChild(rowDiv);
-        }
-
-        function addDyeRow(data = {}) {
-            const container = document.getElementById('dyeRowsContainer');
-            if (!container) return;
-            // Default the row's M/O, S/O to the record's overall M/O, S/O field for convenience (still editable per row).
-            const overallMoSo = (document.getElementById('formMoSo') || {}).value || '';
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-indigo-600">รายการย้อมสี</span>
-                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5 font-semibold">เลขที่ M/O, S/O</label>
-                        <input type="text" class="row-dyeMoSo w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="เช่น M/O: 6902-01, S/O: 45001" value="${data.moSo || overallMoSo}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี</label>
-                        <input type="text" class="row-colorCode w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="เช่น B-01" value="${data.colorCode || data.codeAndQty || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">จำนวน</label>
-                        <input type="text" class="row-quantity w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="เช่น 50 กก." value="${data.quantity || ''}">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ผลการเทียบสี</label>
-                        <select class="row-colorMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="เหมือน / ผ่าน (PASS)" ${data.colorMatch === 'เหมือน / ผ่าน (PASS)' ? 'selected' : ''}>เหมือน / ผ่าน (PASS)</option>
-                            <option value="ไม่เหมือน" ${data.colorMatch === 'ไม่เหมือน' ? 'selected' : ''}>ไม่เหมือน</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">รายละเอียดแก้ไข/ผู้อนุมัติ</label>
-                        <input type="text" class="row-approver w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ชื่อผู้อนุมัติ" value="${data.approverInfo || ''}">
-                    </div>
-                </div>
-            `;
-            container.appendChild(rowDiv);
-        }
-
-        function addFinishRow(data = {}) {
-            const container = document.getElementById('finishRowsContainer');
-            if (!container) return;
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "dept-item-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-indigo-600">รายการตกแต่ง / บรรจุภัณฑ์</span>
-                    <button type="button" onclick="this.closest('.dept-item-row').remove()" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ขนาดพรม / Spec</label>
-                        <input type="text" class="row-specMatch w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ตรงตาม Spec" value="${data.specMatch || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">บรรจุภัณฑ์ & ความสะอาด</label>
-                        <input type="text" class="row-packaging w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ถุงพลาสติกหนา" value="${data.packagingInfo || ''}">
-                    </div>
-                </div>
-            `;
-            container.appendChild(rowDiv);
-        }
-
-        function addLoomRoundRow(data = {}) {
-            const container = document.getElementById('loomRoundsContainer');
-            if(!container) return;
-            const roundIndex = container.children.length + 1;
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "loom-round-row bg-white p-3 rounded-xl border border-slate-200 space-y-2 relative shadow-sm";
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-indigo-600">รอบที่ <span class="round-num">${roundIndex}</span></span>
-                    <button type="button" onclick="removeLoomRoundRow(this)" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">เริ่มตรวจกี่โมง / เสร็จกี่โมง</label>
-                        <div class="flex gap-1">
-                            <input type="time" class="round-start w-1/2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.start || ''}">
-                            <input type="time" class="round-end w-1/2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" value="${data.end || ''}">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ปัญหาที่พบ</label>
-                        <input type="text" class="round-problem w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ระบุปัญหา..." value="${data.problem || 'ไม่มีปัญหา'}">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] text-slate-500 mb-0.5">วิธีแก้ไขปัญหา</label>
-                    <input type="text" class="round-solution w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="วิธีการแก้ไข..." value="${data.solution || '-'}">
-                </div>
-            `;
-            container.appendChild(rowDiv);
-            updateLoomRoundNumbers();
-        }
-
-        function removeLoomRoundRow(btn) {
-            const row = btn.closest('.loom-round-row');
-            row.remove();
-            updateLoomRoundNumbers();
-        }
-
-        function updateLoomRoundNumbers() {
-            const rows = document.querySelectorAll('.loom-round-row');
-            rows.forEach((r, idx) => {
-                r.querySelector('.round-num').textContent = idx + 1;
-            });
-        }
-
-        function renderTable(dataToRender) {
-            const tbody = document.getElementById('qcTableBody');
-            const emptyState = document.getElementById('emptyState');
-            tbody.innerHTML = '';
-
-            if (dataToRender.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            dataToRender.forEach((item) => {
-                const originalIndex = qcData.findIndex(d => d === item);
-                
-                let badgeClass = 'bg-slate-100 text-slate-700';
-                if (item.status === 'PASS') badgeClass = 'bg-emerald-100 text-emerald-700';
-                else if (item.status === 'FAIL') badgeClass = 'bg-rose-100 text-rose-700';
-                else if (item.status === 'PENDING') badgeClass = 'bg-amber-100 text-amber-700';
-
-                let stampBadge = item.stamp === 'PASS' 
-                    ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200"><i class="fa-solid fa-check mr-1"></i> PASS</span>' 
-                    : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">-</span>';
-
-                let summaryText = '';
-                const ex = item.extraData || {};
-                if (item.department === 'ดีไซน์/ขยายลาย') {
-                    const count = ex.items ? ex.items.length : (ex.designIdMatch ? 1 : 0);
-                    summaryText = `รวม ${count} รายการลายผ้า (เช็คดีไซน์ & สี)`;
-                } else if (item.department === 'แผนกวางแผน') {
-                    const count = ex.items ? ex.items.length : (ex.weavingGrade ? 1 : 0);
-                    summaryText = `รวม ${count} รายการแผนงาน (เกรดทอ & กำหนดเสร็จ)`;
-                } else if (item.department === 'แผนกย้อม') {
-                    const dyeItems = ex.items || ((ex.codeAndQty || ex.colorCode) ? [ex] : []);
-                    const count = dyeItems.length;
-                    const codesPreview = dyeItems.map(d => d.colorCode || d.codeAndQty).filter(Boolean).join(', ');
-                    summaryText = `รวม ${count} รายการย้อมสี${codesPreview ? ` (Code: ${codesPreview})` : ''}`;
-                } else if (item.department === 'แผนกทอมือ') {
-                    const roundsCount = ex.loomRounds ? ex.loomRounds.length : 0;
-                    summaryText = `จอ: ${ex.loomNo || '-'}, ตรวจ ${roundsCount} รอบ`;
-                } else if (item.department === 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์') {
-                    const count = ex.items ? ex.items.length : (ex.packagingInfo || ex.specMatch ? 1 : 0);
-                    summaryText = `รวม ${count} รายการตกแต่ง/บรรจุภัณฑ์`;
-                } else {
-                    summaryText = item.moSo;
-                }
-
-                if (item.remark) {
-                    summaryText += ` | หมายเหตุ: ${item.remark}`;
-                }
-
-                const tr = document.createElement('tr');
-                tr.className = 'group hover:bg-slate-50/80 transition border-b border-slate-100';
-                tr.innerHTML = `
-                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
-                    <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
-                    <td class="py-3.5 px-4 font-medium text-xs">${escapeHtml(item.department)}</td>
-                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${escapeHtml(item.moSo)}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate" title="${escapeHtml(summaryText)}">${escapeHtml(summaryText)}</td>
-                    <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${escapeHtml(item.status)}</span></td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
-                    <td class="py-3.5 px-4 text-center">${stampBadge}</td>
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap action-col sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 ${isDisplayMode ? 'hidden' : ''}">
-                        <button onclick="printQCItem(${originalIndex})" class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 transition inline-flex items-center justify-center mr-1" title="ดู PDF / พิมพ์ใบตรวจสอบนี้">
-                            <i class="fa-solid fa-file-pdf text-xs"></i>
-                        </button>
-                        <button onclick="editItem(${originalIndex})" class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center mr-1" title="ดู/แก้ไข">
-                            <i class="fa-solid fa-pen-to-square text-xs"></i>
-                        </button>
-                        <button onclick="promptDeleteItem(${originalIndex})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition inline-flex items-center justify-center" title="ลบ">
-                            <i class="fa-solid fa-trash text-xs"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderSummaryTable(dataToRender) {
-            const tbody = document.getElementById('summaryTableBody');
-            const emptyState = document.getElementById('emptySummaryState');
-            const countBadge = document.getElementById('summaryCountBadge');
-            tbody.innerHTML = '';
-
-            // Group data by M/O, S/O, tracking the worst-case status per department
-            // (FAIL beats PENDING beats PASS) so multiple QC checks on the same department are handled correctly.
-            const statusRank = { FAIL: 3, PENDING: 2, PASS: 1 };
-            const summaryMap = {};
-            dataToRender.forEach(item => {
-                const key = (item.moSo || 'ไม่ระบุ M/O').trim();
-                if (!summaryMap[key]) {
-                    summaryMap[key] = {
-                        moSo: key,
-                        deptStatus: {}, // { departmentName: 'PASS' | 'FAIL' | 'PENDING' }
-                        totalChecks: 0,
-                        lastInspector: item.inspector,
-                        lastDate: item.date
-                    };
-                }
-                const rec = summaryMap[key];
-                rec.totalChecks++;
-                if (item.department) {
-                    const existing = rec.deptStatus[item.department];
-                    if (!existing || (statusRank[item.status] || 0) > (statusRank[existing] || 0)) {
-                        rec.deptStatus[item.department] = item.status;
-                    }
-                }
-                // Keep latest date/inspector if newer
-                if (item.date >= rec.lastDate) {
-                    rec.lastDate = item.date;
-                    rec.lastInspector = item.inspector;
-                }
-            });
-
-            const summaryArray = Object.values(summaryMap);
-            countBadge.textContent = `${summaryArray.length} รายการ M/O, S/O`;
-
-            if (summaryArray.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            summaryArray.forEach(sum => {
-                const passCount = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'PASS').length;
-                const failDepts = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'FAIL');
-                const percent = Math.round((passCount / ALL_DEPARTMENTS.length) * 100);
-
-                let statusBadge;
-                let barColor;
-                if (failDepts.length > 0) {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>มีจุดต้องแก้ไข (${failDepts.map(d => escapeHtml(DEPT_SHORT_LABELS[d] || d)).join(', ')})</span>`;
-                    barColor = 'bg-rose-500';
-                } else if (percent >= 100) {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>Complete 100%</span>`;
-                    barColor = 'bg-emerald-500';
-                } else {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"><i class="fa-solid fa-hourglass-half mr-1"></i>กำลังดำเนินการ ${percent}%</span>`;
-                    barColor = 'bg-amber-500';
-                }
-
-                // Per-department status chips, always in the fixed workflow order (shows which department is done / pending / not started yet)
-                const deptChipsHtml = ALL_DEPARTMENTS.map(d => {
-                    const st = sum.deptStatus[d];
-                    let chipCls = 'bg-slate-100 text-slate-400 border-slate-200';
-                    let icon = 'fa-minus';
-                    if (st === 'PASS') { chipCls = 'bg-emerald-50 text-emerald-700 border-emerald-200'; icon = 'fa-check'; }
-                    else if (st === 'FAIL') { chipCls = 'bg-rose-50 text-rose-700 border-rose-200'; icon = 'fa-xmark'; }
-                    else if (st === 'PENDING') { chipCls = 'bg-amber-50 text-amber-700 border-amber-200'; icon = 'fa-clock'; }
-                    const label = DEPT_SHORT_LABELS[d] || d;
-                    const titleText = st ? `${d} - ${st}` : `${d} - ยังไม่ตรวจ`;
-                    return `<span class="inline-flex items-center gap-1 border ${chipCls} px-2 py-0.5 rounded-md text-[11px] font-medium mr-1 mb-1" title="${escapeHtml(titleText)}"><i class="fa-solid ${icon} text-[9px]"></i>${escapeHtml(label)}</span>`;
-                }).join('');
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/85 transition border-b border-slate-100';
-                tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(sum.moSo)}</td>
-                    <td class="py-3.5 px-4 text-xs">${deptChipsHtml}</td>
-                    <td class="py-3.5 px-4">
-                        <div class="flex items-center gap-2 min-w-[110px]">
-                            <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div>
-                            </div>
-                            <span class="text-[11px] font-semibold text-slate-600 whitespace-nowrap">${percent}%</span>
-                        </div>
-                    </td>
-                    <td class="py-3.5 px-4 text-center text-xs font-semibold text-slate-700">${sum.totalChecks} ครั้ง</td>
-                    <td class="py-3.5 px-4 text-center">${statusBadge}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(sum.lastInspector || '-')}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(sum.lastDate || '-')}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        const PACKAGING_DEPARTMENT = 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์';
-
-        // Finds, per M/O S/O, the most recent packaging-department QC record — that's the one whose
-        // status/shipped-flag actually reflects whether the order is ready to ship right now (a later
-        // re-check should always supersede an older one for that same M/O, S/O).
-        function getShippingReadyList(dataToRender) {
-            const latestByMoSo = {};
-            dataToRender.forEach(item => {
-                if (item.department !== PACKAGING_DEPARTMENT) return;
-                const key = (item.moSo || 'ไม่ระบุ M/O').trim();
-                if (!latestByMoSo[key] || item.date >= latestByMoSo[key].date) {
-                    latestByMoSo[key] = item;
-                }
-            });
-            return Object.values(latestByMoSo).filter(item => item.status === 'PASS' && !(item.extraData && item.extraData.shipped));
-        }
-
-        function renderShippingTable(dataToRender) {
-            const tbody = document.getElementById('shippingTableBody');
-            const emptyState = document.getElementById('emptyShippingState');
-            const countBadge = document.getElementById('shippingListCountBadge');
-            const tabBadge = document.getElementById('shippingCountBadge');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            const readyList = getShippingReadyList(dataToRender);
-            countBadge.textContent = `${readyList.length} รายการรอส่ง`;
-            if (readyList.length > 0) {
-                tabBadge.textContent = readyList.length;
-                tabBadge.classList.remove('hidden');
-            } else {
-                tabBadge.classList.add('hidden');
-            }
-
-            if (readyList.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            readyList.forEach(item => {
-                const originalIndex = qcData.findIndex(d => d === item);
-                const ex = item.extraData || {};
-                const packItems = ex.items || ((ex.packagingInfo || ex.specMatch) ? [ex] : []);
-                const detailText = packItems.map(p => [p.specMatch, p.packagingInfo].filter(Boolean).join(' / ')).filter(Boolean).join(' | ') || '-';
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
-                tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(item.moSo)}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600 max-w-sm truncate" title="${escapeHtml(detailText)}">${escapeHtml(detailText)}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
-                    <td class="py-3.5 px-4 text-center action-col">
-                        <button onclick="promptShipItem(${originalIndex})" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition">
-                            <i class="fa-solid fa-truck-fast"></i> ยืนยันส่งแล้ว
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function promptShipItem(index) {
-            document.getElementById('shipTargetIndex').value = index;
-            document.getElementById('shipModal').classList.remove('hidden');
-        }
-
-        function closeShipModal() {
-            document.getElementById('shipModal').classList.add('hidden');
-        }
-
-        async function confirmShipItem() {
-            const index = parseInt(document.getElementById('shipTargetIndex').value);
-            closeShipModal();
-            if (isNaN(index) || index < 0 || index >= qcData.length) return;
-
-            const item = qcData[index];
-            if (!item.extraData) item.extraData = {};
-            item.extraData.shipped = true;
-            item.extraData.shippedDate = new Date().toISOString().split('T')[0];
-
-            saveToLocal();
-            initApp();
-            showToast('บันทึกการส่งมอบเรียบร้อยแล้ว ย้ายออกจากรายการรอส่งแล้ว', 'fa-truck-fast', 'text-emerald-400');
-
-            if (gasWebAppUrl) {
-                try {
-                    await fetch(gasWebAppUrl, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(item)
-                    });
-                } catch(err) {
-                    console.error("Error syncing shipped status to Google Sheet:", err);
-                }
-            }
+            productionOrders.push(order);
+            saveOrdersToLocal();
+            syncOrderToSheet(order);
+            renderProductionBoard();
+            renderProductionOverview();
+            closeNewOrderModal();
+            showToast(`เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`);
         }
 
         function updateStats() {
