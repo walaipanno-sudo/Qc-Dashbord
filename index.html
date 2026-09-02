@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -157,15 +155,15 @@
                 <button onclick="switchView('board')" id="tabBoardBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-table-columns mr-1.5"></i> แผนผังการผลิต
                 </button>
-                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
-                    <i class="fa-solid fa-list mr-1.5"></i> รายการ QC ทั้งหมด
-                </button>
                 <button onclick="switchView('summary')" id="tabSummaryBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-chart-pie mr-1.5"></i> สรุปภาพรวมตาม M/O, S/O
                 </button>
                 <button onclick="switchView('shipping')" id="tabShippingBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
                     <span id="shippingCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
+                </button>
+                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-list mr-1.5"></i> รายงาน QC ทั้งหมด
                 </button>
             </div>
 
@@ -176,7 +174,11 @@
                     </span>
                     <input type="text" id="searchInput" oninput="filterTable()" placeholder="ค้นหา ID, M/O, แผนก..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                 </div>
-                <div id="deptFilterWrapper" class="flex items-center gap-2">
+                <div id="deptFilterWrapper" class="flex items-center gap-2 flex-wrap">
+                    <input type="month" id="monthFilter" onchange="filterTable()" title="กรองตามเดือน" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="moSoFilterSelect" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[160px]">
+                        <option value="">ทุก M/O, S/O</option>
+                    </select>
                     <select id="statusFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">ทุกสถานะ</option>
                         <option value="PASS">PASS</option>
@@ -212,6 +214,7 @@
                             <th class="py-3.5 px-4">กำหนดเสร็จ</th>
                             <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
                             <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
+                            <th class="py-3.5 px-4 text-center">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="overviewTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
@@ -416,6 +419,30 @@
                 <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
                 <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่ม M/O</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Order Detail / Edit-Any-Department Modal: lets staff view & correct data for ANY department
+         stage of an M/O at any time, even after work has already moved on to a later stage. -->
+    <div id="orderDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-bold text-lg" id="orderDetailTitle">รายละเอียด M/O</h3>
+                    <p class="text-xs text-indigo-200">แก้ไขข้อมูลแผนกใดก็ได้ ตลอดเวลา แม้จะโอนงานผ่านไปแล้ว</p>
+                </div>
+                <button onclick="closeOrderDetailModal()" class="text-indigo-200 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3 shrink-0">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">กำหนดเสร็จ</label>
+                    <input type="date" id="orderDetailDueDate" onchange="updateOrderField(currentDetailOrderIndex, 'dueDate', this.value)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div id="orderDetailStepper" class="flex-grow"></div>
+            </div>
+            <div id="orderDetailBody" class="p-6 space-y-5 overflow-y-auto flex-grow text-sm"></div>
         </div>
     </div>
 
@@ -655,6 +682,7 @@
         }
 
         function initApp() {
+            populateMoSoFilterOptions();
             renderTable(qcData);
             renderSummaryTable(qcData);
             renderShippingTable(qcData);
@@ -1218,6 +1246,51 @@
 
         const PACKAGING_DEPARTMENT = 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์';
 
+        // Maps each production-pipeline stage to the QC department whose records gate the transfer
+        // out of that stage. A stage can only be handed to the next department once (a) its own work
+        // is at 100% and (b) the matching QC record for this M/O, S/O is currently PASS.
+        const STAGE_QC_DEPT = {
+            planning: 'แผนกวางแผน',
+            dyeing: 'แผนกย้อม',
+            weaving: 'แผนกทอมือ',
+            finishing: PACKAGING_DEPARTMENT
+        };
+
+        // Finds the most recent QC record for a given M/O, S/O + department (a later re-check always
+        // supersedes an older one for the same M/O, S/O — same rule used elsewhere in this file).
+        function getLatestQcForDept(moSo, dept) {
+            const key = (moSo || '').trim();
+            let latest = null;
+            qcData.forEach(d => {
+                if (d.department !== dept) return;
+                if ((d.moSo || '').trim() !== key) return;
+                if (!latest || d.date >= latest.date) latest = d;
+            });
+            return latest;
+        }
+
+        function hasQcPass(moSo, dept) {
+            const rec = getLatestQcForDept(moSo, dept);
+            return !!rec && rec.status === 'PASS';
+        }
+
+        // Small status chip shown on each stage card / detail section so staff can see at a glance
+        // whether that department's QC check has actually been recorded and passed yet.
+        function renderQcBadge(moSo, stage) {
+            const dept = STAGE_QC_DEPT[stage];
+            const rec = getLatestQcForDept(moSo, dept);
+            if (!rec) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-400 border border-slate-200"><i class="fa-solid fa-clipboard-question"></i> ยังไม่มีผล QC ${escapeHtml(dept)}</span>`;
+            }
+            if (rec.status === 'PASS') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-clipboard-check"></i> QC ${escapeHtml(dept)} ผ่านแล้ว</span>`;
+            }
+            if (rec.status === 'FAIL') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fa-solid fa-triangle-exclamation"></i> QC ${escapeHtml(dept)} ไม่ผ่าน ต้องแก้ไข</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> รอผล QC ${escapeHtml(dept)} (PENDING)</span>`;
+        }
+
         // Finds, per M/O S/O, the most recent packaging-department QC record — that's the one whose
         // status/shipped-flag actually reflects whether the order is ready to ship right now (a later
         // re-check should always supersede an older one for that same M/O, S/O).
@@ -1348,6 +1421,10 @@
             }
         }
 
+        // Converts an order coming from localStorage/Google Sheets into the current item-list-based
+        // shape. Older saved orders only had flat scalar fields per department (no "items" array) —
+        // those are migrated into a single item so no historical data is ever lost, exactly like the
+        // dye-department field migration done for QC records earlier.
         function normalizeOrder(raw) {
             const parseField = (v, fallback) => {
                 if (v && typeof v === 'object') return v;
@@ -1356,16 +1433,84 @@
                 }
                 return fallback;
             };
-            return {
+
+            const planning = Object.assign({ percent: 0, items: [] }, parseField(raw.planning, {}));
+            if (!Array.isArray(planning.items)) planning.items = [];
+            let planningMigrated = false;
+            if (planning.items.length === 0 && planning.task) {
+                planning.items = [{ task: planning.task, percent: planning.percent || 0 }];
+                planningMigrated = true;
+            }
+
+            const dyeing = Object.assign({ colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] }, parseField(raw.dyeing, {}));
+            if (!Array.isArray(dyeing.items)) dyeing.items = [];
+            let dyeingMigrated = false;
+            if (dyeing.items.length === 0 && (dyeing.colorsOrdered || dyeing.colorsCompleted)) {
+                dyeing.items = [{
+                    colorCode: '(ข้อมูลเดิม)',
+                    qty: dyeing.colorsOrdered || 0,
+                    colorsPerDay: dyeing.colorsPerDay || 0,
+                    completedQty: dyeing.colorsCompleted || 0
+                }];
+                dyeingMigrated = true;
+            }
+
+            const weaving = Object.assign({ receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [] }, parseField(raw.weaving, {}));
+            if (!Array.isArray(weaving.items)) weaving.items = [];
+            let weavingMigrated = false;
+            if (weaving.items.length === 0 && weaving.status && weaving.status !== 'waiting') {
+                weaving.items = [{ batch: '(ข้อมูลเดิม)', status: weaving.status }];
+                weavingMigrated = true;
+            }
+
+            const finishing = Object.assign({ status: 'waiting', percent: 0, items: [] }, parseField(raw.finishing, {}));
+            if (!Array.isArray(finishing.items)) finishing.items = [];
+            let finishingMigrated = false;
+            if (finishing.items.length === 0 && finishing.status && finishing.status !== 'waiting') {
+                finishing.items = [{ batch: '(ข้อมูลเดิม)', status: finishing.status }];
+                finishingMigrated = true;
+            }
+
+            const order = {
                 moSo: raw.moSo || '',
                 dueDate: normalizeDateString(raw.dueDate),
                 currentStage: ORDER_STAGES.includes(raw.currentStage) ? raw.currentStage : 'planning',
-                planning: Object.assign({ percent: 0 }, parseField(raw.planning, {})),
-                dyeing: Object.assign({ colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0 }, parseField(raw.dyeing, {})),
-                weaving: Object.assign({ receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0 }, parseField(raw.weaving, {})),
-                finishing: Object.assign({ status: 'waiting', percent: 0 }, parseField(raw.finishing, {})),
+                planning, dyeing, weaving, finishing,
                 lastUpdated: normalizeDateString(raw.lastUpdated) || ''
             };
+            // Only auto-recalculate % from items that were genuinely saved as items (new-style data).
+            // For a stage whose single item was just synthesized here from old scalar fields, keep the
+            // original saved % as-is — recalculating now would silently change a legacy order's progress
+            // reading (e.g. "in_progress" has no % of its own) the moment it's loaded. Once a person
+            // actually edits that item, the normal auto-calc takes back over from then on.
+            const migratedFlags = { planning: planningMigrated, dyeing: dyeingMigrated, weaving: weavingMigrated, finishing: finishingMigrated };
+            ORDER_STAGES.forEach(stage => {
+                if (!migratedFlags[stage]) recomputeStagePercent(order, stage);
+            });
+            return order;
+        }
+
+        // Recalculates a stage's overall % automatically from its line items ("รวมยอดให้อัตโนมัติ").
+        // If a stage has no items yet, its percent stays whatever value it already holds (manual entry),
+        // so orders created before the item-list feature keep working exactly as before.
+        function recomputeStagePercent(order, stage) {
+            const s = order[stage];
+            const items = s.items || [];
+            if (items.length === 0) return;
+
+            if (stage === 'planning') {
+                const sum = items.reduce((acc, it) => acc + (Number(it.percent) || 0), 0);
+                s.percent = Math.round(sum / items.length);
+            } else if (stage === 'dyeing') {
+                const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+                const totalDone = items.reduce((acc, it) => acc + Math.min(Number(it.completedQty) || 0, Number(it.qty) || 0), 0);
+                s.percent = totalQty > 0 ? Math.round((totalDone / totalQty) * 100) : 0;
+                s.colorsOrdered = items.length;
+                s.colorsCompleted = items.filter(it => (Number(it.qty) || 0) > 0 && (Number(it.completedQty) || 0) >= (Number(it.qty) || 0)).length;
+            } else if (stage === 'weaving' || stage === 'finishing') {
+                const doneCount = items.filter(it => it.status === 'done').length;
+                s.percent = Math.round((doneCount / items.length) * 100);
+            }
         }
 
         async function syncOrderToSheet(order) {
@@ -1381,6 +1526,63 @@
             } catch(err) {
                 console.error("Error syncing production order to Google Sheet:", err);
             }
+        }
+
+        let currentDetailOrderIndex = null; // which order's cross-department detail modal is currently open, if any
+
+        function persistOrderChange(order) {
+            order.lastUpdated = new Date().toISOString().split('T')[0];
+            saveOrdersToLocal();
+            syncOrderToSheet(order);
+        }
+
+        // Refreshes every place an order can be shown after an edit: the Kanban board, the overview
+        // table, and — if it's currently open — the cross-department detail modal for this order.
+        function rerenderOrderViews(orderIndex) {
+            renderProductionBoard();
+            renderProductionOverview();
+            if (currentDetailOrderIndex === orderIndex) {
+                renderOrderDetailModalBody(orderIndex);
+            }
+        }
+
+        // Default shape for a newly-added line item, per department stage.
+        const STAGE_ITEM_DEFAULTS = {
+            planning: { task: '', percent: 0 },
+            dyeing: { colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0 },
+            weaving: { batch: '', status: 'waiting' },
+            finishing: { batch: '', status: 'waiting' }
+        };
+
+        // Every department stage supports adding any number of line items ("แต่ละแผนกให้สามารถเพิ่ม
+        // รายการได้") — e.g. the dye department may dye several colors/batches for the same M/O — and
+        // the stage's overall % is always recalculated automatically from them.
+        function addOrderItem(orderIndex, stage) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!Array.isArray(order[stage].items)) order[stage].items = [];
+            order[stage].items.push(Object.assign({}, STAGE_ITEM_DEFAULTS[stage]));
+            recomputeStagePercent(order, stage);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function removeOrderItem(orderIndex, stage, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            order[stage].items.splice(itemIndex, 1);
+            recomputeStagePercent(order, stage);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function updateOrderItemField(orderIndex, stage, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order[stage].items[itemIndex]) return;
+            order[stage].items[itemIndex][field] = value;
+            recomputeStagePercent(order, stage);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
         }
 
         // Figures out the real current stage of an M/O, checking the existing QC/shipping data first
@@ -1429,7 +1631,7 @@
             }
 
             const today = new Date().toISOString().split('T')[0];
-            productionOrders.forEach(order => {
+            productionOrders.forEach((order, orderIndex) => {
                 const effectiveStage = getEffectiveStage(order);
                 const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
                 const dueDateHtml = order.dueDate
@@ -1443,6 +1645,11 @@
                     <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">${dueDateHtml}</td>
                     <td class="py-3.5 px-4">${renderStageStepper(effectiveStage)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.lastUpdated || '-')}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-lg transition">
+                            <i class="fa-solid fa-pen-to-square"></i> แก้ไข
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1470,87 +1677,62 @@
             });
         }
 
+        // Compact Kanban card for the CURRENT stage of an order: just a live summary (progress %,
+        // item count, QC status) plus a link into the full cross-department detail modal — where the
+        // actual line items get added/edited (also see decision: any department can be corrected there
+        // at any time, not just the one currently active).
         function buildOrderCard(order, orderIndex, stage) {
             const card = document.createElement('div');
             card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm p-3 space-y-2.5';
 
+            const percent = order[stage].percent || 0;
+            const itemCount = (order[stage].items || []).length;
+            const barColor = percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500';
+
             const headerHtml = `
-                <div>
-                    <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
-                    <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                <div class="flex justify-between items-start gap-2">
+                    <div>
+                        <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
+                        <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
+                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </button>
                 </div>
             `;
 
-            let bodyHtml = '';
-            let footerHtml = '';
+            let extraNote = '';
+            if (stage === 'weaving') {
+                const fabricOk = !!order.weaving.receivedPrintedFabric;
+                const yarnOk = !!order.weaving.yarnComplete;
+                extraNote = `<p class="text-[10px] ${fabricOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${fabricOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${fabricOk ? 'ได้รับผ้าปั๊มลายแล้ว' : 'ยังไม่ได้รับผ้าปั๊มลาย'}</p>
+                    <p class="text-[10px] ${yarnOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${yarnOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${yarnOk ? 'ไหมครบสำหรับทอแล้ว' : 'ไหมยังไม่ครบสำหรับทอ'}</p>`;
+            }
 
-            if (stage === 'planning') {
-                bodyHtml = `
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">% ความคืบหน้าวางแผน</label>
-                        <input type="number" min="0" max="100" value="${order.planning.percent || 0}" onchange="updateOrderField(${orderIndex}, 'planning.percent', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5 font-semibold">สั่งย้อมกี่สี (จำเป็นก่อนโอนงาน)</label>
-                        <input type="number" min="0" value="${order.dyeing.colorsOrdered || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsOrdered', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                `;
-                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'planning', 'dyeing')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกย้อม</button>`;
-            } else if (stage === 'dyeing') {
-                bodyHtml = `
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] text-slate-500 mb-0.5">สั่งย้อม (สี)</label>
-                            <input type="number" min="0" value="${order.dyeing.colorsOrdered || 0}" disabled class="w-full p-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมได้/วัน (สี)</label>
-                            <input type="number" min="0" value="${order.dyeing.colorsPerDay || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsPerDay', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมเสร็จแล้ว (สี)</label>
-                        <input type="number" min="0" value="${order.dyeing.colorsCompleted || 0}" onchange="updateOrderField(${orderIndex}, 'dyeing.colorsCompleted', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-indigo-500 h-2 rounded-full" style="width:${order.dyeing.percent || 0}%"></div></div>
-                        <span class="text-[11px] font-semibold text-slate-600">${order.dyeing.percent || 0}%</span>
-                    </div>
-                `;
-                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'dyeing', 'weaving')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกทอ</button>`;
-            } else if (stage === 'weaving') {
-                bodyHtml = `
-                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.receivedPrintedFabric ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.receivedPrintedFabric', this.checked)" class="rounded"> ได้รับผ้าปั๊มลายแล้ว</label>
-                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.yarnComplete ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.yarnComplete', this.checked)" class="rounded"> ไหมครบสำหรับทอ</label>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">สถานะการทอ</label>
-                        <select onchange="updateOrderField(${orderIndex}, 'weaving.status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="waiting" ${order.weaving.status === 'waiting' ? 'selected' : ''}>รอทอ</option>
-                            <option value="in_progress" ${order.weaving.status === 'in_progress' ? 'selected' : ''}>กำลังทอ</option>
-                            <option value="done" ${order.weaving.status === 'done' ? 'selected' : ''}>เสร็จแล้ว</option>
-                        </select>
-                    </div>
-                `;
-                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, 'weaving', 'finishing')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนกตกแต่ง</button>`;
-            } else if (stage === 'finishing') {
-                bodyHtml = `
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">สถานะการตกแต่ง/บรรจุ</label>
-                        <select onchange="updateOrderField(${orderIndex}, 'finishing.status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="waiting" ${order.finishing.status === 'waiting' ? 'selected' : ''}>รอแต่ง</option>
-                            <option value="in_progress" ${order.finishing.status === 'in_progress' ? 'selected' : ''}>กำลังแต่ง</option>
-                            <option value="done" ${order.finishing.status === 'done' ? 'selected' : ''}>บรรจุเสร็จแล้ว</option>
-                        </select>
-                    </div>
-                    <p class="text-[10px] text-slate-400 leading-relaxed">เมื่อบรรจุเสร็จ ให้บันทึกผล QC แผนกตกแต่ง/บรรจุภัณฑ์เป็น PASS ระบบจะย้ายไป "รายการรอส่ง" ให้อัตโนมัติ</p>
-                `;
-                footerHtml = `<button onclick="openQCModalForOrder('${order.moSo.replace(/'/g, "\\'")}', '${PACKAGING_DEPARTMENT}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์</button>`;
+            const bodyHtml = `
+                <div class="flex items-center gap-2">
+                    <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div></div>
+                    <span class="text-[11px] font-semibold text-slate-600">${percent}%</span>
+                </div>
+                <p class="text-[11px] text-slate-500">${itemCount} รายการย่อย</p>
+                ${extraNote}
+                <div>${renderQcBadge(order.moSo, stage)}</div>
+            `;
+
+            let footerHtml = '';
+            if (stage === 'finishing') {
+                footerHtml = `<button onclick="attemptOpenPackagingQc(${orderIndex})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์</button>`;
+            } else {
+                const toStage = NEXT_STAGE[stage];
+                footerHtml = `<button onclick="transferOrderStage(${orderIndex}, '${stage}', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>`;
             }
 
             card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1">${footerHtml}</div>`;
             return card;
         }
 
+        // Generic setter for the few fields that stay scalar (not itemized): due date, and the
+        // weaving prerequisite checkboxes (received printed fabric / yarn complete).
         function updateOrderField(orderIndex, path, value) {
             const order = productionOrders[orderIndex];
             if (!order) return;
@@ -1558,50 +1740,50 @@
             let obj = order;
             for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
             obj[parts[parts.length - 1]] = value;
-
-            // Convenience auto-calculations so staff don't have to compute % by hand.
-            if (path === 'dyeing.colorsCompleted' || path === 'dyeing.colorsOrdered') {
-                const d = order.dyeing;
-                d.percent = d.colorsOrdered > 0 ? Math.min(100, Math.round((d.colorsCompleted / d.colorsOrdered) * 100)) : 0;
-            }
-            if (path === 'weaving.status') {
-                order.weaving.percent = value === 'done' ? 100 : value === 'in_progress' ? 50 : 0;
-            }
-            if (path === 'finishing.status') {
-                order.finishing.percent = value === 'done' ? 100 : value === 'in_progress' ? 50 : 0;
-            }
-
-            order.lastUpdated = new Date().toISOString().split('T')[0];
-            saveOrdersToLocal();
-            syncOrderToSheet(order);
-            renderProductionBoard();
-            renderProductionOverview();
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
         }
 
+        // Strict transfer gate, per requirement: a department can only hand work to the next one once
+        // (a) its own work is at 100% and (b) that department's QC record for this M/O, S/O is PASS.
+        // Weaving additionally requires both prerequisite checkboxes to be confirmed first.
         function transferOrderStage(orderIndex, fromStage, toStage) {
             const order = productionOrders[orderIndex];
             if (!order) return;
 
-            if (fromStage === 'planning' && (!order.dyeing.colorsOrdered || order.dyeing.colorsOrdered <= 0)) {
-                showToast('กรุณาระบุจำนวนสีที่สั่งย้อมก่อนโอนงาน', 'fa-circle-exclamation', 'text-amber-400');
+            const percent = order[fromStage].percent || 0;
+            if (percent < 100) {
+                showToast(`แผนก${STAGE_LABELS[fromStage]}ยังทำงานไม่ครบ 100% (ตอนนี้ ${percent}%) ยังโอนงานไม่ได้`, 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
-            if (fromStage === 'dyeing' && order.dyeing.colorsCompleted < order.dyeing.colorsOrdered) {
-                showToast('ย้อมยังไม่ครบทุกสี ยังโอนงานไม่ได้', 'fa-circle-exclamation', 'text-amber-400');
+            if (fromStage === 'weaving' && (!order.weaving.receivedPrintedFabric || !order.weaving.yarnComplete)) {
+                showToast('กรุณายืนยันว่าได้รับผ้าปั๊มลายและไหมครบสำหรับทอแล้ว ก่อนโอนงาน', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
-            if (fromStage === 'weaving' && order.weaving.status !== 'done') {
-                showToast('ทอยังไม่เสร็จ ยังโอนงานไม่ได้', 'fa-circle-exclamation', 'text-amber-400');
+            const qcDept = STAGE_QC_DEPT[fromStage];
+            if (!hasQcPass(order.moSo, qcDept)) {
+                showToast(`ต้องมีผลตรวจ QC แผนก${qcDept} สถานะ PASS ก่อน จึงจะโอนงานได้ กรุณาบันทึกผล QC ให้ผ่านก่อน`, 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
 
             order.currentStage = toStage;
-            order.lastUpdated = new Date().toISOString().split('T')[0];
-            saveOrdersToLocal();
-            syncOrderToSheet(order);
-            renderProductionBoard();
-            renderProductionOverview();
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
             showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
+        }
+
+        // Finishing doesn't "transfer" via transferOrderStage (moving to รอส่ง/ส่งแล้ว is derived
+        // automatically once the packaging QC record is PASS) but the same 100%-complete rule still
+        // applies before that QC check can even be recorded.
+        function attemptOpenPackagingQc(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const percent = order.finishing.percent || 0;
+            if (percent < 100) {
+                showToast(`แผนกตกแต่ง/บรรจุยังทำงานไม่ครบ 100% (ตอนนี้ ${percent}%) กรุณาอัปเดตให้ครบก่อนบันทึกผล QC`, 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            openQCModalForOrder(order.moSo, PACKAGING_DEPARTMENT);
         }
 
         function openQCModalForOrder(moSo, dept) {
@@ -1636,10 +1818,10 @@
                 moSo: moSo,
                 dueDate: dueDate,
                 currentStage: 'planning',
-                planning: { percent: 0 },
-                dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0 },
-                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0 },
-                finishing: { status: 'waiting', percent: 0 },
+                planning: { percent: 0, items: [] },
+                dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] },
+                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [] },
+                finishing: { status: 'waiting', percent: 0, items: [] },
                 lastUpdated: new Date().toISOString().split('T')[0]
             };
             productionOrders.push(order);
@@ -1651,6 +1833,183 @@
             showToast(`เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`);
         }
 
+        // =========================================================================================
+        // Order Detail Modal: the single place where ANY department's data for an M/O can be viewed
+        // and corrected, at any time — even long after work has moved on to a later stage. Also where
+        // each department's repeatable line items ("รายการย่อย") get added, edited, and removed.
+        // =========================================================================================
+
+        function itemRowShell(orderIndex, stage, itemIndex, titleHtml, fieldsHtml) {
+            return `
+                <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-indigo-600">${titleHtml}</span>
+                        <button type="button" onclick="removeOrderItem(${orderIndex}, '${stage}', ${itemIndex})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    ${fieldsHtml}
+                </div>
+            `;
+        }
+
+        function renderPlanningItemsHtml(order, orderIndex) {
+            const items = order.planning.items || [];
+            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการ กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
+            return items.map((it, idx) => itemRowShell(orderIndex, 'planning', idx, `งานย่อยที่ ${idx + 1}`, `
+                <input type="text" placeholder="เช่น ตรวจสเปกลูกค้า, จัดคิวการผลิต" value="${escapeHtml(it.task || '')}" onchange="updateOrderItemField(${orderIndex}, 'planning', ${idx}, 'task', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <div class="flex items-center gap-2">
+                    <input type="range" min="0" max="100" value="${it.percent || 0}" oninput="updateOrderItemField(${orderIndex}, 'planning', ${idx}, 'percent', Number(this.value))" class="flex-grow">
+                    <span class="text-[11px] font-semibold text-slate-600 w-10 text-right">${it.percent || 0}%</span>
+                </div>
+            `)).join('');
+        }
+
+        function renderDyeingItemsHtml(order, orderIndex) {
+            const items = order.dyeing.items || [];
+            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการสี กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
+            return items.map((it, idx) => itemRowShell(orderIndex, 'dyeing', idx, `สีที่ ${idx + 1}`, `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี</label>
+                        <input type="text" placeholder="เช่น B-01" value="${escapeHtml(it.colorCode || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'colorCode', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">จำนวนที่สั่งย้อม</label>
+                        <input type="number" min="0" value="${it.qty || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'qty', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมได้/วัน</label>
+                        <input type="number" min="0" value="${it.colorsPerDay || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'colorsPerDay', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-0.5">ย้อมเสร็จแล้ว</label>
+                    <input type="number" min="0" value="${it.completedQty || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'completedQty', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+            `)).join('');
+        }
+
+        function renderWeavingItemsHtml(order, orderIndex) {
+            const items = order.weaving.items || [];
+            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการ กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
+            return items.map((it, idx) => itemRowShell(orderIndex, 'weaving', idx, `รายการที่ ${idx + 1}`, `
+                <input type="text" placeholder="เช่น จอที่ 2 / ผืนที่ 1-10" value="${escapeHtml(it.batch || '')}" onchange="updateOrderItemField(${orderIndex}, 'weaving', ${idx}, 'batch', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <select onchange="updateOrderItemField(${orderIndex}, 'weaving', ${idx}, 'status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <option value="waiting" ${it.status === 'waiting' ? 'selected' : ''}>รอทอ</option>
+                    <option value="in_progress" ${it.status === 'in_progress' ? 'selected' : ''}>กำลังทอ</option>
+                    <option value="done" ${it.status === 'done' ? 'selected' : ''}>เสร็จแล้ว</option>
+                </select>
+            `)).join('');
+        }
+
+        function renderFinishingItemsHtml(order, orderIndex) {
+            const items = order.finishing.items || [];
+            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการ กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
+            return items.map((it, idx) => itemRowShell(orderIndex, 'finishing', idx, `รายการที่ ${idx + 1}`, `
+                <input type="text" placeholder="เช่น ล็อตที่ 1 (20 ผืน)" value="${escapeHtml(it.batch || '')}" onchange="updateOrderItemField(${orderIndex}, 'finishing', ${idx}, 'batch', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <select onchange="updateOrderItemField(${orderIndex}, 'finishing', ${idx}, 'status', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <option value="waiting" ${it.status === 'waiting' ? 'selected' : ''}>รอแต่ง</option>
+                    <option value="in_progress" ${it.status === 'in_progress' ? 'selected' : ''}>กำลังแต่ง</option>
+                    <option value="done" ${it.status === 'done' ? 'selected' : ''}>บรรจุเสร็จแล้ว</option>
+                </select>
+            `)).join('');
+        }
+
+        const STAGE_ICONS = {
+            planning: 'fa-calendar-days',
+            dyeing: 'fa-droplet',
+            weaving: 'fa-hand-holding-heart',
+            finishing: 'fa-box-archive'
+        };
+        const STAGE_ITEM_RENDERERS = {
+            planning: renderPlanningItemsHtml,
+            dyeing: renderDyeingItemsHtml,
+            weaving: renderWeavingItemsHtml,
+            finishing: renderFinishingItemsHtml
+        };
+
+        // One collapsible-looking section per department stage. Editing is always allowed regardless
+        // of whether this is the order's current stage; the "โอนงานต่อ" action only appears on the
+        // stage that is actually active right now (weaving also shows its two prerequisite checkboxes,
+        // and finishing shows the QC-record button instead of a plain transfer button).
+        function renderOrderDetailStageSection(order, orderIndex, stage) {
+            const percent = order[stage].percent || 0;
+            const isCurrent = order.currentStage === stage;
+            const barColor = percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500';
+
+            let weavingChecks = '';
+            if (stage === 'weaving') {
+                weavingChecks = `
+                    <div class="flex flex-wrap gap-4 mb-2">
+                        <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.receivedPrintedFabric ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.receivedPrintedFabric', this.checked)" class="rounded"> ได้รับผ้าปั๊มลายแล้ว</label>
+                        <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.yarnComplete ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.yarnComplete', this.checked)" class="rounded"> ไหมครบสำหรับทอ</label>
+                    </div>
+                `;
+            }
+
+            let actionHtml = '';
+            if (isCurrent) {
+                if (stage === 'finishing') {
+                    actionHtml = `<button onclick="attemptOpenPackagingQc(${orderIndex})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์</button>`;
+                } else {
+                    const toStage = NEXT_STAGE[stage];
+                    actionHtml = `<button onclick="transferOrderStage(${orderIndex}, '${stage}', '${toStage}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>`;
+                }
+            }
+
+            return `
+                <div id="orderDetailSection-${stage}" class="border border-slate-200 rounded-2xl overflow-hidden ${isCurrent ? 'ring-2 ring-indigo-200' : ''}">
+                    <div class="bg-slate-50 p-3 flex flex-wrap justify-between items-center gap-2 border-b border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid ${STAGE_ICONS[stage]} text-indigo-600"></i>
+                            <span class="font-bold text-slate-700 text-sm">${escapeHtml(STAGE_LABELS[stage])}</span>
+                            ${isCurrent ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">กำลังดำเนินการอยู่</span>' : ''}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${renderQcBadge(order.moSo, stage)}
+                            <button type="button" onclick="addOrderItem(${orderIndex}, '${stage}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                                <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div></div>
+                            <span class="text-[11px] font-semibold text-slate-600 w-10 text-right">${percent}%</span>
+                        </div>
+                        ${weavingChecks}
+                        <div class="space-y-2">${STAGE_ITEM_RENDERERS[stage](order, orderIndex)}</div>
+                        ${actionHtml ? `<div class="pt-2 flex justify-end">${actionHtml}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOrderDetailModalBody(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            document.getElementById('orderDetailTitle').textContent = `รายละเอียด M/O, S/O: ${order.moSo}`;
+            document.getElementById('orderDetailDueDate').value = order.dueDate || '';
+            document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order));
+            document.getElementById('orderDetailBody').innerHTML = ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
+        }
+
+        function openOrderDetailModal(orderIndex, focusStage) {
+            currentDetailOrderIndex = orderIndex;
+            renderOrderDetailModalBody(orderIndex);
+            document.getElementById('orderDetailModal').classList.remove('hidden');
+            if (focusStage) {
+                setTimeout(() => {
+                    const el = document.getElementById(`orderDetailSection-${focusStage}`);
+                    if (el) el.scrollIntoView({ block: 'nearest' });
+                }, 50);
+            }
+        }
+
+        function closeOrderDetailModal() {
+            currentDetailOrderIndex = null;
+            document.getElementById('orderDetailModal').classList.add('hidden');
+        }
+
         function updateStats() {
             document.getElementById('stat-total').textContent = qcData.length;
             document.getElementById('stat-pass').textContent = qcData.filter(d => d.status === 'PASS').length;
@@ -1658,10 +2017,23 @@
             document.getElementById('stat-pending').textContent = qcData.filter(d => d.status === 'PENDING').length;
         }
 
+        // Fills the M/O, S/O dropdown filter (records tab) with every distinct M/O currently in qcData,
+        // preserving whichever value is already selected if it still exists.
+        function populateMoSoFilterOptions() {
+            const select = document.getElementById('moSoFilterSelect');
+            if (!select) return;
+            const current = select.value;
+            const uniqueMoSo = Array.from(new Set(qcData.map(d => (d.moSo || '').trim()).filter(Boolean))).sort();
+            select.innerHTML = '<option value="">ทุก M/O, S/O</option>' + uniqueMoSo.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+            if (uniqueMoSo.includes(current)) select.value = current;
+        }
+
         function filterTable() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const statusVal = document.getElementById('statusFilter').value;
             const deptVal = document.getElementById('deptFilter').value;
+            const monthVal = document.getElementById('monthFilter') ? document.getElementById('monthFilter').value : '';
+            const moSoVal = document.getElementById('moSoFilterSelect') ? document.getElementById('moSoFilterSelect').value : '';
 
             const filtered = qcData.filter(item => {
                 const matchQuery = String(item.id).toLowerCase().includes(query) ||
@@ -1669,11 +2041,13 @@
                                    String(item.department).toLowerCase().includes(query) ||
                                    String(item.inspector).toLowerCase().includes(query) ||
                                    String(item.remark || '').toLowerCase().includes(query);
-                
+
                 const matchStatus = statusVal === '' || item.status === statusVal;
                 const matchDept = deptVal === '' || item.department === deptVal;
+                const matchMonth = monthVal === '' || String(item.date || '').startsWith(monthVal);
+                const matchMoSo = moSoVal === '' || (item.moSo || '').trim() === moSoVal;
 
-                return matchQuery && matchStatus && matchDept;
+                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo;
             });
 
             renderTable(filtered);
@@ -1685,6 +2059,8 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('deptFilter').value = '';
+            if (document.getElementById('monthFilter')) document.getElementById('monthFilter').value = '';
+            if (document.getElementById('moSoFilterSelect')) document.getElementById('moSoFilterSelect').value = '';
             renderTable(qcData);
             renderSummaryTable(qcData);
             renderShippingTable(qcData);
