@@ -38,7 +38,7 @@
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
-            #recordsViewContainer, #summaryViewContainer { box-shadow: none !important; border: none !important; }
+            #recordsViewContainer { box-shadow: none !important; border: none !important; }
             .print-only-header { display: block !important; text-align: center; margin-bottom: 16px; }
             .print-only-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
             .print-only-header p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
@@ -155,15 +155,12 @@
                 <button onclick="switchView('board')" id="tabBoardBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-table-columns mr-1.5"></i> แผนผังการผลิต
                 </button>
-                <button onclick="switchView('summary')" id="tabSummaryBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
-                    <i class="fa-solid fa-chart-pie mr-1.5"></i> สรุปภาพรวมตาม M/O, S/O
+                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-list mr-1.5"></i> รายงาน QC ทั้งหมด
                 </button>
                 <button onclick="switchView('shipping')" id="tabShippingBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
                     <span id="shippingCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
-                </button>
-                <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
-                    <i class="fa-solid fa-list mr-1.5"></i> รายงาน QC ทั้งหมด
                 </button>
             </div>
 
@@ -210,7 +207,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O</th>
+                            <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
                             <th class="py-3.5 px-4">กำหนดเสร็จ</th>
                             <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
                             <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
@@ -301,38 +298,6 @@
             </div>
         </div>
 
-        <!-- M/O, S/O Summary View Table -->
-        <div id="summaryViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-chart-pie mr-2 text-indigo-600"></i> สรุปสถานะความคืบหน้าการผลิตและ QC แยกตามหมายเลข M/O, S/O</h3>
-                <span id="summaryCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full">0 รายการ M/O, S/O</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">สถานะแต่ละแผนก</th>
-                            <th class="py-3.5 px-4">ความคืบหน้า</th>
-                            <th class="py-3.5 px-4 text-center">จำนวนครั้งที่ตรวจ</th>
-                            <th class="py-3.5 px-4 text-center">สถานะภาพรวม</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบล่าสุด</th>
-                            <th class="py-3.5 px-4">วันที่อัปเดตล่าสุด</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summaryTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Summary rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty Summary State -->
-            <div id="emptySummaryState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-chart-simple"></i>
-                </div>
-                <p class="text-slate-500 font-medium">ยังไม่มีข้อมูล M/O, S/O ในระบบ</p>
-            </div>
-        </div>
 
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
@@ -412,6 +377,14 @@
                 <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อลูกค้า</label>
+                <input type="text" id="newOrderCustomerName" placeholder="เช่น บริษัท เอบีซี จำกัด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า</label>
+                <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
                 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">กำหนดเสร็จ</label>
                 <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
@@ -435,7 +408,19 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3 shrink-0">
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-end gap-3 shrink-0">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">M/O, S/O</label>
+                    <p id="orderDetailMoSoLabel" class="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs font-mono font-bold text-indigo-700"></p>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชื่อลูกค้า</label>
+                    <input type="text" id="orderDetailCustomerName" onchange="updateOrderField(currentDetailOrderIndex, 'customerName', this.value)" placeholder="ชื่อลูกค้า" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs w-40">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">PO ลูกค้า</label>
+                    <input type="text" id="orderDetailCustomerPO" onchange="updateOrderField(currentDetailOrderIndex, 'customerPO', this.value)" placeholder="PO ลูกค้า" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs w-36">
+                </div>
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">กำหนดเสร็จ</label>
                     <input type="date" id="orderDetailDueDate" onchange="updateOrderField(currentDetailOrderIndex, 'dueDate', this.value)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
@@ -578,16 +563,6 @@
     <div id="printArea"></div>
 
     <script>
-        // Fixed production workflow: an M/O, S/O is only "Complete 100%" once it has PASSed every one of these departments.
-        const ALL_DEPARTMENTS = ['ดีไซน์/ขยายลาย', 'แผนกวางแผน', 'แผนกย้อม', 'แผนกทอมือ', 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์'];
-        const DEPT_SHORT_LABELS = {
-            'ดีไซน์/ขยายลาย': 'ดีไซน์',
-            'แผนกวางแผน': 'วางแผน',
-            'แผนกย้อม': 'ย้อม',
-            'แผนกทอมือ': 'ทอมือ',
-            'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์': 'ตกแต่ง/บรรจุ'
-        };
-
         // Normalizes a date value coming back from Google Sheets/Apps Script into a plain "YYYY-MM-DD" string.
         // Google Sheets can return dates as ISO strings ("2026-08-31T00:00:00.000Z") or as a full JS Date
         // toString() ("Mon Aug 31 2026 00:00:00 GMT+0700 ...") depending on the Apps Script code — handle both.
@@ -684,7 +659,6 @@
         function initApp() {
             populateMoSoFilterOptions();
             renderTable(qcData);
-            renderSummaryTable(qcData);
             renderShippingTable(qcData);
             renderProductionOverview();
             renderProductionBoard();
@@ -697,7 +671,6 @@
                 overview: { btn: 'tabOverviewBtn', container: 'overviewViewContainer' },
                 board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
-                summary: { btn: 'tabSummaryBtn', container: 'summaryViewContainer' },
                 shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
@@ -714,7 +687,6 @@
             const deptFilterWrapper = document.getElementById('deptFilterWrapper');
             deptFilterWrapper.classList.toggle('hidden', view !== 'records');
 
-            if (view === 'summary') renderSummaryTable(qcData);
             if (view === 'shipping') renderShippingTable(qcData);
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
@@ -1145,105 +1117,6 @@
             });
         }
 
-        function renderSummaryTable(dataToRender) {
-            const tbody = document.getElementById('summaryTableBody');
-            const emptyState = document.getElementById('emptySummaryState');
-            const countBadge = document.getElementById('summaryCountBadge');
-            tbody.innerHTML = '';
-
-            // Group data by M/O, S/O, tracking the worst-case status per department
-            // (FAIL beats PENDING beats PASS) so multiple QC checks on the same department are handled correctly.
-            const statusRank = { FAIL: 3, PENDING: 2, PASS: 1 };
-            const summaryMap = {};
-            dataToRender.forEach(item => {
-                const key = (item.moSo || 'ไม่ระบุ M/O').trim();
-                if (!summaryMap[key]) {
-                    summaryMap[key] = {
-                        moSo: key,
-                        deptStatus: {}, // { departmentName: 'PASS' | 'FAIL' | 'PENDING' }
-                        totalChecks: 0,
-                        lastInspector: item.inspector,
-                        lastDate: item.date
-                    };
-                }
-                const rec = summaryMap[key];
-                rec.totalChecks++;
-                if (item.department) {
-                    const existing = rec.deptStatus[item.department];
-                    if (!existing || (statusRank[item.status] || 0) > (statusRank[existing] || 0)) {
-                        rec.deptStatus[item.department] = item.status;
-                    }
-                }
-                // Keep latest date/inspector if newer
-                if (item.date >= rec.lastDate) {
-                    rec.lastDate = item.date;
-                    rec.lastInspector = item.inspector;
-                }
-            });
-
-            const summaryArray = Object.values(summaryMap);
-            countBadge.textContent = `${summaryArray.length} รายการ M/O, S/O`;
-
-            if (summaryArray.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            summaryArray.forEach(sum => {
-                const passCount = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'PASS').length;
-                const failDepts = ALL_DEPARTMENTS.filter(d => sum.deptStatus[d] === 'FAIL');
-                const percent = Math.round((passCount / ALL_DEPARTMENTS.length) * 100);
-
-                let statusBadge;
-                let barColor;
-                if (failDepts.length > 0) {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>มีจุดต้องแก้ไข (${failDepts.map(d => escapeHtml(DEPT_SHORT_LABELS[d] || d)).join(', ')})</span>`;
-                    barColor = 'bg-rose-500';
-                } else if (percent >= 100) {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>Complete 100%</span>`;
-                    barColor = 'bg-emerald-500';
-                } else {
-                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"><i class="fa-solid fa-hourglass-half mr-1"></i>กำลังดำเนินการ ${percent}%</span>`;
-                    barColor = 'bg-amber-500';
-                }
-
-                // Per-department status chips, always in the fixed workflow order (shows which department is done / pending / not started yet)
-                const deptChipsHtml = ALL_DEPARTMENTS.map(d => {
-                    const st = sum.deptStatus[d];
-                    let chipCls = 'bg-slate-100 text-slate-400 border-slate-200';
-                    let icon = 'fa-minus';
-                    if (st === 'PASS') { chipCls = 'bg-emerald-50 text-emerald-700 border-emerald-200'; icon = 'fa-check'; }
-                    else if (st === 'FAIL') { chipCls = 'bg-rose-50 text-rose-700 border-rose-200'; icon = 'fa-xmark'; }
-                    else if (st === 'PENDING') { chipCls = 'bg-amber-50 text-amber-700 border-amber-200'; icon = 'fa-clock'; }
-                    const label = DEPT_SHORT_LABELS[d] || d;
-                    const titleText = st ? `${d} - ${st}` : `${d} - ยังไม่ตรวจ`;
-                    return `<span class="inline-flex items-center gap-1 border ${chipCls} px-2 py-0.5 rounded-md text-[11px] font-medium mr-1 mb-1" title="${escapeHtml(titleText)}"><i class="fa-solid ${icon} text-[9px]"></i>${escapeHtml(label)}</span>`;
-                }).join('');
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/85 transition border-b border-slate-100';
-                tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(sum.moSo)}</td>
-                    <td class="py-3.5 px-4 text-xs">${deptChipsHtml}</td>
-                    <td class="py-3.5 px-4">
-                        <div class="flex items-center gap-2 min-w-[110px]">
-                            <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div>
-                            </div>
-                            <span class="text-[11px] font-semibold text-slate-600 whitespace-nowrap">${percent}%</span>
-                        </div>
-                    </td>
-                    <td class="py-3.5 px-4 text-center text-xs font-semibold text-slate-700">${sum.totalChecks} ครั้ง</td>
-                    <td class="py-3.5 px-4 text-center">${statusBadge}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(sum.lastInspector || '-')}</td>
-                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(sum.lastDate || '-')}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
         const PACKAGING_DEPARTMENT = 'แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์';
 
         // Maps each production-pipeline stage to the QC department whose records gate the transfer
@@ -1434,13 +1307,25 @@
                 return fallback;
             };
 
-            const planning = Object.assign({ percent: 0, items: [] }, parseField(raw.planning, {}));
-            if (!Array.isArray(planning.items)) planning.items = [];
-            let planningMigrated = false;
-            if (planning.items.length === 0 && planning.task) {
-                planning.items = [{ task: planning.task, percent: planning.percent || 0 }];
-                planningMigrated = true;
+            // Planning is a fixed 2-step checklist (คำนวณสเปคแล้ว / ลงแผนงานแล้ว), not a repeatable
+            // item list like the other departments — ticking both means the department is 100% done.
+            const planningRaw = parseField(raw.planning, {});
+            const planning = {
+                specDone: !!planningRaw.specDone,
+                planEntered: !!planningRaw.planEntered,
+                percent: 0
+            };
+            if (!('specDone' in planningRaw) && !('planEntered' in planningRaw)) {
+                // Migrating from an older shape (plain %, or the short-lived item-list version):
+                // preserve the gist of the old progress without inventing data that was never entered.
+                const items = Array.isArray(planningRaw.items) ? planningRaw.items : [];
+                const oldPercent = items.length > 0
+                    ? Math.round(items.reduce((acc, it) => acc + (Number(it.percent) || 0), 0) / items.length)
+                    : (Number(planningRaw.percent) || 0);
+                if (oldPercent >= 100) { planning.specDone = true; planning.planEntered = true; }
+                else if (oldPercent > 0) { planning.specDone = true; }
             }
+            recomputePlanningPercent(planning);
 
             const dyeing = Object.assign({ colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] }, parseField(raw.dyeing, {}));
             if (!Array.isArray(dyeing.items)) dyeing.items = [];
@@ -1473,6 +1358,8 @@
 
             const order = {
                 moSo: raw.moSo || '',
+                customerName: raw.customerName || '',
+                customerPO: raw.customerPO || '',
                 dueDate: normalizeDateString(raw.dueDate),
                 currentStage: ORDER_STAGES.includes(raw.currentStage) ? raw.currentStage : 'planning',
                 planning, dyeing, weaving, finishing,
@@ -1483,11 +1370,31 @@
             // original saved % as-is — recalculating now would silently change a legacy order's progress
             // reading (e.g. "in_progress" has no % of its own) the moment it's loaded. Once a person
             // actually edits that item, the normal auto-calc takes back over from then on.
-            const migratedFlags = { planning: planningMigrated, dyeing: dyeingMigrated, weaving: weavingMigrated, finishing: finishingMigrated };
-            ORDER_STAGES.forEach(stage => {
+            const migratedFlags = { dyeing: dyeingMigrated, weaving: weavingMigrated, finishing: finishingMigrated };
+            ['dyeing', 'weaving', 'finishing'].forEach(stage => {
                 if (!migratedFlags[stage]) recomputeStagePercent(order, stage);
             });
             return order;
+        }
+
+        // Planning's % is simply how many of its 2 fixed checklist steps are ticked.
+        function recomputePlanningPercent(planning) {
+            const done = (planning.specDone ? 1 : 0) + (planning.planEntered ? 1 : 0);
+            planning.percent = Math.round((done / 2) * 100);
+        }
+
+        // A count-based progress summary ("เสร็จแล้ว X/Y รายการ") shown instead of a numeric % —
+        // the underlying % is still tracked internally (see recomputeStagePercent /
+        // recomputePlanningPercent) and still used to gate transfers, it's just not displayed anymore.
+        function stageProgressText(order, stage) {
+            if (stage === 'planning') {
+                const done = (order.planning.specDone ? 1 : 0) + (order.planning.planEntered ? 1 : 0);
+                return `เสร็จแล้ว ${done}/2 ขั้นตอน`;
+            }
+            const items = order[stage].items || [];
+            if (items.length === 0) return 'ยังไม่มีรายการ';
+            const doneCount = stage === 'dyeing' ? (order.dyeing.colorsCompleted || 0) : items.filter(it => it.status === 'done').length;
+            return `เสร็จแล้ว ${doneCount}/${items.length} รายการ`;
         }
 
         // Recalculates a stage's overall % automatically from its line items ("รวมยอดให้อัตโนมัติ").
@@ -1498,10 +1405,7 @@
             const items = s.items || [];
             if (items.length === 0) return;
 
-            if (stage === 'planning') {
-                const sum = items.reduce((acc, it) => acc + (Number(it.percent) || 0), 0);
-                s.percent = Math.round(sum / items.length);
-            } else if (stage === 'dyeing') {
+            if (stage === 'dyeing') {
                 const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
                 const totalDone = items.reduce((acc, it) => acc + Math.min(Number(it.completedQty) || 0, Number(it.qty) || 0), 0);
                 s.percent = totalQty > 0 ? Math.round((totalDone / totalQty) * 100) : 0;
@@ -1546,17 +1450,17 @@
             }
         }
 
-        // Default shape for a newly-added line item, per department stage.
+        // Default shape for a newly-added line item, per department stage. Planning has no item list —
+        // it's a fixed 2-step checklist handled separately (see recomputePlanningPercent).
         const STAGE_ITEM_DEFAULTS = {
-            planning: { task: '', percent: 0 },
             dyeing: { colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0 },
             weaving: { batch: '', status: 'waiting' },
             finishing: { batch: '', status: 'waiting' }
         };
 
-        // Every department stage supports adding any number of line items ("แต่ละแผนกให้สามารถเพิ่ม
-        // รายการได้") — e.g. the dye department may dye several colors/batches for the same M/O — and
-        // the stage's overall % is always recalculated automatically from them.
+        // Dyeing, weaving and finishing support adding any number of line items ("แต่ละแผนกให้สามารถ
+        // เพิ่มรายการได้") — e.g. the dye department may dye several colors/batches for the same M/O —
+        // and the stage's overall % is always recalculated automatically from them.
         function addOrderItem(orderIndex, stage) {
             const order = productionOrders[orderIndex];
             if (!order) return;
@@ -1638,10 +1542,17 @@
                     ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
                     : '<span class="text-slate-400">-</span>';
 
+                const customerLineHtml = (order.customerName || order.customerPO)
+                    ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName || '-')}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>`
+                    : '';
+
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</td>
+                    <td class="py-3.5 px-4">
+                        <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
+                        ${customerLineHtml}
+                    </td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">${dueDateHtml}</td>
                     <td class="py-3.5 px-4">${renderStageStepper(effectiveStage)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.lastUpdated || '-')}</td>
@@ -1677,22 +1588,21 @@
             });
         }
 
-        // Compact Kanban card for the CURRENT stage of an order: just a live summary (progress %,
-        // item count, QC status) plus a link into the full cross-department detail modal — where the
-        // actual line items get added/edited (also see decision: any department can be corrected there
-        // at any time, not just the one currently active).
+        // Compact Kanban card for the CURRENT stage of an order: just a live summary (done-count, QC
+        // status — no numeric % anymore) plus a link into the full cross-department detail modal —
+        // where the actual line items get added/edited (any department can be corrected there at any
+        // time, not just the one currently active).
         function buildOrderCard(order, orderIndex, stage) {
             const card = document.createElement('div');
             card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm p-3 space-y-2.5';
-
             const percent = order[stage].percent || 0;
-            const itemCount = (order[stage].items || []).length;
-            const barColor = percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500';
+            const complete = percent >= 100;
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
                     <div>
                         <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
                     <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
@@ -1701,21 +1611,24 @@
                 </div>
             `;
 
-            let extraNote = '';
-            if (stage === 'weaving') {
+            let mainHtml = '';
+            if (stage === 'planning') {
+                mainHtml = `
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded"> คำนวณสเปคแล้ว</label>
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded"> ลงแผนงานแล้ว</label>
+                `;
+            } else if (stage === 'weaving') {
                 const fabricOk = !!order.weaving.receivedPrintedFabric;
                 const yarnOk = !!order.weaving.yarnComplete;
-                extraNote = `<p class="text-[10px] ${fabricOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${fabricOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${fabricOk ? 'ได้รับผ้าปั๊มลายแล้ว' : 'ยังไม่ได้รับผ้าปั๊มลาย'}</p>
-                    <p class="text-[10px] ${yarnOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${yarnOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${yarnOk ? 'ไหมครบสำหรับทอแล้ว' : 'ไหมยังไม่ครบสำหรับทอ'}</p>`;
+                mainHtml = `
+                    <p class="text-[10px] ${fabricOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${fabricOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${fabricOk ? 'ได้รับผ้าปั๊มลายแล้ว' : 'ยังไม่ได้รับผ้าปั๊มลาย'}</p>
+                    <p class="text-[10px] ${yarnOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${yarnOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${yarnOk ? 'ไหมครบสำหรับทอแล้ว' : 'ไหมยังไม่ครบสำหรับทอ'}</p>
+                `;
             }
 
             const bodyHtml = `
-                <div class="flex items-center gap-2">
-                    <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div></div>
-                    <span class="text-[11px] font-semibold text-slate-600">${percent}%</span>
-                </div>
-                <p class="text-[11px] text-slate-500">${itemCount} รายการย่อย</p>
-                ${extraNote}
+                ${mainHtml}
+                <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
                 <div>${renderQcBadge(order.moSo, stage)}</div>
             `;
 
@@ -1731,8 +1644,9 @@
             return card;
         }
 
-        // Generic setter for the few fields that stay scalar (not itemized): due date, and the
-        // weaving prerequisite checkboxes (received printed fabric / yarn complete).
+        // Generic setter for the few fields that stay scalar (not itemized): due date, the planning
+        // checklist's two checkboxes, and the weaving prerequisite checkboxes (received printed fabric
+        // / yarn complete).
         function updateOrderField(orderIndex, path, value) {
             const order = productionOrders[orderIndex];
             if (!order) return;
@@ -1740,6 +1654,9 @@
             let obj = order;
             for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
             obj[parts[parts.length - 1]] = value;
+            if (path === 'planning.specDone' || path === 'planning.planEntered') {
+                recomputePlanningPercent(order.planning);
+            }
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
         }
@@ -1795,6 +1712,8 @@
 
         function openNewOrderModal() {
             document.getElementById('newOrderMoSo').value = '';
+            document.getElementById('newOrderCustomerName').value = '';
+            document.getElementById('newOrderCustomerPO').value = '';
             document.getElementById('newOrderDueDate').value = '';
             document.getElementById('newOrderModal').classList.remove('hidden');
         }
@@ -1805,6 +1724,8 @@
 
         function submitNewOrder() {
             const moSo = document.getElementById('newOrderMoSo').value.trim();
+            const customerName = document.getElementById('newOrderCustomerName').value.trim();
+            const customerPO = document.getElementById('newOrderCustomerPO').value.trim();
             const dueDate = document.getElementById('newOrderDueDate').value;
             if (!moSo) {
                 showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
@@ -1816,9 +1737,11 @@
             }
             const order = {
                 moSo: moSo,
+                customerName: customerName,
+                customerPO: customerPO,
                 dueDate: dueDate,
                 currentStage: 'planning',
-                planning: { percent: 0, items: [] },
+                planning: { specDone: false, planEntered: false, percent: 0 },
                 dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] },
                 weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [] },
                 finishing: { status: 'waiting', percent: 0, items: [] },
@@ -1851,16 +1774,13 @@
             `;
         }
 
-        function renderPlanningItemsHtml(order, orderIndex) {
-            const items = order.planning.items || [];
-            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการ กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
-            return items.map((it, idx) => itemRowShell(orderIndex, 'planning', idx, `งานย่อยที่ ${idx + 1}`, `
-                <input type="text" placeholder="เช่น ตรวจสเปกลูกค้า, จัดคิวการผลิต" value="${escapeHtml(it.task || '')}" onchange="updateOrderItemField(${orderIndex}, 'planning', ${idx}, 'task', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                <div class="flex items-center gap-2">
-                    <input type="range" min="0" max="100" value="${it.percent || 0}" oninput="updateOrderItemField(${orderIndex}, 'planning', ${idx}, 'percent', Number(this.value))" class="flex-grow">
-                    <span class="text-[11px] font-semibold text-slate-600 w-10 text-right">${it.percent || 0}%</span>
-                </div>
-            `)).join('');
+        // Planning is a fixed 2-step checklist (not a repeatable item list): "คำนวณสเปคแล้ว" and
+        // "ลงแผนงานแล้ว" — ticking both makes the department 100% complete.
+        function renderPlanningChecklistHtml(order, orderIndex) {
+            return `
+                <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded w-4 h-4"> คำนวณสเปคแล้ว</label>
+                <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded w-4 h-4"> ลงแผนงานแล้ว</label>
+            `;
         }
 
         function renderDyeingItemsHtml(order, orderIndex) {
@@ -1921,7 +1841,6 @@
             finishing: 'fa-box-archive'
         };
         const STAGE_ITEM_RENDERERS = {
-            planning: renderPlanningItemsHtml,
             dyeing: renderDyeingItemsHtml,
             weaving: renderWeavingItemsHtml,
             finishing: renderFinishingItemsHtml
@@ -1930,11 +1849,13 @@
         // One collapsible-looking section per department stage. Editing is always allowed regardless
         // of whether this is the order's current stage; the "โอนงานต่อ" action only appears on the
         // stage that is actually active right now (weaving also shows its two prerequisite checkboxes,
-        // and finishing shows the QC-record button instead of a plain transfer button).
+        // and finishing shows the QC-record button instead of a plain transfer button). Planning shows
+        // its fixed 2-step checklist instead of an add-item list; the other 3 stages keep the
+        // repeatable item list with an "+ เพิ่มรายการ" button.
         function renderOrderDetailStageSection(order, orderIndex, stage) {
             const percent = order[stage].percent || 0;
+            const complete = percent >= 100;
             const isCurrent = order.currentStage === stage;
-            const barColor = percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500';
 
             let weavingChecks = '';
             if (stage === 'weaving') {
@@ -1945,6 +1866,16 @@
                     </div>
                 `;
             }
+
+            const bodyContentHtml = stage === 'planning'
+                ? `<div class="space-y-2">${renderPlanningChecklistHtml(order, orderIndex)}</div>`
+                : `<div class="space-y-2">${STAGE_ITEM_RENDERERS[stage](order, orderIndex)}</div>`;
+
+            const addItemBtnHtml = stage === 'planning' ? '' : `
+                <button type="button" onclick="addOrderItem(${orderIndex}, '${stage}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
+                    <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                </button>
+            `;
 
             let actionHtml = '';
             if (isCurrent) {
@@ -1966,18 +1897,13 @@
                         </div>
                         <div class="flex items-center gap-2">
                             ${renderQcBadge(order.moSo, stage)}
-                            <button type="button" onclick="addOrderItem(${orderIndex}, '${stage}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
-                                <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                            </button>
+                            ${addItemBtnHtml}
                         </div>
                     </div>
                     <div class="p-3 space-y-2">
-                        <div class="flex items-center gap-2">
-                            <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden"><div class="${barColor} h-2 rounded-full" style="width:${percent}%"></div></div>
-                            <span class="text-[11px] font-semibold text-slate-600 w-10 text-right">${percent}%</span>
-                        </div>
+                        <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
                         ${weavingChecks}
-                        <div class="space-y-2">${STAGE_ITEM_RENDERERS[stage](order, orderIndex)}</div>
+                        ${bodyContentHtml}
                         ${actionHtml ? `<div class="pt-2 flex justify-end">${actionHtml}</div>` : ''}
                     </div>
                 </div>
@@ -1988,6 +1914,9 @@
             const order = productionOrders[orderIndex];
             if (!order) return;
             document.getElementById('orderDetailTitle').textContent = `รายละเอียด M/O, S/O: ${order.moSo}`;
+            document.getElementById('orderDetailMoSoLabel').textContent = order.moSo || '-';
+            document.getElementById('orderDetailCustomerName').value = order.customerName || '';
+            document.getElementById('orderDetailCustomerPO').value = order.customerPO || '';
             document.getElementById('orderDetailDueDate').value = order.dueDate || '';
             document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order));
             document.getElementById('orderDetailBody').innerHTML = ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
@@ -2051,7 +1980,6 @@
             });
 
             renderTable(filtered);
-            renderSummaryTable(filtered);
             renderShippingTable(filtered);
         }
 
@@ -2062,7 +1990,6 @@
             if (document.getElementById('monthFilter')) document.getElementById('monthFilter').value = '';
             if (document.getElementById('moSoFilterSelect')) document.getElementById('moSoFilterSelect').value = '';
             renderTable(qcData);
-            renderSummaryTable(qcData);
             renderShippingTable(qcData);
         }
 
