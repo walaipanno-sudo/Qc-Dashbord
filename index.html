@@ -38,7 +38,7 @@
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
-            #recordsViewContainer, #recordsViewContainer > div { box-shadow: none !important; border: none !important; }
+            #recordsViewContainer, #shippedViewContainer { box-shadow: none !important; border: none !important; }
             .print-only-header { display: block !important; text-align: center; margin-bottom: 16px; }
             .print-only-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
             .print-only-header p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
@@ -162,6 +162,9 @@
                     <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
                     <span id="shippingCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
                 </button>
+                <button onclick="switchView('shipped')" id="tabShippedBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition">
+                    <i class="fa-solid fa-box-archive mr-1.5"></i> จัดส่งเรียบร้อยแล้ว
+                </button>
             </div>
 
             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
@@ -201,6 +204,12 @@
              number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
              together in one list. -->
         <div id="overviewViewContainer" class="space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
+                <div class="relative w-full sm:w-80">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="overviewSearchInput" oninput="renderProductionOverview()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทั้งสองกรอบ)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-industry mr-2 text-indigo-600"></i> M/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
@@ -227,7 +236,7 @@
                     <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
                         <i class="fa-solid fa-industry"></i>
                     </div>
-                    <p class="text-slate-500 font-medium">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                    <p id="emptyOverviewMoStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ &quot;แผนผังการผลิต&quot;">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
                 </div>
             </div>
 
@@ -257,7 +266,7 @@
                     <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
                         <i class="fa-solid fa-swatchbook"></i>
                     </div>
-                    <p class="text-slate-500 font-medium">ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                    <p id="emptyOverviewSoStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ &quot;แผนผังการผลิต&quot;">ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
                 </div>
             </div>
         </div>
@@ -302,67 +311,71 @@
             </div>
         </div>
 
-        <!-- Records View: QC department home — full QC audit trail, plus (below) the read-only
-             archive of M/O, S/O that have been confirmed shipped and removed from the main
-             Overview/Board working views. Shipped orders stay visible here so QC keeps full history. -->
-        <div id="recordsViewContainer" class="space-y-4 hidden">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-box-archive mr-2 text-emerald-600"></i> คลัง M/O, S/O ที่ยืนยันส่งมอบแล้ว (สำหรับแผนก QC)</h3>
-                    <span id="qcArchiveCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 รายการ</span>
-                </div>
-                <p class="px-4 pt-3 text-[11px] text-slate-400">เมื่อยืนยันการจัดส่งแล้ว M/O, S/O จะถูกย้ายออกจากแท็บ "ภาพรวมการผลิต" และ "แผนผังการผลิต" อัตโนมัติ มาอยู่ที่นี่แทน ยังเปิดดู/แก้ไข/ลบได้ตามปกติ</p>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                                <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
-                                <th class="py-3.5 px-4">วันที่ส่งมอบ</th>
-                                <th class="py-3.5 px-4">กำหนดเสร็จเดิม</th>
-                                <th class="py-3.5 px-4 text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="qcArchiveTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                            <!-- Shipped orders injected via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="emptyQcArchiveState" class="hidden py-10 text-center">
-                    <p class="text-slate-400 text-xs font-medium">ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว</p>
-                </div>
+        <!-- Records View: the full QC audit trail (every department's inspection records). -->
+        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                            <th class="py-3.5 px-4">วันที่</th>
+                            <th class="py-3.5 px-4">QC ID</th>
+                            <th class="py-3.5 px-4">แผนก</th>
+                            <th class="py-3.5 px-4">M/O, S/O</th>
+                            <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
+                            <th class="py-3.5 px-4 text-center">สถานะ</th>
+                            <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
+                            <th class="py-3.5 px-4 text-center">Stamp Pass</th>
+                            <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Data rows injected via JS -->
+                    </tbody>
+                </table>
             </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                                <th class="py-3.5 px-4">วันที่</th>
-                                <th class="py-3.5 px-4">QC ID</th>
-                                <th class="py-3.5 px-4">แผนก</th>
-                                <th class="py-3.5 px-4">M/O, S/O</th>
-                                <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
-                                <th class="py-3.5 px-4 text-center">สถานะ</th>
-                                <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
-                                <th class="py-3.5 px-4 text-center">Stamp Pass</th>
-                                <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                            <!-- Data rows injected via JS -->
-                        </tbody>
-                    </table>
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden py-16 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-solid fa-folder-open"></i>
                 </div>
-                <!-- Empty State -->
-                <div id="emptyState" class="hidden py-16 text-center">
-                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                        <i class="fa-solid fa-folder-open"></i>
-                    </div>
-                    <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
-                </div>
+                <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
             </div>
         </div>
 
+        <!-- Shipped/Delivered View: read-ish archive of every M/O, S/O whose shipment has been
+             confirmed from "รายการรอส่ง" — they land here and disappear from the main
+             Overview/Board working views, but stay fully viewable/editable/deletable. -->
+        <div id="shippedViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
+            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-box-archive mr-2 text-emerald-600"></i> M/O, S/O ที่จัดส่งเรียบร้อยแล้ว</h3>
+                <span id="qcArchiveCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 รายการ</span>
+            </div>
+            <p class="px-4 pt-3 text-[11px] text-slate-400">เมื่อกดยืนยันการจัดส่งจากแท็บ "รายการรอส่ง" M/O, S/O จะถูกย้ายออกจากแท็บ "ภาพรวมการผลิต" และ "แผนผังการผลิต" อัตโนมัติ มาอยู่ที่นี่แทน ยังเปิดดู/แก้ไข/ลบได้ตามปกติ</p>
+            <div class="px-4 pt-3">
+                <div class="relative w-full sm:w-72">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="qcArchiveSearchInput" oninput="renderQcShippedArchive()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                            <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
+                            <th class="py-3.5 px-4">วันที่ส่งมอบ</th>
+                            <th class="py-3.5 px-4">กำหนดเสร็จเดิม</th>
+                            <th class="py-3.5 px-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qcArchiveTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Shipped orders injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyQcArchiveState" class="hidden py-10 text-center">
+                <p id="emptyQcArchiveStateText" class="text-slate-400 text-xs font-medium" data-default-text="ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว">ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว</p>
+            </div>
+        </div>
 
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
@@ -799,7 +812,8 @@
                 overview: { btn: 'tabOverviewBtn', container: 'overviewViewContainer' },
                 board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
-                shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' }
+                shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
+                shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
@@ -818,7 +832,7 @@
             if (view === 'shipping') renderShippingTable(qcData);
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
-            if (view === 'records') renderQcShippedArchive();
+            if (view === 'shipped') renderQcShippedArchive();
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -2123,18 +2137,30 @@
             // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
             // (here and the Kanban board) so the day-to-day list only shows what's still in progress —
             // it stays fully visible/editable from the QC archive block in the "รายงาน QC ทั้งหมด" tab.
-            const activeWithIndex = [];
+            const searchInput = document.getElementById('overviewSearchInput');
+            const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+            let activeWithIndex = [];
             productionOrders.forEach((order, orderIndex) => {
                 if (getEffectiveStage(order) === 'shipped') return;
                 activeWithIndex.push({ order, orderIndex });
             });
 
+            if (searchTerm) {
+                activeWithIndex = activeWithIndex.filter(({ order }) => {
+                    const haystack = [order.moSo, order.customerName, order.customerPO]
+                        .map(v => String(v || '').toLowerCase())
+                        .join(' ');
+                    return haystack.includes(searchTerm);
+                });
+            }
+
             const moList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) !== 'SO').sort(sortByDueDateAsc);
             const soList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) === 'SO').sort(sortByDueDateAsc);
 
-            [{ list: moList, tbody: moTbody, countBadgeId: 'overviewMoCountBadge', emptyId: 'emptyOverviewMoState', unitLabel: 'M/O' },
-             { list: soList, tbody: soTbody, countBadgeId: 'overviewSoCountBadge', emptyId: 'emptyOverviewSoState', unitLabel: 'S/O' }]
-                .forEach(({ list, tbody, countBadgeId, emptyId, unitLabel }) => {
+            [{ list: moList, tbody: moTbody, countBadgeId: 'overviewMoCountBadge', emptyId: 'emptyOverviewMoState', emptyTextId: 'emptyOverviewMoStateText', unitLabel: 'M/O' },
+             { list: soList, tbody: soTbody, countBadgeId: 'overviewSoCountBadge', emptyId: 'emptyOverviewSoState', emptyTextId: 'emptyOverviewSoStateText', unitLabel: 'S/O' }]
+                .forEach(({ list, tbody, countBadgeId, emptyId, emptyTextId, unitLabel }) => {
                     const riskCount = list.filter(x => getDeadlineWarning(x.order)).length;
                     document.getElementById(countBadgeId).textContent = `${list.length} ${unitLabel} ในสายการผลิต${riskCount > 0 ? ` • ${riskCount} รายการเสี่ยงไม่ทันกำหนด` : ''}`;
 
@@ -2142,6 +2168,10 @@
                     if (list.length === 0) {
                         tbody.innerHTML = '';
                         emptyState.classList.remove('hidden');
+                        const emptyStateText = document.getElementById(emptyTextId);
+                        if (emptyStateText) {
+                            emptyStateText.textContent = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : emptyStateText.dataset.defaultText;
+                        }
                         return;
                     }
                     emptyState.classList.add('hidden');
@@ -2160,16 +2190,33 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            const shippedOrders = [];
+            const searchInput = document.getElementById('qcArchiveSearchInput');
+            const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+            let shippedOrders = [];
             productionOrders.forEach((order, orderIndex) => {
                 if (getEffectiveStage(order) === 'shipped') shippedOrders.push({ order, orderIndex });
             });
+
+            if (searchTerm) {
+                shippedOrders = shippedOrders.filter(({ order }) => {
+                    const haystack = [order.moSo, order.customerName, order.customerPO]
+                        .map(v => String(v || '').toLowerCase())
+                        .join(' ');
+                    return haystack.includes(searchTerm);
+                });
+            }
+
             shippedOrders.sort((a, b) => String(b.order.shippedDate || '').localeCompare(String(a.order.shippedDate || '')));
 
             countBadge.textContent = `${shippedOrders.length} รายการ`;
 
             if (shippedOrders.length === 0) {
                 emptyState.classList.remove('hidden');
+                const emptyStateText = document.getElementById('emptyQcArchiveStateText');
+                if (emptyStateText) {
+                    emptyStateText.textContent = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : emptyStateText.dataset.defaultText;
+                }
                 return;
             } else {
                 emptyState.classList.add('hidden');
