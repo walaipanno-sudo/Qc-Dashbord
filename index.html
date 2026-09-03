@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -38,7 +40,7 @@
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
-            #recordsViewContainer { box-shadow: none !important; border: none !important; }
+            #recordsViewContainer, #recordsViewContainer > div { box-shadow: none !important; border: none !important; }
             .print-only-header { display: block !important; text-align: center; margin-bottom: 16px; }
             .print-only-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
             .print-only-header p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
@@ -230,9 +232,9 @@
         <!-- Production Board: Kanban-style board, one column per department, showing M/O currently at that stage -->
         <div id="boardViewContainer" class="hidden">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <p class="text-xs text-slate-500">คลิก "+ เพิ่ม M/O ใหม่" เพื่อเริ่มสั่งงานที่แผนกวางแผน จากนั้นกด "โอนงาน" เมื่อแต่ละแผนกทำงานเสร็จ เพื่อส่งต่อให้แผนกถัดไปโดยอัตโนมัติ</p>
+                <p class="text-xs text-slate-500">คลิก "+ เพิ่ม M/O, S/O ใหม่" เพื่อเริ่มสั่งงานที่แผนกวางแผน จากนั้นกด "โอนงาน" เมื่อแต่ละแผนกทำงานเสร็จ เพื่อส่งต่อให้แผนกถัดไปโดยอัตโนมัติ</p>
                 <button onclick="openNewOrderModal()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O ใหม่
+                    <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O, S/O ใหม่
                 </button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -267,34 +269,64 @@
             </div>
         </div>
 
-        <!-- Records View Table -->
-        <div id="recordsViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">วันที่</th>
-                            <th class="py-3.5 px-4">QC ID</th>
-                            <th class="py-3.5 px-4">แผนก</th>
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
-                            <th class="py-3.5 px-4 text-center">สถานะ</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
-                            <th class="py-3.5 px-4 text-center">Stamp Pass</th>
-                            <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Data rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-folder-open"></i>
+        <!-- Records View: QC department home — full QC audit trail, plus (below) the read-only
+             archive of M/O, S/O that have been confirmed shipped and removed from the main
+             Overview/Board working views. Shipped orders stay visible here so QC keeps full history. -->
+        <div id="recordsViewContainer" class="space-y-4 hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-box-archive mr-2 text-emerald-600"></i> คลัง M/O, S/O ที่ยืนยันส่งมอบแล้ว (สำหรับแผนก QC)</h3>
+                    <span id="qcArchiveCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 รายการ</span>
                 </div>
-                <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
+                <p class="px-4 pt-3 text-[11px] text-slate-400">เมื่อยืนยันการจัดส่งแล้ว M/O, S/O จะถูกย้ายออกจากแท็บ "ภาพรวมการผลิต" และ "แผนผังการผลิต" อัตโนมัติ มาอยู่ที่นี่แทน ยังเปิดดู/แก้ไข/ลบได้ตามปกติ</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                                <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
+                                <th class="py-3.5 px-4">วันที่ส่งมอบ</th>
+                                <th class="py-3.5 px-4">กำหนดเสร็จเดิม</th>
+                                <th class="py-3.5 px-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qcArchiveTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Shipped orders injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyQcArchiveState" class="hidden py-10 text-center">
+                    <p class="text-slate-400 text-xs font-medium">ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                                <th class="py-3.5 px-4">วันที่</th>
+                                <th class="py-3.5 px-4">QC ID</th>
+                                <th class="py-3.5 px-4">แผนก</th>
+                                <th class="py-3.5 px-4">M/O, S/O</th>
+                                <th class="py-3.5 px-4">รายละเอียดสรุป / หมายเหตุ</th>
+                                <th class="py-3.5 px-4 text-center">สถานะ</th>
+                                <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
+                                <th class="py-3.5 px-4 text-center">Stamp Pass</th>
+                                <th class="py-3.5 px-4 text-center action-col sticky right-0 bg-slate-50 border-l border-slate-200 z-10">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qcTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Data rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
+                </div>
             </div>
         </div>
 
@@ -352,6 +384,23 @@
         </div>
     </div>
 
+    <!-- Delete Production Order Confirmation Modal (deletes the whole M/O, S/O — every stage's data —
+         not a single QC record; see deleteModal above for that) -->
+    <div id="deleteOrderModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
+            <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="font-bold text-lg text-slate-800">ยืนยันการลบ M/O, S/O นี้</h3>
+            <p class="text-xs text-slate-500">จะลบรายการ <span id="deleteOrderMoSoLabel" class="font-bold font-mono"></span> ทุกแผนก (วางแผน/ย้อม/ทอ/ตกแต่ง) ออกจากระบบและ Google Sheets ทุกแผนกสามารถลบได้ ใช่หรือไม่?</p>
+            <input type="hidden" id="deleteOrderTargetIndex" value="">
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="closeDeleteOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="confirmDeleteProductionOrder()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-xl transition shadow">ลบ M/O, S/O นี้</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Ship Confirmation Modal -->
     <div id="shipModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
@@ -370,8 +419,20 @@
 
     <!-- New Production Order Modal -->
     <div id="newOrderModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
-            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O ใหม่เข้าสายการผลิต</h3>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O, S/O ใหม่เข้าสายการผลิต</h3>
+            <p class="text-[11px] text-slate-400 -mt-3"><i class="fa-solid fa-circle-info mr-1"></i>สำหรับแผนกขายเป็นผู้กรอกข้อมูล — ทุกแผนกยังแก้ไข/ลบรายการนี้ได้ตามปกติ</p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ประเภทรายการ</label>
+                <div class="flex gap-2">
+                    <label id="newOrderTypeMoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-indigo-600 border-indigo-600 text-white">
+                        <input type="radio" name="newOrderType" id="newOrderTypeMo" value="MO" checked class="hidden" onchange="updateNewOrderTypeStyle()"> M/O
+                    </label>
+                    <label id="newOrderTypeSoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-amber-50 border-amber-300 text-amber-700">
+                        <input type="radio" name="newOrderType" id="newOrderTypeSo" value="SO" class="hidden" onchange="updateNewOrderTypeStyle()"> S/O
+                    </label>
+                </div>
+            </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
                 <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -384,14 +445,17 @@
                 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า</label>
                 <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">จำนวนตารางเมตรรวม</label>
-                    <input type="number" min="0" step="0.01" id="newOrderTotalSqm" placeholder="ตร.ม." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase">รายการขนาด (Size)</label>
+                    <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น = ตร.ม.</span>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">จำนวนชิ้นรวม</label>
-                    <input type="number" min="0" id="newOrderTotalPieces" placeholder="ชิ้น" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div id="newOrderSizeItemsBody" class="space-y-2"></div>
+                <button type="button" onclick="addNewOrderSizeRow()" class="mt-2 w-full py-2 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i> เพิ่มขนาด (ถ้ามีมากกว่า 1 ไซส์)
+                </button>
+                <div class="mt-2 flex justify-end">
+                    <span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5">รวม: <span id="newOrderSizeSummary">0.00 ตร.ม. • 0 ชิ้น</span></span>
                 </div>
             </div>
             <div>
@@ -400,7 +464,7 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
-                <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่ม M/O</button>
+                <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่มรายการ</button>
             </div>
         </div>
     </div>
@@ -414,14 +478,26 @@
                     <h3 class="font-bold text-lg" id="orderDetailTitle">รายละเอียด M/O</h3>
                     <p class="text-xs text-indigo-200">แก้ไขข้อมูลแผนกใดก็ได้ ตลอดเวลา แม้จะโอนงานผ่านไปแล้ว</p>
                 </div>
-                <button onclick="closeOrderDetailModal()" class="text-indigo-200 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <div class="flex items-center gap-3">
+                    <button onclick="promptDeleteProductionOrder(currentDetailOrderIndex)" title="ลบ M/O, S/O นี้ทั้งรายการ" class="text-indigo-200 hover:text-rose-300 transition text-sm">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button onclick="closeOrderDetailModal()" class="text-indigo-200 hover:text-white transition text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
             <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-end gap-3 shrink-0">
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">M/O, S/O</label>
                     <p id="orderDetailMoSoLabel" class="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs font-mono font-bold text-indigo-700"></p>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ประเภท</label>
+                    <select id="orderDetailOrderType" onchange="updateOrderField(currentDetailOrderIndex, 'orderType', this.value)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold">
+                        <option value="MO">M/O</option>
+                        <option value="SO">S/O</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชื่อลูกค้า</label>
@@ -680,6 +756,7 @@
             renderShippingTable(qcData);
             renderProductionOverview();
             renderProductionBoard();
+            renderQcShippedArchive();
             updateStats();
         }
 
@@ -708,6 +785,7 @@
             if (view === 'shipping') renderShippingTable(qcData);
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
+            if (view === 'records') renderQcShippedArchive();
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -1114,7 +1192,7 @@
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
                     <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
                     <td class="py-3.5 px-4 font-medium text-xs">${escapeHtml(item.department)}</td>
-                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${escapeHtml(item.moSo)}</td>
+                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${orderTypeBadgeHtml(getOrderTypeByMoSo(item.moSo))}${escapeHtml(item.moSo)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate" title="${escapeHtml(summaryText)}">${escapeHtml(summaryText)}</td>
                     <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${escapeHtml(item.status)}</span></td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
@@ -1249,7 +1327,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-indigo-700 text-xs font-mono">${escapeHtml(row.moSo)}</td>
+                    <td class="py-3.5 px-4 font-bold ${orderTypeTextClass(getOrderTypeByMoSo(row.moSo))} text-xs font-mono">${orderTypeBadgeHtml(getOrderTypeByMoSo(row.moSo))}${escapeHtml(row.moSo)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(row.date || '-')}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-sm truncate" title="${escapeHtml(detailText)}">${escapeHtml(detailText)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(row.inspector || '-')}</td>
@@ -1337,11 +1415,42 @@
                     saveOrdersToLocal();
                     renderProductionOverview();
                     renderProductionBoard();
+                    renderQcShippedArchive();
+                    renderShippingTable(qcData);
                     if (isManual) showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`);
                 }
             } catch(e) {
                 console.error("Fetch production orders error (backend may not support order sync yet):", e);
             }
+        }
+
+        // Best-effort guess of M/O vs S/O for orders saved before the explicit orderType field existed —
+        // looks at the free-text "M/O, S/O" number the person typed (e.g. "S/O: 45001") and defaults to
+        // M/O when it can't tell, since that's the far more common case.
+        function detectOrderTypeFromMoSo(moSo) {
+            const s = String(moSo || '').toUpperCase();
+            if (s.indexOf('S/O') !== -1 || /\bSO[\s:.-]/.test(s)) return 'SO';
+            return 'MO';
+        }
+
+        // Looks up the production order behind a given "M/O, S/O" text key — used so views that only
+        // have the moSo string on hand (the QC records table, the shipping list) can still show the
+        // same M/O=indigo / S/O=amber color coding as the Overview and Board views.
+        function findOrderByMoSo(moSo) {
+            const key = String(moSo || '').trim();
+            return productionOrders.find(o => (o.moSo || '').trim() === key) || null;
+        }
+        function getOrderTypeByMoSo(moSo) {
+            const order = findOrderByMoSo(moSo);
+            return order ? (order.orderType || detectOrderTypeFromMoSo(order.moSo)) : detectOrderTypeFromMoSo(moSo);
+        }
+        function orderTypeBadgeHtml(type) {
+            return type === 'SO'
+                ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-200 align-middle mr-1.5">S/O</span>'
+                : '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 align-middle mr-1.5">M/O</span>';
+        }
+        function orderTypeTextClass(type) {
+            return type === 'SO' ? 'text-amber-700' : 'text-indigo-700';
         }
 
         // Converts an order coming from localStorage/Google Sheets into the current item-list-based
@@ -1408,12 +1517,30 @@
                 finishingMigrated = true;
             }
 
+            // Size line items ("รายการขนาด": กว้าง × ยาว × จำนวนชิ้น) — may arrive as an actual array
+            // (localStorage) or a JSON string (Google Sheets cell). An order saved before this field
+            // existed simply has none, which is fine: its totalSqm/totalPieces stay as plain numbers.
+            let sizeItems = raw.sizeItems;
+            if (typeof sizeItems === 'string') {
+                try { sizeItems = JSON.parse(sizeItems); } catch (e) { sizeItems = []; }
+            }
+            if (!Array.isArray(sizeItems)) sizeItems = [];
+            sizeItems = sizeItems.map(it => ({
+                width: Number(it.width) || 0,
+                length: Number(it.length) || 0,
+                qty: Number(it.qty) || 0,
+                sqm: Number(it.sqm) || Math.round((Number(it.width) || 0) * (Number(it.length) || 0) * (Number(it.qty) || 0) * 100) / 100
+            }));
+
             const order = {
                 moSo: raw.moSo || '',
+                orderType: (raw.orderType === 'SO' || raw.orderType === 'MO') ? raw.orderType : detectOrderTypeFromMoSo(raw.moSo),
                 customerName: raw.customerName || '',
                 customerPO: raw.customerPO || '',
+                sizeItems: sizeItems,
                 totalSqm: Number(raw.totalSqm) || 0,
                 totalPieces: Number(raw.totalPieces) || 0,
+                designImageUrl: raw.designImageUrl || '',
                 dueDate: normalizeDateString(raw.dueDate),
                 currentStage: ORDER_STAGES.includes(raw.currentStage) ? raw.currentStage : 'planning',
                 planning, dyeing, weaving, finishing,
@@ -1512,6 +1639,233 @@
             }
         }
 
+        // =========================================================================================
+        // Design images ("รูปดีไซน์"): one optional image per M/O overall, plus one optional image
+        // per line item ("ชิ้นที่") in the ย้อม/ทอ/ตกแต่ง departments. Images are uploaded to Google
+        // Drive via the Apps Script backend (so every department, on any device, sees the same
+        // picture) — only the resulting Drive link is ever stored on the order/item itself, which
+        // keeps things small enough for localStorage and the Google Sheet cell-size limit.
+        // =========================================================================================
+
+        // Shrinks + compresses an image file in the browser before upload, so a phone photo doesn't
+        // turn into a multi-MB payload — this also keeps the JSON blob that lands in each Google Sheet
+        // cell reasonably small (only the link is stored there, but the upload itself is still faster
+        // and lighter this way).
+        function resizeImageFile(file, maxDim, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let { width, height } = img;
+                        if (width > maxDim || height > maxDim) {
+                            if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+                            else { width = Math.round(width * maxDim / height); height = maxDim; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function handleDesignImageInputChange(event, orderIndex, target, itemIndex) {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = ''; // reset so choosing the same file again still fires onchange
+            if (!file) return;
+            if (!file.type || !file.type.startsWith('image/')) {
+                showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            uploadDesignImage(orderIndex, target, itemIndex, file);
+        }
+
+        // Uploads a design image via the Apps Script backend (?type=uploadImage) and, on success,
+        // stores the returned Drive link on the order/item. Deliberately NOT using mode:'no-cors' here
+        // (unlike the rest of this file's writes) because we actually need to read the URL back — and
+        // deliberately NOT setting a JSON Content-Type header, so the browser sends it as a CORS-safe
+        // "text/plain" request and skips the preflight that Apps Script web apps don't handle. As a
+        // safety net in case the response still can't be read (a flaky browser/Apps Script CORS quirk),
+        // the backend itself writes the resulting link straight into the Google Sheet row, so the next
+        // sync (automatic or via "ซิงค์ข้อมูล") will pick the picture up either way.
+        async function uploadDesignImage(orderIndex, target, itemIndex, file) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!gasWebAppUrl) {
+                showToast('กรุณาตั้งค่าลิงก์ Google Sheet ก่อน จึงจะอัปโหลดรูปได้', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            showToast('กำลังอัปโหลดรูปดีไซน์...', 'fa-spinner', 'text-indigo-400');
+            try {
+                const dataUrl = await resizeImageFile(file, 1400, 0.75);
+                const labelPart = itemIndex == null ? target : `${target}_item${Number(itemIndex) + 1}`;
+                const payload = {
+                    moSo: order.moSo,
+                    target: target,
+                    itemIndex: (itemIndex === undefined || itemIndex === null) ? null : Number(itemIndex),
+                    imageBase64: dataUrl,
+                    fileName: `${order.moSo}_${labelPart}_${Date.now()}.jpg`
+                };
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=uploadImage' : gasWebAppUrl + '?type=uploadImage';
+
+                let resultUrl = null;
+                try {
+                    const resp = await fetch(postUrl, { method: 'POST', body: JSON.stringify(payload) });
+                    const json = await resp.json();
+                    if (json && json.result === 'success' && json.url) resultUrl = json.url;
+                } catch (err) {
+                    console.warn('Could not read the upload response directly (this can happen with Apps Script + CORS) — relying on the next sync to pick up the image instead:', err);
+                }
+
+                if (resultUrl) {
+                    applyDesignImageUrl(orderIndex, target, itemIndex, resultUrl);
+                    showToast('อัปโหลดรูปดีไซน์สำเร็จ', 'fa-image');
+                } else {
+                    showToast('ส่งรูปไปบันทึกที่ Google Drive แล้ว แต่ยังไม่ได้รับลิงก์ยืนยันกลับมา กด "ซิงค์ข้อมูล" อีกครั้งในไม่กี่วินาทีถ้ารูปยังไม่ขึ้น', 'fa-cloud-arrow-up', 'text-amber-400');
+                }
+            } catch (err) {
+                console.error('Design image upload error:', err);
+                showToast('อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่', 'fa-circle-exclamation', 'text-rose-400');
+            }
+        }
+
+        function applyDesignImageUrl(orderIndex, target, itemIndex, url) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (target === 'order') {
+                order.designImageUrl = url;
+            } else if (order[target] && order[target].items && order[target].items[itemIndex]) {
+                order[target].items[itemIndex].designImageUrl = url;
+            } else {
+                return;
+            }
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function removeDesignImage(orderIndex, target, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (target === 'order') {
+                order.designImageUrl = '';
+            } else if (order[target] && order[target].items && order[target].items[itemIndex]) {
+                order[target].items[itemIndex].designImageUrl = '';
+            } else {
+                return;
+            }
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        // =========================================================================================
+        // Size line items ("รายการขนาด"): กว้าง × ยาว × จำนวนชิ้น per size, for orders with more than
+        // one size. totalSqm/totalPieces are always kept as the sum of these rows once any exist —
+        // see recomputeOrderSizeTotals(). Orders with no rows keep totalSqm/totalPieces as plain,
+        // manually-entered numbers (legacy behavior, and still fine for a simple single-size order).
+        // =========================================================================================
+
+        function recomputeOrderSizeTotals(order) {
+            if (!Array.isArray(order.sizeItems) || order.sizeItems.length === 0) return;
+            order.totalSqm = Math.round(order.sizeItems.reduce((acc, it) => acc + (Number(it.sqm) || 0), 0) * 100) / 100;
+            order.totalPieces = order.sizeItems.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+        }
+
+        function addOrderSizeItem(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!Array.isArray(order.sizeItems)) order.sizeItems = [];
+            order.sizeItems.push({ width: 0, length: 0, qty: 1, sqm: 0 });
+            recomputeOrderSizeTotals(order);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function removeOrderSizeItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !Array.isArray(order.sizeItems)) return;
+            order.sizeItems.splice(itemIndex, 1);
+            recomputeOrderSizeTotals(order);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function updateOrderSizeItemField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.sizeItems || !order.sizeItems[itemIndex]) return;
+            order.sizeItems[itemIndex][field] = value;
+            const item = order.sizeItems[itemIndex];
+            item.sqm = Math.round((Number(item.width) || 0) * (Number(item.length) || 0) * (Number(item.qty) || 0) * 100) / 100;
+            recomputeOrderSizeTotals(order);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function renderOrderSizeItemsBlock(order, orderIndex) {
+            const items = Array.isArray(order.sizeItems) ? order.sizeItems : [];
+            const rowsHtml = items.map((item, itemIndex) => `
+                <div class="flex items-center gap-1.5">
+                    <input type="number" min="0" step="0.01" value="${item.width || ''}" placeholder="กว้าง (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'width', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
+                    <span class="text-slate-400 text-xs">×</span>
+                    <input type="number" min="0" step="0.01" value="${item.length || ''}" placeholder="ยาว (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'length', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
+                    <input type="number" min="1" step="1" value="${item.qty || ''}" placeholder="จำนวน (ชิ้น)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'qty', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
+                    <span class="text-[10px] text-slate-400 w-16 text-right shrink-0">${(Number(item.sqm) || 0).toFixed(2)} ตร.ม.</span>
+                    <button type="button" onclick="removeOrderSizeItem(${orderIndex}, ${itemIndex})" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `).join('');
+
+            const totalSqm = items.reduce((acc, it) => acc + (Number(it.sqm) || 0), 0);
+            const totalPieces = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+
+            return `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-ruler-combined mr-1"></i> รายการขนาด (Size)</span>
+                        <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น = ตร.ม.</span>
+                    </div>
+                    ${items.length === 0 ? '<p class="text-[11px] text-slate-400">ยังไม่มีรายการขนาด — กด "เพิ่มขนาด" ด้านล่างเพื่อระบุแต่ละไซส์ (ถ้ามีมากกว่า 1 ไซส์)</p>' : rowsHtml}
+                    <button type="button" onclick="addOrderSizeItem(${orderIndex})" class="w-full py-1.5 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> เพิ่มขนาด
+                    </button>
+                    ${items.length > 0 ? `<div class="flex justify-end"><span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1">รวม: ${totalSqm.toFixed(2)} ตร.ม. • ${totalPieces} ชิ้น</span></div>` : ''}
+                </div>
+            `;
+        }
+
+        // Small upload/preview control reused for both the order-level design image and each
+        // department item's design image. itemIndex is null for the order-level image.
+        function renderDesignImageBlock(order, orderIndex, target, itemIndex, label) {
+            const url = target === 'order'
+                ? (order.designImageUrl || '')
+                : (((order[target].items || [])[itemIndex] || {}).designImageUrl || '');
+            const itemIndexArg = itemIndex == null ? 'null' : itemIndex;
+            return `
+                <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                    ${url
+                        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="shrink-0"><img src="${escapeHtml(url)}" class="w-14 h-14 object-cover rounded-lg border border-slate-200" alt="รูปดีไซน์" loading="lazy"></a>`
+                        : `<div class="w-14 h-14 rounded-lg bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-300 shrink-0"><i class="fa-solid fa-image"></i></div>`
+                    }
+                    <div class="flex-grow min-w-0">
+                        <p class="text-[11px] font-semibold text-slate-500 mb-1 truncate">${escapeHtml(label)}</p>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-medium px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1">
+                                <i class="fa-solid fa-upload"></i> ${url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
+                                <input type="file" accept="image/*" class="hidden" onchange="handleDesignImageInputChange(event, ${orderIndex}, '${target}', ${itemIndexArg})">
+                            </label>
+                            ${url ? `<button type="button" onclick="removeDesignImage(${orderIndex}, '${target}', ${itemIndexArg})" class="text-rose-500 hover:text-rose-700 text-[11px] px-2 py-1 rounded transition"><i class="fa-solid fa-trash"></i> ลบรูป</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         let currentDetailOrderIndex = null; // which order's cross-department detail modal is currently open, if any
 
         function persistOrderChange(order) {
@@ -1526,6 +1880,7 @@
             renderProductionBoard();
             renderProductionOverview();
             renderShippingTable(qcData); // keeps "รายการรอส่ง" badge/count in sync with readyToShip/shipped changes
+            renderQcShippedArchive(); // keeps the "ส่งมอบแล้ว" QC archive in sync once an order gets shipped
             if (currentDetailOrderIndex === orderIndex) {
                 renderOrderDetailModalBody(orderIndex);
             }
@@ -1534,9 +1889,9 @@
         // Default shape for a newly-added line item, per department stage. Planning has no item list —
         // it's a fixed 2-step checklist handled separately (see recomputePlanningPercent).
         const STAGE_ITEM_DEFAULTS = {
-            dyeing: { colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0, pieceNo: '', enteredBy: '' },
-            weaving: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '' },
-            finishing: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '' }
+            dyeing: { colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0, pieceNo: '', enteredBy: '', designImageUrl: '' },
+            weaving: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '', designImageUrl: '' },
+            finishing: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '', designImageUrl: '' }
         };
 
         // Dyeing, weaving and finishing support adding any number of line items ("แต่ละแผนกให้สามารถ
@@ -1594,6 +1949,44 @@
             return order.currentStage;
         }
 
+        // Warns per-order when the CURRENT stage of that M/O looks like it won't make the due date:
+        // 'overdue' once the due date has already passed while that stage is still not 100% complete,
+        // or 'at_risk' once the due date is within DEADLINE_WARNING_DAYS days away and the stage is
+        // still not 100% complete. An order that's already shipped/ready-to-ship, has no due date, or
+        // whose current stage is already at 100% (just hasn't been transferred out yet) never warns.
+        const DEADLINE_WARNING_DAYS = 7;
+        function getDeadlineWarning(order) {
+            if (!order.dueDate) return null;
+            const effectiveStage = getEffectiveStage(order);
+            if (effectiveStage === 'shipped' || effectiveStage === 'ready_to_ship') return null;
+
+            const stage = order.currentStage;
+            const percent = (order[stage] && order[stage].percent) || 0;
+            if (percent >= 100) return null;
+
+            const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
+            const dueMs = new Date(order.dueDate).getTime();
+            if (isNaN(dueMs)) return null;
+            const daysRemaining = Math.round((dueMs - todayMs) / 86400000);
+
+            if (daysRemaining < 0) return { level: 'overdue', daysRemaining, stage };
+            if (daysRemaining <= DEADLINE_WARNING_DAYS) return { level: 'at_risk', daysRemaining, stage };
+            return null;
+        }
+
+        // Small alert chip built from getDeadlineWarning() — used on the overview table, the Kanban
+        // card, and the detail modal so the warning shows up everywhere staff might be looking.
+        function renderDeadlineWarningBadge(order) {
+            const warning = getDeadlineWarning(order);
+            if (!warning) return '';
+            const stageLabel = STAGE_LABELS[warning.stage];
+            if (warning.level === 'overdue') {
+                const lateDays = Math.abs(warning.daysRemaining);
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i class="fa-solid fa-triangle-exclamation"></i> เลยกำหนดแล้ว ${lateDays} วัน — แผนก${escapeHtml(stageLabel)}ยังไม่เสร็จ</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> เหลืออีก ${warning.daysRemaining} วันถึงกำหนด — แผนก${escapeHtml(stageLabel)}เสี่ยงไม่ทัน</span>`;
+        }
+
         function renderStageStepper(effectiveStage) {
             const idx = ALL_STAGES.indexOf(effectiveStage);
             const dots = ALL_STAGES.map((s, i) => {
@@ -1614,9 +2007,16 @@
             const countBadge = document.getElementById('overviewCountBadge');
             if (!tbody) return;
             tbody.innerHTML = '';
-            countBadge.textContent = `${productionOrders.length} M/O ในสายการผลิต`;
 
-            if (productionOrders.length === 0) {
+            // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
+            // (here and the Kanban board) so the day-to-day list only shows what's still in progress —
+            // it stays fully visible/editable from the QC archive block in the "รายงาน QC ทั้งหมด" tab.
+            const activeOrders = productionOrders.filter(o => getEffectiveStage(o) !== 'shipped');
+
+            const riskCount = activeOrders.filter(o => getDeadlineWarning(o)).length;
+            countBadge.textContent = `${activeOrders.length} M/O ในสายการผลิต${riskCount > 0 ? ` • ${riskCount} รายการเสี่ยงไม่ทันกำหนด` : ''}`;
+
+            if (activeOrders.length === 0) {
                 emptyState.classList.remove('hidden');
                 return;
             } else {
@@ -1626,6 +2026,7 @@
             const today = new Date().toISOString().split('T')[0];
             productionOrders.forEach((order, orderIndex) => {
                 const effectiveStage = getEffectiveStage(order);
+                if (effectiveStage === 'shipped') return;
                 const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
                 const dueDateHtml = order.dueDate
                     ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
@@ -1637,22 +2038,95 @@
                 const sqmPiecesLineHtml = (order.totalSqm || order.totalPieces)
                     ? `<p class="text-[11px] text-slate-400 mt-0.5">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>`
                     : '';
+                const deadlineWarningHtml = renderDeadlineWarningBadge(order);
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
                     <td class="py-3.5 px-4">
-                        <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
-                        ${customerLineHtml}
-                        ${sqmPiecesLineHtml}
+                        <div class="flex items-start gap-2">
+                            ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                            <div class="min-w-0">
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                                ${customerLineHtml}
+                                ${sqmPiecesLineHtml}
+                            </div>
+                        </div>
                     </td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">${dueDateHtml}</td>
-                    <td class="py-3.5 px-4">${renderStageStepper(effectiveStage)}</td>
+                    <td class="py-3.5 px-4">
+                        ${renderStageStepper(effectiveStage)}
+                        ${deadlineWarningHtml ? `<div class="mt-1.5">${deadlineWarningHtml}</div>` : ''}
+                    </td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.lastUpdated || '-')}</td>
                     <td class="py-3.5 px-4 text-center">
-                        <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-lg transition">
-                            <i class="fa-solid fa-pen-to-square"></i> แก้ไข
-                        </button>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-lg transition">
+                                <i class="fa-solid fa-pen-to-square"></i> แก้ไข
+                            </button>
+                            <button onclick="promptDeleteProductionOrder(${orderIndex})" class="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition" title="ลบรายการนี้">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // The QC-only archive: M/O, S/O that have been confirmed shipped and are therefore no longer
+        // shown on the Overview table or the Kanban board — this is the one place they're still fully
+        // visible (and still editable/deletable, like every other record — there's no real per-department
+        // access control in this app, only this separation of "where it normally shows").
+        function renderQcShippedArchive() {
+            const tbody = document.getElementById('qcArchiveTableBody');
+            const emptyState = document.getElementById('emptyQcArchiveState');
+            const countBadge = document.getElementById('qcArchiveCountBadge');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const shippedOrders = [];
+            productionOrders.forEach((order, orderIndex) => {
+                if (getEffectiveStage(order) === 'shipped') shippedOrders.push({ order, orderIndex });
+            });
+            shippedOrders.sort((a, b) => String(b.order.shippedDate || '').localeCompare(String(a.order.shippedDate || '')));
+
+            countBadge.textContent = `${shippedOrders.length} รายการ`;
+
+            if (shippedOrders.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            shippedOrders.forEach(({ order, orderIndex }) => {
+                const customerLineHtml = (order.customerName || order.customerPO)
+                    ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName || '-')}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>`
+                    : '';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-start gap-2">
+                            ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                            <div class="min-w-0">
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                                ${customerLineHtml}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"><i class="fa-solid fa-check text-[10px]"></i> ${escapeHtml(order.shippedDate || '-')}</span></td>
+                    <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.dueDate || '-')}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-lg transition">
+                                <i class="fa-solid fa-eye"></i> ดู/แก้ไข
+                            </button>
+                            <button onclick="promptDeleteProductionOrder(${orderIndex})" class="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition" title="ลบรายการนี้">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1687,14 +2161,19 @@
         // time, not just the one currently active).
         function buildOrderCard(order, orderIndex, stage) {
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm p-3 space-y-2.5';
+            const cardWarning = getDeadlineWarning(order);
+            const cardBorderCls = cardWarning
+                ? (cardWarning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200')
+                : 'border-slate-200';
+            card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2.5`;
             const percent = order[stage].percent || 0;
             const complete = percent >= 100;
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div>
-                        <p class="font-bold text-indigo-700 text-xs font-mono">${escapeHtml(order.moSo)}</p>
+                    ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
@@ -1724,10 +2203,12 @@
                 `;
             }
 
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             const bodyHtml = `
                 ${mainHtml}
                 <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
                 <div>${renderQcBadge(order.moSo, stage)}</div>
+                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             let footerHtml = '';
@@ -1843,9 +2324,11 @@
             document.getElementById('newOrderMoSo').value = '';
             document.getElementById('newOrderCustomerName').value = '';
             document.getElementById('newOrderCustomerPO').value = '';
-            document.getElementById('newOrderTotalSqm').value = '';
-            document.getElementById('newOrderTotalPieces').value = '';
             document.getElementById('newOrderDueDate').value = '';
+            document.getElementById('newOrderTypeMo').checked = true;
+            updateNewOrderTypeStyle();
+            document.getElementById('newOrderSizeItemsBody').innerHTML = '';
+            addNewOrderSizeRow();
             document.getElementById('newOrderModal').classList.remove('hidden');
         }
 
@@ -1853,12 +2336,84 @@
             document.getElementById('newOrderModal').classList.add('hidden');
         }
 
+        // Size-items editor for the "New M/O, S/O" modal: one row per size (กว้าง × ยาว), each with
+        // its own piece count — used so an order with more than one size can capture all of them,
+        // instead of a single hand-typed "total sqm" number. Purely DOM-driven (read at submit time)
+        // since the order object doesn't exist yet at this point.
+        function newOrderSizeRowHtml() {
+            return `
+                <div class="new-order-size-row flex items-center gap-1.5">
+                    <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-width w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="กว้าง (ม.)">
+                    <span class="text-slate-400 text-xs">×</span>
+                    <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-length w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ยาว (ม.)">
+                    <input type="number" min="1" step="1" oninput="updateNewOrderSizeTotals()" class="size-qty w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="จำนวน (ชิ้น)">
+                    <span class="size-sqm-readout text-[10px] text-slate-400 w-16 text-right shrink-0">0.00 ตร.ม.</span>
+                    <button type="button" onclick="removeNewOrderSizeRow(this)" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `;
+        }
+
+        function addNewOrderSizeRow() {
+            document.getElementById('newOrderSizeItemsBody').insertAdjacentHTML('beforeend', newOrderSizeRowHtml());
+        }
+
+        function removeNewOrderSizeRow(btn) {
+            const container = document.getElementById('newOrderSizeItemsBody');
+            const row = btn.closest('.new-order-size-row');
+            if (row) row.remove();
+            if (container.children.length === 0) addNewOrderSizeRow();
+            updateNewOrderSizeTotals();
+        }
+
+        // Reads all size rows currently in the "New M/O, S/O" modal and returns { sizeItems, totalSqm,
+        // totalPieces } — sizeItems only includes rows where at least width or length was entered
+        // (an untouched blank row is skipped, not saved as a zero-size line item).
+        function collectNewOrderSizeItems() {
+            const rows = document.querySelectorAll('#newOrderSizeItemsBody .new-order-size-row');
+            const sizeItems = [];
+            let totalSqm = 0, totalPieces = 0;
+            rows.forEach(row => {
+                const width = Number(row.querySelector('.size-width').value) || 0;
+                const length = Number(row.querySelector('.size-length').value) || 0;
+                const qty = Number(row.querySelector('.size-qty').value) || 0;
+                if (!width && !length && !qty) return;
+                const effQty = qty || 1;
+                const sqm = Math.round(width * length * effQty * 100) / 100;
+                sizeItems.push({ width, length, qty: effQty, sqm });
+                totalSqm += sqm;
+                totalPieces += effQty;
+            });
+            return { sizeItems, totalSqm: Math.round(totalSqm * 100) / 100, totalPieces };
+        }
+
+        function updateNewOrderSizeTotals() {
+            document.querySelectorAll('#newOrderSizeItemsBody .new-order-size-row').forEach(row => {
+                const width = Number(row.querySelector('.size-width').value) || 0;
+                const length = Number(row.querySelector('.size-length').value) || 0;
+                const qty = Number(row.querySelector('.size-qty').value) || 0;
+                const sqm = width * length * (qty || 1);
+                row.querySelector('.size-sqm-readout').textContent = `${sqm.toFixed(2)} ตร.ม.`;
+            });
+            const { totalSqm, totalPieces } = collectNewOrderSizeItems();
+            document.getElementById('newOrderSizeSummary').textContent = `${totalSqm.toFixed(2)} ตร.ม. • ${totalPieces} ชิ้น`;
+        }
+
+        // Keeps the M/O, S/O type picker visually in sync (indigo=M/O, amber=S/O), matching the same
+        // color convention used everywhere else the type is shown (overview, board, shipping, QC archive).
+        function updateNewOrderTypeStyle() {
+            const isSo = document.getElementById('newOrderTypeSo').checked;
+            const moLabel = document.getElementById('newOrderTypeMoLabel');
+            const soLabel = document.getElementById('newOrderTypeSoLabel');
+            moLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isSo ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-indigo-600 border-indigo-600 text-white'}`;
+            soLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isSo ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-300 text-amber-700'}`;
+        }
+
         function submitNewOrder() {
             const moSo = document.getElementById('newOrderMoSo').value.trim();
+            const orderType = document.getElementById('newOrderTypeSo').checked ? 'SO' : 'MO';
             const customerName = document.getElementById('newOrderCustomerName').value.trim();
             const customerPO = document.getElementById('newOrderCustomerPO').value.trim();
-            const totalSqm = Number(document.getElementById('newOrderTotalSqm').value) || 0;
-            const totalPieces = Number(document.getElementById('newOrderTotalPieces').value) || 0;
+            const { sizeItems, totalSqm, totalPieces } = collectNewOrderSizeItems();
             const dueDate = document.getElementById('newOrderDueDate').value;
             if (!moSo) {
                 showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
@@ -1870,10 +2425,13 @@
             }
             const order = {
                 moSo: moSo,
+                orderType: orderType,
                 customerName: customerName,
                 customerPO: customerPO,
+                sizeItems: sizeItems,
                 totalSqm: totalSqm,
                 totalPieces: totalPieces,
+                designImageUrl: '',
                 dueDate: dueDate,
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
@@ -1959,6 +2517,7 @@
                     <label class="block text-[10px] text-slate-500 mb-0.5">ชื่อผู้คีย์รายการ</label>
                     <input type="text" placeholder="ชื่อผู้คีย์" value="${escapeHtml(it.enteredBy || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'enteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
+                ${renderDesignImageBlock(order, orderIndex, 'dyeing', idx, `รูปดีไซน์ ${it.pieceNo ? it.pieceNo : `สีที่ ${idx + 1}`}`)}
             `)).join('');
         }
 
@@ -1976,6 +2535,7 @@
                     <input type="text" placeholder="ชิ้นที่ เช่น ชิ้นที่ 3" value="${escapeHtml(it.pieceNo || '')}" onchange="updateOrderItemField(${orderIndex}, 'weaving', ${idx}, 'pieceNo', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
                 <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(it.enteredBy || '')}" onchange="updateOrderItemField(${orderIndex}, 'weaving', ${idx}, 'enteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                ${renderDesignImageBlock(order, orderIndex, 'weaving', idx, `รูปดีไซน์ ${it.pieceNo ? it.pieceNo : `รายการที่ ${idx + 1}`}`)}
             `)).join('');
         }
 
@@ -1993,6 +2553,7 @@
                     <input type="text" placeholder="ชิ้นที่ เช่น ชิ้นที่ 3" value="${escapeHtml(it.pieceNo || '')}" onchange="updateOrderItemField(${orderIndex}, 'finishing', ${idx}, 'pieceNo', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
                 <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(it.enteredBy || '')}" onchange="updateOrderItemField(${orderIndex}, 'finishing', ${idx}, 'enteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                ${renderDesignImageBlock(order, orderIndex, 'finishing', idx, `รูปดีไซน์ ${it.pieceNo ? it.pieceNo : `รายการที่ ${idx + 1}`}`)}
             `)).join('');
         }
 
@@ -2117,13 +2678,29 @@
             if (!order) return;
             document.getElementById('orderDetailTitle').textContent = `รายละเอียด M/O, S/O: ${order.moSo}`;
             document.getElementById('orderDetailMoSoLabel').textContent = order.moSo || '-';
+            document.getElementById('orderDetailOrderType').value = order.orderType === 'SO' ? 'SO' : 'MO';
             document.getElementById('orderDetailCustomerName').value = order.customerName || '';
             document.getElementById('orderDetailCustomerPO').value = order.customerPO || '';
             document.getElementById('orderDetailTotalSqm').value = order.totalSqm || '';
             document.getElementById('orderDetailTotalPieces').value = order.totalPieces || '';
             document.getElementById('orderDetailDueDate').value = order.dueDate || '';
-            document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order));
-            document.getElementById('orderDetailBody').innerHTML = ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
+            // Once this M/O has a size-items breakdown, totalSqm/totalPieces are always derived from
+            // it (see recomputeOrderSizeTotals) — the header fields become a read-only display so
+            // there's only one place to actually change them. Legacy orders with no breakdown keep
+            // manual entry exactly as before.
+            const hasSizeItems = Array.isArray(order.sizeItems) && order.sizeItems.length > 0;
+            [document.getElementById('orderDetailTotalSqm'), document.getElementById('orderDetailTotalPieces')].forEach(el => {
+                el.disabled = hasSizeItems;
+                el.title = hasSizeItems ? 'คำนวณจากรายการขนาดด้านล่าง' : '';
+                el.classList.toggle('bg-slate-100', hasSizeItems);
+                el.classList.toggle('text-slate-400', hasSizeItems);
+                el.classList.toggle('bg-white', !hasSizeItems);
+            });
+            const detailWarningHtml = renderDeadlineWarningBadge(order);
+            document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order)) + (detailWarningHtml ? `<div class="mt-1.5">${detailWarningHtml}</div>` : '');
+            const orderSizeItemsHtml = renderOrderSizeItemsBlock(order, orderIndex);
+            const orderDesignImageHtml = renderDesignImageBlock(order, orderIndex, 'order', null, 'รูปดีไซน์ของ M/O นี้ (ถ้ามี)');
+            document.getElementById('orderDetailBody').innerHTML = orderSizeItemsHtml + orderDesignImageHtml + ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
         }
 
         function openOrderDetailModal(orderIndex, focusStage) {
@@ -2464,6 +3041,47 @@
                     await fetch(deleteUrl);
                 } catch(err) {
                     console.error("Error deleting from Google Sheet:", err);
+                }
+            }
+        }
+
+        // Deletes an entire M/O, S/O production order (every department's data for it) — separate
+        // from confirmDeleteItem() above, which only removes a single QC audit record. Every
+        // department can delete any M/O, S/O record; there is no per-department restriction.
+        function promptDeleteProductionOrder(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            document.getElementById('deleteOrderTargetIndex').value = orderIndex;
+            document.getElementById('deleteOrderMoSoLabel').textContent = order.moSo || '(ไม่มีเลขที่)';
+            document.getElementById('deleteOrderModal').classList.remove('hidden');
+        }
+
+        function closeDeleteOrderModal() {
+            document.getElementById('deleteOrderModal').classList.add('hidden');
+        }
+
+        async function confirmDeleteProductionOrder() {
+            const orderIndex = parseInt(document.getElementById('deleteOrderTargetIndex').value);
+            closeDeleteOrderModal();
+
+            if (isNaN(orderIndex) || orderIndex < 0 || orderIndex >= productionOrders.length) return;
+
+            const deletedOrder = productionOrders[orderIndex];
+            if (currentDetailOrderIndex === orderIndex) closeOrderDetailModal();
+            productionOrders.splice(orderIndex, 1);
+            saveOrdersToLocal();
+            renderProductionBoard();
+            renderProductionOverview();
+            renderShippingTable(qcData);
+            renderQcShippedArchive();
+            showToast(`ลบรายการ "${deletedOrder.moSo}" ออกจากสายการผลิตแล้ว`, 'fa-circle-xmark', 'text-rose-400');
+
+            if (gasWebAppUrl && deletedOrder.moSo) {
+                try {
+                    const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteOrder&moSo=' + encodeURIComponent(deletedOrder.moSo);
+                    await fetch(deleteUrl);
+                } catch(err) {
+                    console.error("Error deleting production order from Google Sheet:", err);
                 }
             }
         }
