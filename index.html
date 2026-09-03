@@ -481,7 +481,7 @@
             <div>
                 <div class="flex items-center justify-between mb-1">
                     <label class="block text-xs font-semibold text-slate-600 uppercase">รายการขนาด (Size)</label>
-                    <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น = ตร.ม.</span>
+                    <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น × (100% − % พื้นที่ว่าง) = ตร.ม. (แก้ไขผลรวมเองได้)</span>
                 </div>
                 <div id="newOrderSizeItemsBody" class="space-y-2"></div>
                 <button type="button" onclick="addNewOrderSizeRow()" class="mt-2 w-full py-2 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
@@ -1562,7 +1562,14 @@
                 width: Number(it.width) || 0,
                 length: Number(it.length) || 0,
                 qty: Number(it.qty) || 0,
-                sqm: Number(it.sqm) || Math.round((Number(it.width) || 0) * (Number(it.length) || 0) * (Number(it.qty) || 0) * 100) / 100
+                voidPercent: Number(it.voidPercent) || 0,
+                // A row saved before "sqm" existed gets it derived from width×length×qty×void% (void%
+                // defaults to 0 for those, i.e. no change from the old plain-area formula). A row that
+                // already has an sqm value keeps it as-is even if it was hand-typed and doesn't match
+                // the formula exactly — that's the point of letting the total be edited directly.
+                sqm: (it.sqm !== undefined && it.sqm !== null && it.sqm !== '')
+                    ? Number(it.sqm) || 0
+                    : computeSizeItemSqm(it.width, it.length, it.qty, it.voidPercent)
             }));
 
             const order = {
@@ -1815,7 +1822,7 @@
             const order = productionOrders[orderIndex];
             if (!order) return;
             if (!Array.isArray(order.sizeItems)) order.sizeItems = [];
-            order.sizeItems.push({ width: 0, length: 0, qty: 1, sqm: 0 });
+            order.sizeItems.push({ width: 0, length: 0, qty: 1, voidPercent: 0, sqm: 0 });
             recomputeOrderSizeTotals(order);
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
@@ -1830,12 +1837,17 @@
             rerenderOrderViews(orderIndex);
         }
 
+        // Editing width/length/qty/voidPercent recomputes this row's ตร.ม. from the formula; editing
+        // the ตร.ม. field itself ('sqm') is a direct manual override and is kept exactly as typed —
+        // that's what makes the total editable, per the request.
         function updateOrderSizeItemField(orderIndex, itemIndex, field, value) {
             const order = productionOrders[orderIndex];
             if (!order || !order.sizeItems || !order.sizeItems[itemIndex]) return;
-            order.sizeItems[itemIndex][field] = value;
             const item = order.sizeItems[itemIndex];
-            item.sqm = Math.round((Number(item.width) || 0) * (Number(item.length) || 0) * (Number(item.qty) || 0) * 100) / 100;
+            item[field] = value;
+            if (field !== 'sqm') {
+                item.sqm = computeSizeItemSqm(item.width, item.length, item.qty, item.voidPercent);
+            }
             recomputeOrderSizeTotals(order);
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
@@ -1844,13 +1856,21 @@
         function renderOrderSizeItemsBlock(order, orderIndex) {
             const items = Array.isArray(order.sizeItems) ? order.sizeItems : [];
             const rowsHtml = items.map((item, itemIndex) => `
-                <div class="flex items-center gap-1.5">
-                    <input type="number" min="0" step="0.01" value="${item.width || ''}" placeholder="กว้าง (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'width', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
-                    <span class="text-slate-400 text-xs">×</span>
-                    <input type="number" min="0" step="0.01" value="${item.length || ''}" placeholder="ยาว (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'length', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
-                    <input type="number" min="1" step="1" value="${item.qty || ''}" placeholder="จำนวน (ชิ้น)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'qty', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs">
-                    <span class="text-[10px] text-slate-400 w-16 text-right shrink-0">${(Number(item.sqm) || 0).toFixed(2)} ตร.ม.</span>
-                    <button type="button" onclick="removeOrderSizeItem(${orderIndex}, ${itemIndex})" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                <div class="bg-white border border-slate-200 rounded-lg p-2 space-y-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" min="0" step="0.01" value="${item.width || ''}" placeholder="กว้าง (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'width', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <span class="text-slate-400 text-xs">×</span>
+                        <input type="number" min="0" step="0.01" value="${item.length || ''}" placeholder="ยาว (ม.)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'length', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <input type="number" min="1" step="1" value="${item.qty || ''}" placeholder="จำนวน (ชิ้น)" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'qty', Number(this.value))" class="w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <button type="button" onclick="removeOrderSizeItem(${orderIndex}, ${itemIndex})" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 shrink-0">% พื้นที่ว่าง</span>
+                        <input type="number" min="0" max="100" step="0.01" value="${item.voidPercent || ''}" placeholder="0" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'voidPercent', Number(this.value))" class="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <span class="text-slate-400 text-xs shrink-0">=</span>
+                        <input type="number" step="0.01" value="${(Number(item.sqm) || 0).toFixed(2)}" onchange="updateOrderSizeItemField(${orderIndex}, ${itemIndex}, 'sqm', Number(this.value))" class="flex-1 min-w-0 px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-semibold text-indigo-700 text-right">
+                        <span class="text-[10px] text-slate-400 shrink-0">ตร.ม. (แก้ไขได้)</span>
+                    </div>
                 </div>
             `).join('');
 
@@ -1861,7 +1881,7 @@
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-ruler-combined mr-1"></i> รายการขนาด (Size)</span>
-                        <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น = ตร.ม.</span>
+                        <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น × (100% − % พื้นที่ว่าง) = ตร.ม. (แก้ไขผลรวมเองได้)</span>
                     </div>
                     ${items.length === 0 ? '<p class="text-[11px] text-slate-400">ยังไม่มีรายการขนาด — กด "เพิ่มขนาด" ด้านล่างเพื่อระบุแต่ละไซส์ (ถ้ามีมากกว่า 1 ไซส์)</p>' : rowsHtml}
                     <button type="button" onclick="addOrderSizeItem(${orderIndex})" class="w-full py-1.5 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1.5">
@@ -2391,19 +2411,37 @@
             document.getElementById('newOrderModal').classList.add('hidden');
         }
 
+        // Shared formula for every size line item, new-order modal and order-detail modal alike:
+        // area = กว้าง × ยาว × จำนวนชิ้น, then knocked down by "% พื้นที่ว่าง" (void/open area that
+        // isn't counted) — effective ตร.ม. = area × (100% − void%).
+        function computeSizeItemSqm(width, length, qty, voidPercent) {
+            const raw = (Number(width) || 0) * (Number(length) || 0) * (Number(qty) || 0);
+            const effective = raw * (1 - (Number(voidPercent) || 0) / 100);
+            return Math.round(effective * 100) / 100;
+        }
+
         // Size-items editor for the "New M/O, S/O" modal: one row per size (กว้าง × ยาว), each with
-        // its own piece count — used so an order with more than one size can capture all of them,
+        // its own piece count, void-area % and a resulting ตร.ม. that auto-calculates but can also be
+        // typed over directly — used so an order with more than one size can capture all of them,
         // instead of a single hand-typed "total sqm" number. Purely DOM-driven (read at submit time)
         // since the order object doesn't exist yet at this point.
         function newOrderSizeRowHtml() {
             return `
-                <div class="new-order-size-row flex items-center gap-1.5">
-                    <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-width w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="กว้าง (ม.)">
-                    <span class="text-slate-400 text-xs">×</span>
-                    <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-length w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="ยาว (ม.)">
-                    <input type="number" min="1" step="1" oninput="updateNewOrderSizeTotals()" class="size-qty w-0 flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="จำนวน (ชิ้น)">
-                    <span class="size-sqm-readout text-[10px] text-slate-400 w-16 text-right shrink-0">0.00 ตร.ม.</span>
-                    <button type="button" onclick="removeNewOrderSizeRow(this)" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                <div class="new-order-size-row bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-width w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs" placeholder="กว้าง (ม.)">
+                        <span class="text-slate-400 text-xs">×</span>
+                        <input type="number" min="0" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-length w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs" placeholder="ยาว (ม.)">
+                        <input type="number" min="1" step="1" oninput="updateNewOrderSizeTotals()" class="size-qty w-0 flex-1 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs" placeholder="จำนวน (ชิ้น)">
+                        <button type="button" onclick="removeNewOrderSizeRow(this)" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 shrink-0">% พื้นที่ว่าง</span>
+                        <input type="number" min="0" max="100" step="0.01" oninput="updateNewOrderSizeTotals()" class="size-void w-16 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" placeholder="0">
+                        <span class="text-slate-400 text-xs shrink-0">=</span>
+                        <input type="number" step="0.01" oninput="updateNewOrderSizeSummaryOnly()" class="size-sqm flex-1 min-w-0 px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-semibold text-indigo-700 text-right" placeholder="ตร.ม.">
+                        <span class="text-[10px] text-slate-400 shrink-0">ตร.ม. (แก้ไขได้)</span>
+                    </div>
                 </div>
             `;
         }
@@ -2417,12 +2455,14 @@
             const row = btn.closest('.new-order-size-row');
             if (row) row.remove();
             if (container.children.length === 0) addNewOrderSizeRow();
-            updateNewOrderSizeTotals();
+            updateNewOrderSizeSummaryOnly();
         }
 
         // Reads all size rows currently in the "New M/O, S/O" modal and returns { sizeItems, totalSqm,
-        // totalPieces } — sizeItems only includes rows where at least width or length was entered
-        // (an untouched blank row is skipped, not saved as a zero-size line item).
+        // totalPieces } — sizeItems only includes rows where at least width, length, qty or the ตร.ม.
+        // field itself was touched (an untouched blank row is skipped, not saved as a zero-size line
+        // item). The per-row ตร.ม. field is authoritative: if the person typed over it directly, that
+        // value is kept as-is rather than recomputed from width × length × qty × void%.
         function collectNewOrderSizeItems() {
             const rows = document.querySelectorAll('#newOrderSizeItemsBody .new-order-size-row');
             const sizeItems = [];
@@ -2431,24 +2471,34 @@
                 const width = Number(row.querySelector('.size-width').value) || 0;
                 const length = Number(row.querySelector('.size-length').value) || 0;
                 const qty = Number(row.querySelector('.size-qty').value) || 0;
-                if (!width && !length && !qty) return;
+                const voidPercent = Number(row.querySelector('.size-void').value) || 0;
+                const sqmRaw = row.querySelector('.size-sqm').value;
+                if (!width && !length && !qty && !sqmRaw) return;
                 const effQty = qty || 1;
-                const sqm = Math.round(width * length * effQty * 100) / 100;
-                sizeItems.push({ width, length, qty: effQty, sqm });
+                const sqm = sqmRaw !== '' ? (Number(sqmRaw) || 0) : computeSizeItemSqm(width, length, effQty, voidPercent);
+                sizeItems.push({ width, length, qty: effQty, voidPercent, sqm });
                 totalSqm += sqm;
                 totalPieces += effQty;
             });
             return { sizeItems, totalSqm: Math.round(totalSqm * 100) / 100, totalPieces };
         }
 
+        // Recomputes the ตร.ม. field from width × length × qty × void% for every row — called only
+        // when one of those DRIVING fields changes, so typing directly into the ตร.ม. field itself
+        // never gets silently overwritten except by a later change to its own row's inputs.
         function updateNewOrderSizeTotals() {
             document.querySelectorAll('#newOrderSizeItemsBody .new-order-size-row').forEach(row => {
                 const width = Number(row.querySelector('.size-width').value) || 0;
                 const length = Number(row.querySelector('.size-length').value) || 0;
                 const qty = Number(row.querySelector('.size-qty').value) || 0;
-                const sqm = width * length * (qty || 1);
-                row.querySelector('.size-sqm-readout').textContent = `${sqm.toFixed(2)} ตร.ม.`;
+                const voidPercent = Number(row.querySelector('.size-void').value) || 0;
+                const sqm = computeSizeItemSqm(width, length, qty || 1, voidPercent);
+                row.querySelector('.size-sqm').value = (width || length || qty) ? sqm.toFixed(2) : '';
             });
+            updateNewOrderSizeSummaryOnly();
+        }
+
+        function updateNewOrderSizeSummaryOnly() {
             const { totalSqm, totalPieces } = collectNewOrderSizeItems();
             document.getElementById('newOrderSizeSummary').textContent = `${totalSqm.toFixed(2)} ตร.ม. • ${totalPieces} ชิ้น`;
         }
