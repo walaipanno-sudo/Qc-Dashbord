@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -199,33 +197,68 @@
             </div>
         </div>
 
-        <!-- Production Overview: every M/O, S/O and which stage it's currently at across the whole workflow -->
-        <div id="overviewViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-diagram-project mr-2 text-indigo-600"></i> ภาพรวมสถานะการผลิตของแต่ละ M/O, S/O (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
-                <span id="overviewCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 M/O ในสายการผลิต</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
-                            <th class="py-3.5 px-4">กำหนดเสร็จ</th>
-                            <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
-                            <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
-                            <th class="py-3.5 px-4 text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="overviewTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Overview rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyOverviewState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-diagram-project"></i>
+        <!-- Production Overview: split into an M/O box and an S/O box, each with its own running
+             number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
+             together in one list. -->
+        <div id="overviewViewContainer" class="space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-industry mr-2 text-indigo-600"></i> M/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
+                    <span id="overviewMoCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 M/O ในสายการผลิต</span>
                 </div>
-                <p class="text-slate-500 font-medium">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                                <th class="py-3.5 px-4 text-center w-14">ลำดับ</th>
+                                <th class="py-3.5 px-4">M/O / ลูกค้า / PO</th>
+                                <th class="py-3.5 px-4">กำหนดเสร็จ</th>
+                                <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
+                                <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
+                                <th class="py-3.5 px-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overviewMoTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- M/O overview rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyOverviewMoState" class="hidden py-12 text-center">
+                    <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                        <i class="fa-solid fa-industry"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 bg-amber-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h3 class="font-bold text-amber-900 text-sm"><i class="fa-solid fa-swatchbook mr-2 text-amber-600"></i> S/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
+                    <span id="overviewSoCountBadge" class="text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 S/O ในสายการผลิต</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                                <th class="py-3.5 px-4 text-center w-14">ลำดับ</th>
+                                <th class="py-3.5 px-4">S/O / ลูกค้า / PO</th>
+                                <th class="py-3.5 px-4">กำหนดเสร็จ</th>
+                                <th class="py-3.5 px-4">สถานะขั้นตอนการผลิต</th>
+                                <th class="py-3.5 px-4">อัปเดตล่าสุด</th>
+                                <th class="py-3.5 px-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overviewSoTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- S/O overview rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyOverviewSoState" class="hidden py-12 text-center">
+                    <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                        <i class="fa-solid fa-swatchbook"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                </div>
             </div>
         </div>
 
@@ -2001,48 +2034,26 @@
             return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold text-indigo-700 mt-1.5">${escapeHtml(STAGE_LABELS[effectiveStage])}</div>`;
         }
 
-        function renderProductionOverview() {
-            const tbody = document.getElementById('overviewTableBody');
-            const emptyState = document.getElementById('emptyOverviewState');
-            const countBadge = document.getElementById('overviewCountBadge');
-            if (!tbody) return;
-            tbody.innerHTML = '';
+        // One row of the Overview table — shared by the M/O box and the S/O box. runningNo is the
+        // per-box sequential number (1, 2, 3... "เลขรัน"), independent between the two boxes.
+        function buildOverviewRowHtml(order, orderIndex, runningNo, today) {
+            const effectiveStage = getEffectiveStage(order);
+            const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
+            const dueDateHtml = order.dueDate
+                ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
+                : '<span class="text-slate-400">-</span>';
 
-            // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
-            // (here and the Kanban board) so the day-to-day list only shows what's still in progress —
-            // it stays fully visible/editable from the QC archive block in the "รายงาน QC ทั้งหมด" tab.
-            const activeOrders = productionOrders.filter(o => getEffectiveStage(o) !== 'shipped');
+            const customerLineHtml = (order.customerName || order.customerPO)
+                ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName || '-')}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>`
+                : '';
+            const sqmPiecesLineHtml = (order.totalSqm || order.totalPieces)
+                ? `<p class="text-[11px] text-slate-400 mt-0.5">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>`
+                : '';
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
 
-            const riskCount = activeOrders.filter(o => getDeadlineWarning(o)).length;
-            countBadge.textContent = `${activeOrders.length} M/O ในสายการผลิต${riskCount > 0 ? ` • ${riskCount} รายการเสี่ยงไม่ทันกำหนด` : ''}`;
-
-            if (activeOrders.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            const today = new Date().toISOString().split('T')[0];
-            productionOrders.forEach((order, orderIndex) => {
-                const effectiveStage = getEffectiveStage(order);
-                if (effectiveStage === 'shipped') return;
-                const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
-                const dueDateHtml = order.dueDate
-                    ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
-                    : '<span class="text-slate-400">-</span>';
-
-                const customerLineHtml = (order.customerName || order.customerPO)
-                    ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName || '-')}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>`
-                    : '';
-                const sqmPiecesLineHtml = (order.totalSqm || order.totalPieces)
-                    ? `<p class="text-[11px] text-slate-400 mt-0.5">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>`
-                    : '';
-                const deadlineWarningHtml = renderDeadlineWarningBadge(order);
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
-                tr.innerHTML = `
+            return `
+                <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+                    <td class="py-3.5 px-4 text-center text-xs font-bold text-slate-400">${runningNo}</td>
                     <td class="py-3.5 px-4">
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
@@ -2069,9 +2080,53 @@
                             </button>
                         </div>
                     </td>
-                `;
-                tbody.appendChild(tr);
+                </tr>
+            `;
+        }
+
+        // Sorts by due date ascending ("เรียงตามกำหนดเสร็จ") — orders with no due date sort last,
+        // since there's nothing to run them against.
+        function sortByDueDateAsc(a, b) {
+            if (!a.order.dueDate && !b.order.dueDate) return 0;
+            if (!a.order.dueDate) return 1;
+            if (!b.order.dueDate) return -1;
+            return a.order.dueDate < b.order.dueDate ? -1 : (a.order.dueDate > b.order.dueDate ? 1 : 0);
+        }
+
+        function renderProductionOverview() {
+            const moTbody = document.getElementById('overviewMoTableBody');
+            const soTbody = document.getElementById('overviewSoTableBody');
+            if (!moTbody || !soTbody) return;
+
+            const today = new Date().toISOString().split('T')[0];
+
+            // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
+            // (here and the Kanban board) so the day-to-day list only shows what's still in progress —
+            // it stays fully visible/editable from the QC archive block in the "รายงาน QC ทั้งหมด" tab.
+            const activeWithIndex = [];
+            productionOrders.forEach((order, orderIndex) => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                activeWithIndex.push({ order, orderIndex });
             });
+
+            const moList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) !== 'SO').sort(sortByDueDateAsc);
+            const soList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) === 'SO').sort(sortByDueDateAsc);
+
+            [{ list: moList, tbody: moTbody, countBadgeId: 'overviewMoCountBadge', emptyId: 'emptyOverviewMoState', unitLabel: 'M/O' },
+             { list: soList, tbody: soTbody, countBadgeId: 'overviewSoCountBadge', emptyId: 'emptyOverviewSoState', unitLabel: 'S/O' }]
+                .forEach(({ list, tbody, countBadgeId, emptyId, unitLabel }) => {
+                    const riskCount = list.filter(x => getDeadlineWarning(x.order)).length;
+                    document.getElementById(countBadgeId).textContent = `${list.length} ${unitLabel} ในสายการผลิต${riskCount > 0 ? ` • ${riskCount} รายการเสี่ยงไม่ทันกำหนด` : ''}`;
+
+                    const emptyState = document.getElementById(emptyId);
+                    if (list.length === 0) {
+                        tbody.innerHTML = '';
+                        emptyState.classList.remove('hidden');
+                        return;
+                    }
+                    emptyState.classList.add('hidden');
+                    tbody.innerHTML = list.map((x, i) => buildOverviewRowHtml(x.order, x.orderIndex, i + 1, today)).join('');
+                });
         }
 
         // The QC-only archive: M/O, S/O that have been confirmed shipped and are therefore no longer
