@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -40,7 +39,7 @@
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
-            #recordsViewContainer, #recordsViewContainer > div, #shippedViewContainer { box-shadow: none !important; border: none !important; }
+            #recordsViewContainer, #recordsViewContainer > div { box-shadow: none !important; border: none !important; }
             .print-only-header { display: block !important; text-align: center; margin-bottom: 16px; }
             .print-only-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
             .print-only-header p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
@@ -164,12 +163,9 @@
                     <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
                     <span id="shippingCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
                 </button>
-                <button onclick="switchView('shipped')" id="tabShippedBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition">
-                    <i class="fa-solid fa-box-archive mr-1.5"></i> จัดส่งเรียบร้อยแล้ว
-                </button>
             </div>
 
-            <div id="globalSearchFilterWrapper" class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
                 <div class="relative w-full sm:w-64">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                         <i class="fa-solid fa-search"></i>
@@ -206,12 +202,6 @@
              number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
              together in one list. -->
         <div id="overviewViewContainer" class="space-y-4">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
-                <div class="relative w-full sm:w-80">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="overviewSearchInput" oninput="renderProductionOverview()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทั้งสองกรอบ)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-industry mr-2 text-indigo-600"></i> M/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
@@ -238,7 +228,7 @@
                     <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
                         <i class="fa-solid fa-industry"></i>
                     </div>
-                    <p id="emptyOverviewMoStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ &quot;แผนผังการผลิต&quot;">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                    <p class="text-slate-500 font-medium">ยังไม่มี M/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
                 </div>
             </div>
 
@@ -268,7 +258,7 @@
                     <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
                         <i class="fa-solid fa-swatchbook"></i>
                     </div>
-                    <p id="emptyOverviewSoStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ &quot;แผนผังการผลิต&quot;">ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
+                    <p class="text-slate-500 font-medium">ยังไม่มี S/O ในสายการผลิต — เริ่มเพิ่มได้ที่แท็บ "แผนผังการผลิต"</p>
                 </div>
             </div>
         </div>
@@ -280,12 +270,6 @@
                 <button onclick="openNewOrderModal()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-2">
                     <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O, S/O ใหม่
                 </button>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
-                <div class="relative w-full sm:w-80">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="boardSearchInput" oninput="renderProductionBoard()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทุกคอลัมน์)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
@@ -319,31 +303,33 @@
             </div>
         </div>
 
-        <!-- Records View: the full QC audit trail (every department's inspection records), plus a
-             company-wide weekly summary report (counts + pass rate for the last 8 weeks). -->
+        <!-- Records View: QC department home — full QC audit trail, plus (below) the read-only
+             archive of M/O, S/O that have been confirmed shipped and removed from the main
+             Overview/Board working views. Shipped orders stay visible here so QC keeps full history. -->
         <div id="recordsViewContainer" class="space-y-4 hidden">
-            <!-- Weekly QC Summary Report: company-wide totals per week, most recent 8 weeks. -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-calendar-week mr-2 text-indigo-600"></i> สรุปรายงาน QC รายสัปดาห์ (8 สัปดาห์ล่าสุด)</h3>
-                    <span class="text-[11px] text-slate-400">สัปดาห์: จันทร์ - อาทิตย์ • สรุปรวมทั้งบริษัท ไม่ผูกกับตัวกรองด้านล่าง</span>
+                <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-box-archive mr-2 text-emerald-600"></i> คลัง M/O, S/O ที่ยืนยันส่งมอบแล้ว (สำหรับแผนก QC)</h3>
+                    <span id="qcArchiveCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 รายการ</span>
                 </div>
+                <p class="px-4 pt-3 text-[11px] text-slate-400">เมื่อยืนยันการจัดส่งแล้ว M/O, S/O จะถูกย้ายออกจากแท็บ "ภาพรวมการผลิต" และ "แผนผังการผลิต" อัตโนมัติ มาอยู่ที่นี่แทน ยังเปิดดู/แก้ไข/ลบได้ตามปกติ</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                                <th class="py-3 px-4">สัปดาห์</th>
-                                <th class="py-3 px-4 text-center">ตรวจทั้งหมด</th>
-                                <th class="py-3 px-4 text-center">ผ่าน (PASS)</th>
-                                <th class="py-3 px-4 text-center">ไม่ผ่าน (FAIL)</th>
-                                <th class="py-3 px-4 text-center">รอดำเนินการ</th>
-                                <th class="py-3 px-4 text-center">อัตราผ่าน</th>
+                                <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
+                                <th class="py-3.5 px-4">วันที่ส่งมอบ</th>
+                                <th class="py-3.5 px-4">กำหนดเสร็จเดิม</th>
+                                <th class="py-3.5 px-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
-                        <tbody id="weeklyQcSummaryBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                            <!-- Weekly summary rows injected via JS -->
+                        <tbody id="qcArchiveTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Shipped orders injected via JS -->
                         </tbody>
                     </table>
+                </div>
+                <div id="emptyQcArchiveState" class="hidden py-10 text-center">
+                    <p class="text-slate-400 text-xs font-medium">ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว</p>
                 </div>
             </div>
 
@@ -368,62 +354,22 @@
                         </tbody>
                     </table>
                 </div>
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-folder-open"></i>
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
                 </div>
-                <p class="text-slate-500 font-medium">ไม่พบข้อมูลการตรวจสอบที่คุณค้นหา</p>
-            </div>
             </div>
         </div>
 
-        <!-- Shipped/Delivered View: read-ish archive of every M/O, S/O whose shipment has been
-             confirmed from "รายการรอส่ง" — they land here and disappear from the main
-             Overview/Board working views, but stay fully viewable/editable/deletable. -->
-        <div id="shippedViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-box-archive mr-2 text-emerald-600"></i> M/O, S/O ที่จัดส่งเรียบร้อยแล้ว</h3>
-                <span id="qcArchiveCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 รายการ</span>
-            </div>
-            <p class="px-4 pt-3 text-[11px] text-slate-400">เมื่อกดยืนยันการจัดส่งจากแท็บ "รายการรอส่ง" M/O, S/O จะถูกย้ายออกจากแท็บ "ภาพรวมการผลิต" และ "แผนผังการผลิต" อัตโนมัติ มาอยู่ที่นี่แทน ยังเปิดดู/แก้ไข/ลบได้ตามปกติ</p>
-            <div class="px-4 pt-3">
-                <div class="relative w-full sm:w-72">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="qcArchiveSearchInput" oninput="renderQcShippedArchive()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O / ลูกค้า / PO</th>
-                            <th class="py-3.5 px-4">วันที่ส่งมอบ</th>
-                            <th class="py-3.5 px-4">กำหนดเสร็จเดิม</th>
-                            <th class="py-3.5 px-4 text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="qcArchiveTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Shipped orders injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyQcArchiveState" class="hidden py-10 text-center">
-                <p id="emptyQcArchiveStateText" class="text-slate-400 text-xs font-medium" data-default-text="ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว">ยังไม่มี M/O, S/O ที่ส่งมอบแล้ว</p>
-            </div>
-        </div>
 
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex justify-between items-center">
                 <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-truck-fast mr-2 text-emerald-600"></i> รายการที่บรรจุภัณฑ์เรียบร้อยแล้ว รอส่งมอบ</h3>
                 <span id="shippingListCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">0 รายการรอส่ง</span>
-            </div>
-            <div class="px-4 pt-3">
-                <div class="relative w-full sm:w-72">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="shippingSearchInput" oninput="renderShippingTable(qcData)" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO, ผู้ตรวจ..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -446,7 +392,7 @@
                 <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
                     <i class="fa-solid fa-box-open"></i>
                 </div>
-                <p id="emptyShippingStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง">ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง</p>
+                <p class="text-slate-500 font-medium">ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง</p>
             </div>
         </div>
 
@@ -841,7 +787,6 @@
         function initApp() {
             populateMoSoFilterOptions();
             renderTable(qcData);
-            renderWeeklyQcSummary();
             renderShippingTable(qcData);
             renderProductionOverview();
             renderProductionBoard();
@@ -855,8 +800,7 @@
                 overview: { btn: 'tabOverviewBtn', container: 'overviewViewContainer' },
                 board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
-                shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
-                shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' }
+                shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
@@ -869,13 +813,13 @@
                 if (containerEl) containerEl.classList.toggle('hidden', view !== key);
             });
 
-            const globalSearchFilterWrapper = document.getElementById('globalSearchFilterWrapper');
-            if (globalSearchFilterWrapper) globalSearchFilterWrapper.classList.toggle('hidden', view !== 'records');
+            const deptFilterWrapper = document.getElementById('deptFilterWrapper');
+            deptFilterWrapper.classList.toggle('hidden', view !== 'records');
 
             if (view === 'shipping') renderShippingTable(qcData);
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
-            if (view === 'shipped') renderQcShippedArchive();
+            if (view === 'records') renderQcShippedArchive();
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -1225,84 +1169,6 @@
             });
         }
 
-        // --- Weekly QC Summary Report (company-wide, "รายงาน QC ทั้งหมด" tab) ---
-        // Groups every QC audit record (all departments, all M/O, S/O — not affected by the
-        // search/filter box below it) into Mon-Sun weeks and shows counts + pass rate for the
-        // most recent 8 weeks, most recent first, so management can see the trend at a glance.
-        function parseDateOnly(dateStr) {
-            const parts = String(dateStr || '').split('-').map(Number);
-            if (parts.length !== 3 || parts.some(n => isNaN(n))) return null;
-            return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-        }
-
-        function getWeekStartUTC(dateObj) {
-            const day = dateObj.getUTCDay(); // 0=Sun..6=Sat
-            const diff = (day === 0 ? -6 : 1 - day);
-            const monday = new Date(dateObj);
-            monday.setUTCDate(monday.getUTCDate() + diff);
-            return monday;
-        }
-
-        function formatDateKeyUTC(dateObj) {
-            return dateObj.toISOString().split('T')[0];
-        }
-
-        const THAI_SHORT_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        function formatThaiShortDateUTC(dateObj) {
-            return `${dateObj.getUTCDate()} ${THAI_SHORT_MONTHS[dateObj.getUTCMonth()]}`;
-        }
-
-        function renderWeeklyQcSummary() {
-            const tbody = document.getElementById('weeklyQcSummaryBody');
-            if (!tbody) return;
-
-            const now = new Date();
-            const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-            const currentWeekStart = getWeekStartUTC(todayUTC);
-            const currentWeekKey = formatDateKeyUTC(currentWeekStart);
-
-            const WEEKS_TO_SHOW = 8;
-            const weeks = [];
-            for (let i = 0; i < WEEKS_TO_SHOW; i++) {
-                const weekStart = new Date(currentWeekStart);
-                weekStart.setUTCDate(weekStart.getUTCDate() - (i * 7));
-                const weekEnd = new Date(weekStart);
-                weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
-                weeks.push({ key: formatDateKeyUTC(weekStart), start: weekStart, end: weekEnd, total: 0, pass: 0, fail: 0, pending: 0 });
-            }
-            const weekByKey = {};
-            weeks.forEach(w => { weekByKey[w.key] = w; });
-
-            qcData.forEach(item => {
-                const d = parseDateOnly(item.date);
-                if (!d) return;
-                const wk = weekByKey[formatDateKeyUTC(getWeekStartUTC(d))];
-                if (!wk) return; // outside the shown 8-week window
-                wk.total++;
-                if (item.status === 'PASS') wk.pass++;
-                else if (item.status === 'FAIL') wk.fail++;
-                else wk.pending++;
-            });
-
-            tbody.innerHTML = weeks.map(w => {
-                const passRate = w.total > 0 ? Math.round((w.pass / w.total) * 1000) / 10 : null;
-                const rateBadge = passRate === null
-                    ? '<span class="text-slate-300">-</span>'
-                    : `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${passRate >= 90 ? 'bg-emerald-100 text-emerald-700' : (passRate >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700')}">${passRate}%</span>`;
-                const isCurrentWeek = w.key === currentWeekKey;
-                return `
-                    <tr class="hover:bg-slate-50/80 transition ${isCurrentWeek ? 'bg-indigo-50/40' : ''}">
-                        <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${formatThaiShortDateUTC(w.start)} - ${formatThaiShortDateUTC(w.end)}${isCurrentWeek ? ' <span class="text-indigo-500 font-semibold">(สัปดาห์นี้)</span>' : ''}</td>
-                        <td class="py-3 px-4 text-center text-xs font-semibold text-slate-700">${w.total}</td>
-                        <td class="py-3 px-4 text-center text-xs text-emerald-700 font-semibold">${w.pass}</td>
-                        <td class="py-3 px-4 text-center text-xs text-rose-700 font-semibold">${w.fail}</td>
-                        <td class="py-3 px-4 text-center text-xs text-amber-700 font-semibold">${w.pending}</td>
-                        <td class="py-3 px-4 text-center">${rateBadge}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
         function renderTable(dataToRender) {
             const tbody = document.getElementById('qcTableBody');
             const emptyState = document.getElementById('emptyState');
@@ -1466,35 +1332,17 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            const fullReadyList = getShippingReadyList(dataToRender);
-            if (fullReadyList.length > 0) {
-                tabBadge.textContent = fullReadyList.length;
+            const readyList = getShippingReadyList(dataToRender);
+            countBadge.textContent = `${readyList.length} รายการรอส่ง`;
+            if (readyList.length > 0) {
+                tabBadge.textContent = readyList.length;
                 tabBadge.classList.remove('hidden');
             } else {
                 tabBadge.classList.add('hidden');
             }
 
-            const searchInputEl = document.getElementById('shippingSearchInput');
-            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
-            const readyList = searchTerm
-                ? fullReadyList.filter(row => {
-                    const order = findOrderByMoSo(row.moSo);
-                    const haystack = [row.moSo, row.inspector, order && order.customerName, order && order.customerPO]
-                        .map(v => String(v || '').toLowerCase())
-                        .join(' ');
-                    return haystack.includes(searchTerm);
-                })
-                : fullReadyList;
-
-            countBadge.textContent = `${readyList.length} รายการรอส่ง`;
-
             if (readyList.length === 0) {
                 emptyState.classList.remove('hidden');
-                const emptyStateText = document.getElementById('emptyShippingStateText');
-                if (emptyStateText) {
-                    emptyStateText.textContent = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : emptyStateText.dataset.defaultText;
-                }
-                currentShippingReadyList = [];
                 return;
             } else {
                 emptyState.classList.add('hidden');
@@ -1674,11 +1522,7 @@
             }
             recomputePlanningPercent(planning);
 
-            // mode: 'internal' (ย้อมในบริษัท, default) or 'external' (ไหมสั่งย้อมนอกบริษัท) — a toggle
-            // per M/O that switches which fields each dyeing item shows (see renderDyeingItemsHtml /
-            // recomputeStagePercent), so a color list started in one mode isn't lost switching modes.
-            const dyeing = Object.assign({ mode: 'internal', colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] }, parseField(raw.dyeing, {}));
-            if (dyeing.mode !== 'external') dyeing.mode = 'internal';
+            const dyeing = Object.assign({ colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] }, parseField(raw.dyeing, {}));
             if (!Array.isArray(dyeing.items)) dyeing.items = [];
             let dyeingMigrated = false;
             if (dyeing.items.length === 0 && (dyeing.colorsOrdered || dyeing.colorsCompleted)) {
@@ -1691,16 +1535,8 @@
                 dyeingMigrated = true;
             }
 
-            // mode: 'internal' (ทอในบริษัท, default) or 'external' (จ้างภายนอกทอ — ส่งผ้าพร้อมไหมออกไป
-            // ให้โรงงานภายนอกทอแล้วรอรับพรมคืน). External mode replaces the internal checklist/items
-            // with a single outsourced-job record (see the `external` object below).
-            const weaving = Object.assign({ mode: 'internal', receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0 }, parseField(raw.weaving, {}));
-            if (weaving.mode !== 'external') weaving.mode = 'internal';
+            const weaving = Object.assign({ receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0 }, parseField(raw.weaving, {}));
             if (!Array.isArray(weaving.items)) weaving.items = [];
-            weaving.external = Object.assign(
-                { sentDate: '', vendorDueDate: '', qcResult: 'pending', failResolution: '', receivedDate: '' },
-                (weaving.external && typeof weaving.external === 'object') ? weaving.external : {}
-            );
             let weavingMigrated = false;
             if (weaving.items.length === 0 && weaving.status && weaving.status !== 'waiting') {
                 weaving.items = [{ batch: '(ข้อมูลเดิม)', status: weaving.status }];
@@ -1780,13 +1616,6 @@
                 const done = (order.planning.specDone ? 1 : 0) + (order.planning.planEntered ? 1 : 0);
                 return `เสร็จแล้ว ${done}/2 ขั้นตอน`;
             }
-            if (stage === 'weaving' && order.weaving.mode === 'external') {
-                const ext = order.weaving.external || {};
-                if (ext.receivedDate && ext.qcResult === 'pass') return `ได้รับพรมจากผู้รับจ้างทอแล้ว (${ext.receivedDate}) — QC ผ่าน`;
-                if (ext.receivedDate) return `ได้รับพรมแล้ว (${ext.receivedDate}) — ${ext.qcResult === 'fail' ? 'QC ไม่ผ่าน รอแก้ไข' : 'รอบันทึกผล QC'}`;
-                if (ext.sentDate) return `ส่งผ้า+ไหมให้ผู้รับจ้างทอแล้ว (${ext.sentDate}) — รอรับพรมคืน`;
-                return 'ยังไม่ได้ส่งงานให้ผู้รับจ้างทอภายนอก';
-            }
             if (stage === 'weaving') {
                 const totalSqm = Number(order.totalSqm) || 0;
                 if (totalSqm > 0) {
@@ -1811,26 +1640,12 @@
 
             if (stage === 'dyeing') {
                 if (items.length === 0) return;
-                // In external mode (ไหมสั่งย้อมนอกบริษัท) each item is still one color, but tracked by
-                // กิโล ordered/received instead of the internal ชิ้น-based qty/completedQty.
-                const orderedField = s.mode === 'external' ? 'weightKgOrdered' : 'qty';
-                const doneField = s.mode === 'external' ? 'weightKgReceived' : 'completedQty';
-                const totalQty = items.reduce((acc, it) => acc + (Number(it[orderedField]) || 0), 0);
-                const totalDone = items.reduce((acc, it) => acc + Math.min(Number(it[doneField]) || 0, Number(it[orderedField]) || 0), 0);
+                const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+                const totalDone = items.reduce((acc, it) => acc + Math.min(Number(it.completedQty) || 0, Number(it.qty) || 0), 0);
                 s.percent = totalQty > 0 ? Math.round((totalDone / totalQty) * 100) : 0;
                 s.colorsOrdered = items.length;
-                s.colorsCompleted = items.filter(it => (Number(it[orderedField]) || 0) > 0 && (Number(it[doneField]) || 0) >= (Number(it[orderedField]) || 0)).length;
+                s.colorsCompleted = items.filter(it => (Number(it.qty) || 0) > 0 && (Number(it.completedQty) || 0) >= (Number(it.qty) || 0)).length;
             } else if (stage === 'weaving') {
-                if (s.mode === 'external') {
-                    // จ้างภายนอกทอ: a single outsourced job, not itemized — progress is staged by how
-                    // far that job has gotten (sent → received → QC passed), not a %-of-items count.
-                    const ext = s.external || {};
-                    if (ext.receivedDate && ext.qcResult === 'pass') s.percent = 100;
-                    else if (ext.receivedDate) s.percent = 70; // received back, but QC not yet marked pass
-                    else if (ext.sentDate) s.percent = 25; // sent out, still waiting on the vendor
-                    else s.percent = 0;
-                    return;
-                }
                 // Weaving's % is based on ตารางเมตร ("ทอได้กี่ตารางเมตร" เทียบกับตารางเมตรรวมของ M/O)
                 // once a total sqm has been entered for the order — falls back to the old item-done-count
                 // calculation only when no total sqm has been entered yet, so orders without sqm data
@@ -2128,11 +1943,7 @@
         // Default shape for a newly-added line item, per department stage. Planning has no item list —
         // it's a fixed 2-step checklist handled separately (see recomputePlanningPercent).
         const STAGE_ITEM_DEFAULTS = {
-            dyeing: {
-                colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0, pieceNo: '', enteredBy: '', designImageUrl: '',
-                // Used only when this M/O's dyeing.mode === 'external' (ไหมสั่งย้อมนอกบริษัท):
-                dateRequested: '', weightKg: 0, weightKgOrdered: 0, weightKgReceived: 0
-            },
+            dyeing: { colorCode: '', qty: 0, colorsPerDay: 0, completedQty: 0, pieceNo: '', enteredBy: '', designImageUrl: '' },
             weaving: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '', designImageUrl: '' },
             finishing: { batch: '', status: 'waiting', pieceNo: '', enteredBy: '', designImageUrl: '' }
         };
@@ -2313,30 +2124,18 @@
             // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
             // (here and the Kanban board) so the day-to-day list only shows what's still in progress —
             // it stays fully visible/editable from the QC archive block in the "รายงาน QC ทั้งหมด" tab.
-            const searchInput = document.getElementById('overviewSearchInput');
-            const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-            let activeWithIndex = [];
+            const activeWithIndex = [];
             productionOrders.forEach((order, orderIndex) => {
                 if (getEffectiveStage(order) === 'shipped') return;
                 activeWithIndex.push({ order, orderIndex });
             });
 
-            if (searchTerm) {
-                activeWithIndex = activeWithIndex.filter(({ order }) => {
-                    const haystack = [order.moSo, order.customerName, order.customerPO]
-                        .map(v => String(v || '').toLowerCase())
-                        .join(' ');
-                    return haystack.includes(searchTerm);
-                });
-            }
-
             const moList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) !== 'SO').sort(sortByDueDateAsc);
             const soList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) === 'SO').sort(sortByDueDateAsc);
 
-            [{ list: moList, tbody: moTbody, countBadgeId: 'overviewMoCountBadge', emptyId: 'emptyOverviewMoState', emptyTextId: 'emptyOverviewMoStateText', unitLabel: 'M/O' },
-             { list: soList, tbody: soTbody, countBadgeId: 'overviewSoCountBadge', emptyId: 'emptyOverviewSoState', emptyTextId: 'emptyOverviewSoStateText', unitLabel: 'S/O' }]
-                .forEach(({ list, tbody, countBadgeId, emptyId, emptyTextId, unitLabel }) => {
+            [{ list: moList, tbody: moTbody, countBadgeId: 'overviewMoCountBadge', emptyId: 'emptyOverviewMoState', unitLabel: 'M/O' },
+             { list: soList, tbody: soTbody, countBadgeId: 'overviewSoCountBadge', emptyId: 'emptyOverviewSoState', unitLabel: 'S/O' }]
+                .forEach(({ list, tbody, countBadgeId, emptyId, unitLabel }) => {
                     const riskCount = list.filter(x => getDeadlineWarning(x.order)).length;
                     document.getElementById(countBadgeId).textContent = `${list.length} ${unitLabel} ในสายการผลิต${riskCount > 0 ? ` • ${riskCount} รายการเสี่ยงไม่ทันกำหนด` : ''}`;
 
@@ -2344,10 +2143,6 @@
                     if (list.length === 0) {
                         tbody.innerHTML = '';
                         emptyState.classList.remove('hidden');
-                        const emptyStateText = document.getElementById(emptyTextId);
-                        if (emptyStateText) {
-                            emptyStateText.textContent = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : emptyStateText.dataset.defaultText;
-                        }
                         return;
                     }
                     emptyState.classList.add('hidden');
@@ -2366,33 +2161,16 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            const searchInput = document.getElementById('qcArchiveSearchInput');
-            const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-            let shippedOrders = [];
+            const shippedOrders = [];
             productionOrders.forEach((order, orderIndex) => {
                 if (getEffectiveStage(order) === 'shipped') shippedOrders.push({ order, orderIndex });
             });
-
-            if (searchTerm) {
-                shippedOrders = shippedOrders.filter(({ order }) => {
-                    const haystack = [order.moSo, order.customerName, order.customerPO]
-                        .map(v => String(v || '').toLowerCase())
-                        .join(' ');
-                    return haystack.includes(searchTerm);
-                });
-            }
-
             shippedOrders.sort((a, b) => String(b.order.shippedDate || '').localeCompare(String(a.order.shippedDate || '')));
 
             countBadge.textContent = `${shippedOrders.length} รายการ`;
 
             if (shippedOrders.length === 0) {
                 emptyState.classList.remove('hidden');
-                const emptyStateText = document.getElementById('emptyQcArchiveStateText');
-                if (emptyStateText) {
-                    emptyStateText.textContent = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : emptyStateText.dataset.defaultText;
-                }
                 return;
             } else {
                 emptyState.classList.add('hidden');
@@ -2432,28 +2210,17 @@
         }
 
         function renderProductionBoard() {
-            const searchInputEl = document.getElementById('boardSearchInput');
-            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
-
             ORDER_STAGES.forEach(stage => {
                 const column = document.getElementById(`boardColumn-${stage}`);
                 const countEl = document.getElementById(`boardCount-${stage}`);
                 if (!column) return;
                 column.innerHTML = '';
 
-                let ordersHere = productionOrders.filter(o => getEffectiveStage(o) === stage);
-                if (searchTerm) {
-                    ordersHere = ordersHere.filter(order => {
-                        const haystack = [order.moSo, order.customerName, order.customerPO]
-                            .map(v => String(v || '').toLowerCase())
-                            .join(' ');
-                        return haystack.includes(searchTerm);
-                    });
-                }
+                const ordersHere = productionOrders.filter(o => getEffectiveStage(o) === stage);
                 countEl.textContent = ordersHere.length;
 
                 if (ordersHere.length === 0) {
-                    column.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการ'}</p>`;
+                    column.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">ไม่มีรายการ</p>';
                     return;
                 }
 
@@ -2498,18 +2265,6 @@
                 mainHtml = `
                     <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded"> คำนวณสเปคแล้ว</label>
                     <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded"> ลงแผนงานแล้ว</label>
-                `;
-            } else if (stage === 'dyeing' && order.dyeing.mode === 'external') {
-                mainHtml = `<p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> ไหมสั่งย้อมนอกบริษัท</p>`;
-            } else if (stage === 'weaving' && order.weaving.mode === 'external') {
-                const ext = order.weaving.external;
-                const qcBadge = ext.qcResult === 'pass'
-                    ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
-                    : (ext.qcResult === 'fail' ? '<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>QC ไม่ผ่าน</span>' : '<span class="text-slate-400">รอผล QC</span>');
-                mainHtml = `
-                    <p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> จ้างภายนอกทอ</p>
-                    <p class="text-[10px] text-slate-500">ส่งผ้า+ไหม: ${escapeHtml(ext.sentDate || '-')}${ext.vendorDueDate ? ` • กำหนดส่ง: ${escapeHtml(ext.vendorDueDate)}` : ''}</p>
-                    <p class="text-[10px]">${qcBadge}${ext.receivedDate ? ` • ได้รับพรม: ${escapeHtml(ext.receivedDate)}` : ''}</p>
                 `;
             } else if (stage === 'weaving') {
                 const fabricOk = !!order.weaving.receivedPrintedFabric;
@@ -2566,51 +2321,6 @@
             rerenderOrderViews(orderIndex);
         }
 
-        // Switches this M/O's dyeing stage between "ย้อมในบริษัท" (internal, default) and "ไหมสั่งย้อม
-        // นอกบริษัท" (external) — the color items already entered are kept either way, only the set of
-        // fields shown per item (and which fields drive the % complete) changes. See renderDyeingItemsHtml
-        // and recomputeStagePercent.
-        function setDyeingMode(orderIndex, mode) {
-            const order = productionOrders[orderIndex];
-            if (!order) return;
-            order.dyeing.mode = (mode === 'external') ? 'external' : 'internal';
-            recomputeStagePercent(order, 'dyeing');
-            persistOrderChange(order);
-            rerenderOrderViews(orderIndex);
-        }
-
-        // Switches this M/O's weaving stage between "ทอในบริษัท" (internal, default) and "จ้างภายนอกทอ"
-        // (external — ส่งผ้าพร้อมไหมออกไปให้โรงงานภายนอกทอแล้วรอรับพรมคืน). Switching modes doesn't erase
-        // whichever side's data was entered, so toggling back and forth is safe.
-        function setWeavingMode(orderIndex, mode) {
-            const order = productionOrders[orderIndex];
-            if (!order) return;
-            order.weaving.mode = (mode === 'external') ? 'external' : 'internal';
-            if (!order.weaving.external || typeof order.weaving.external !== 'object') {
-                order.weaving.external = { sentDate: '', vendorDueDate: '', qcResult: 'pending', failResolution: '', receivedDate: '' };
-            }
-            recomputeStagePercent(order, 'weaving');
-            persistOrderChange(order);
-            rerenderOrderViews(orderIndex);
-        }
-
-        // Updates one field of the outsourced weaving job record (order.weaving.external — used only
-        // when weaving.mode === 'external'): ส่งผ้าพร้อมไหมวันที่ / กำหนดส่ง / ผล QC / วิธีแก้ปัญหาถ้าไม่ผ่าน
-        // / วันที่ได้รับพรมคืน.
-        function updateOrderWeavingExternalField(orderIndex, field, value) {
-            const order = productionOrders[orderIndex];
-            if (!order) return;
-            // Defensive: an M/O saved before this feature existed (or loaded from a stale localStorage
-            // cache that hasn't been re-normalized via a Google Sheet sync yet) may not have this object.
-            if (!order.weaving.external || typeof order.weaving.external !== 'object') {
-                order.weaving.external = { sentDate: '', vendorDueDate: '', qcResult: 'pending', failResolution: '', receivedDate: '' };
-            }
-            order.weaving.external[field] = value;
-            recomputeStagePercent(order, 'weaving');
-            persistOrderChange(order);
-            rerenderOrderViews(orderIndex);
-        }
-
         // Transfer gate: a department can hand work to the next one once its own work is at 100%
         // complete — no department needs a QC PASS record to transfer anymore ("ทุกแผนกไม่ต้องรอ QC
         // แล้ว แค่ 100% ก็โอนได้ทุกแผนก"). The QC badge/records elsewhere in the app are now purely
@@ -2625,7 +2335,7 @@
                 showToast(`แผนก${STAGE_LABELS[fromStage]}ยังทำงานไม่ครบ 100% (ตอนนี้ ${percent}%) ยังโอนงานไม่ได้`, 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
-            if (fromStage === 'weaving' && order.weaving.mode !== 'external' && (!order.weaving.receivedPrintedFabric || !order.weaving.yarnComplete)) {
+            if (fromStage === 'weaving' && (!order.weaving.receivedPrintedFabric || !order.weaving.yarnComplete)) {
                 showToast('กรุณายืนยันว่าได้รับผ้าปั๊มลายและไหมครบสำหรับทอแล้ว ก่อนโอนงาน', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
@@ -2881,54 +2591,14 @@
             `;
         }
 
-        // Two shapes per color row depending on order.dyeing.mode: internal (ย้อมในบริษัท — จำนวน/วัน,
-        // ย้อมได้ต่อวัน, ย้อมเสร็จแล้ว) or external (ไหมสั่งย้อมนอกบริษัท — วันที่สั่ง, สั่งกี่กิโล, ได้แล้วกี่กิโล).
-        // Switching modes keeps every item's data — only which fields are shown/edited changes.
         function renderDyeingItemsHtml(order, orderIndex) {
             const items = order.dyeing.items || [];
-            const isExternal = order.dyeing.mode === 'external';
-            if (items.length === 0) return `<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการสี กด "เพิ่มรายการ" เพื่อเริ่มบันทึก${isExternal ? ' (ย้อมนอกบริษัท)' : ''}</p>`;
-            return items.map((it, idx) => itemRowShell(orderIndex, 'dyeing', idx, `สีที่ ${idx + 1}`, isExternal ? `
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี</label>
-                        <input type="text" placeholder="เช่น B-01" value="${escapeHtml(it.colorCode || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'colorCode', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">วันที่สั่งย้อมนอก</label>
-                        <input type="date" value="${escapeHtml(it.dateRequested || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'dateRequested', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">สั่งย้อมกี่กิโล</label>
-                        <input type="number" min="0" step="0.01" value="${it.weightKgOrdered || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'weightKgOrdered', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ได้แล้วกี่กิโล</label>
-                        <input type="number" min="0" step="0.01" value="${it.weightKgReceived || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'weightKgReceived', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] text-slate-500 mb-0.5">ชื่อผู้คีย์รายการ</label>
-                    <input type="text" placeholder="ชื่อผู้คีย์" value="${escapeHtml(it.enteredBy || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'enteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                </div>
-                ${renderDesignImageBlock(order, orderIndex, 'dyeing', idx, `รูปดีไซน์ สีที่ ${idx + 1}`)}
-            ` : `
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี</label>
-                        <input type="text" placeholder="เช่น B-01" value="${escapeHtml(it.colorCode || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'colorCode', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">วันที่ขอย้อม</label>
-                        <input type="date" value="${escapeHtml(it.dateRequested || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'dateRequested', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                </div>
+            if (items.length === 0) return '<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีรายการสี กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</p>';
+            return items.map((it, idx) => itemRowShell(orderIndex, 'dyeing', idx, `สีที่ ${idx + 1}`, `
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">น้ำหนัก (กก.)</label>
-                        <input type="number" min="0" step="0.01" value="${it.weightKg || 0}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'weightKg', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <label class="block text-[10px] text-slate-500 mb-0.5">Code สี</label>
+                        <input type="text" placeholder="เช่น B-01" value="${escapeHtml(it.colorCode || '')}" onchange="updateOrderItemField(${orderIndex}, 'dyeing', ${idx}, 'colorCode', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-500 mb-0.5">จำนวนที่สั่งย้อม</label>
@@ -3011,74 +2681,13 @@
         // and finishing shows the QC-record button instead of a plain transfer button). Planning shows
         // its fixed 2-step checklist instead of an add-item list; the other 3 stages keep the
         // repeatable item list with an "+ เพิ่มรายการ" button.
-        // Small pill toggle shared by dyeing ("ย้อมในบริษัท" / "ไหมสั่งย้อมนอกบริษัท") and weaving
-        // ("ทอในบริษัท" / "จ้างภายนอกทอ") — switches order[stage].mode via setDyeingMode/setWeavingMode.
-        function renderStageModeToggleHtml(orderIndex, stage, currentMode, internalLabel, externalLabel) {
-            const setterFn = stage === 'dyeing' ? 'setDyeingMode' : 'setWeavingMode';
-            const isExternal = currentMode === 'external';
-            return `
-                <div class="flex items-center gap-1.5 mb-2 bg-slate-100 p-1 rounded-lg w-fit">
-                    <button type="button" onclick="${setterFn}(${orderIndex}, 'internal')" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${!isExternal ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-indigo-600'}">${internalLabel}</button>
-                    <button type="button" onclick="${setterFn}(${orderIndex}, 'external')" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${isExternal ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-amber-600'}">${externalLabel}</button>
-                </div>
-            `;
-        }
-
-        // จ้างภายนอกทอ: a single outsourced-job record (not itemized) — ส่งผ้าพร้อมไหมวันที่ / กำหนดส่ง /
-        // ผล QC (ถ้าไม่ผ่านให้บันทึกวิธีแก้ปัญหา) / วันที่ได้รับพรมคืน. Editable regardless of currentStage,
-        // same convention as every other department's fields.
-        function renderWeavingExternalJobHtml(order, orderIndex) {
-            const ext = order.weaving.external || {};
-            return `
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ส่งผ้าพร้อมไหมวันที่</label>
-                        <input type="date" value="${escapeHtml(ext.sentDate || '')}" onchange="updateOrderWeavingExternalField(${orderIndex}, 'sentDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">กำหนดส่ง (ผู้รับจ้างทอ)</label>
-                        <input type="date" value="${escapeHtml(ext.vendorDueDate || '')}" onchange="updateOrderWeavingExternalField(${orderIndex}, 'vendorDueDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                    </div>
-                </div>
-                <div class="mb-2 bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">QC ตรวจงาน</label>
-                        <select onchange="updateOrderWeavingExternalField(${orderIndex}, 'qcResult', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                            <option value="pending" ${ext.qcResult === 'pending' ? 'selected' : ''}>รอตรวจ</option>
-                            <option value="pass" ${ext.qcResult === 'pass' ? 'selected' : ''}>ผ่าน</option>
-                            <option value="fail" ${ext.qcResult === 'fail' ? 'selected' : ''}>ไม่ผ่าน</option>
-                        </select>
-                    </div>
-                    ${ext.qcResult === 'fail' ? `
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-0.5">ไม่ผ่าน — แก้ปัญหาอย่างไร</label>
-                        <textarea rows="2" placeholder="บันทึกวิธีแก้ปัญหา/การแก้ไขที่ผู้รับจ้างทอดำเนินการ" onchange="updateOrderWeavingExternalField(${orderIndex}, 'failResolution', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">${escapeHtml(ext.failResolution || '')}</textarea>
-                    </div>` : ''}
-                </div>
-                <div class="mb-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <label class="block text-[10px] text-slate-500 mb-0.5">ได้รับพรมจากผู้รับจ้างทอวันที่</label>
-                    <input type="date" value="${escapeHtml(ext.receivedDate || '')}" onchange="updateOrderWeavingExternalField(${orderIndex}, 'receivedDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                </div>
-            `;
-        }
-
         function renderOrderDetailStageSection(order, orderIndex, stage) {
             const percent = order[stage].percent || 0;
             const complete = percent >= 100;
             const isCurrent = order.currentStage === stage;
-            const isWeavingExternal = stage === 'weaving' && order.weaving.mode === 'external';
-
-            let modeToggleHtml = '';
-            if (stage === 'dyeing') {
-                modeToggleHtml = renderStageModeToggleHtml(orderIndex, 'dyeing', order.dyeing.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท');
-            } else if (stage === 'weaving') {
-                modeToggleHtml = renderStageModeToggleHtml(orderIndex, 'weaving', order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
-            }
 
             let weavingChecks = '';
-            if (isWeavingExternal) {
-                weavingChecks = renderWeavingExternalJobHtml(order, orderIndex);
-            } else if (stage === 'weaving') {
+            if (stage === 'weaving') {
                 const totalYarnColors = Number(order.weaving.totalYarnColors) || 0;
                 const yarnColorsReceived = Number(order.weaving.yarnColorsReceived) || 0;
                 const yarnColorsRemaining = Math.max(0, totalYarnColors - yarnColorsReceived);
@@ -3117,11 +2726,9 @@
 
             const bodyContentHtml = stage === 'planning'
                 ? `<div class="space-y-2">${renderPlanningChecklistHtml(order, orderIndex)}</div>`
-                : (isWeavingExternal
-                    ? '' // Outsourced weaving is a single job record (see weavingChecks above), not an item list.
-                    : `<div class="space-y-2">${STAGE_ITEM_RENDERERS[stage](order, orderIndex)}</div>`);
+                : `<div class="space-y-2">${STAGE_ITEM_RENDERERS[stage](order, orderIndex)}</div>`;
 
-            const addItemBtnHtml = (stage === 'planning' || isWeavingExternal) ? '' : `
+            const addItemBtnHtml = stage === 'planning' ? '' : `
                 <button type="button" onclick="addOrderItem(${orderIndex}, '${stage}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm transition">
                     <i class="fa-solid fa-plus"></i> เพิ่มรายการ
                 </button>
@@ -3163,7 +2770,6 @@
                         </div>
                     </div>
                     <div class="p-3 space-y-2">
-                        ${modeToggleHtml}
                         <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
                         ${weavingChecks}
                         ${bodyContentHtml}
