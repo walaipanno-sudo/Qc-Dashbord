@@ -1728,7 +1728,11 @@
             // mode: 'internal' (ย้อมในบริษัท, default) or 'external' (ไหมสั่งย้อมนอกบริษัท) — a toggle
             // per M/O that switches which fields each dyeing item shows (see renderDyeingItemsHtml /
             // recomputeStagePercent), so a color list started in one mode isn't lost switching modes.
-            const dyeing = Object.assign({ mode: 'internal', colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] }, parseField(raw.dyeing, {}));
+            // plannedColorCount/plannedKg/surplusUsed/surplusColorCount/surplusKg: the dyeing order plan
+            // entered once by the Planning department (จำนวนสี/กิโลที่สั่งย้อม + ไหม surplus ที่ใช้แทน),
+            // kept separate from colorsOrdered/colorsCompleted above (those are auto-derived from the
+            // per-color item list the dyeing department fills in as work progresses).
+            const dyeing = Object.assign({ mode: 'internal', colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [], plannedColorCount: 0, plannedKg: 0, surplusUsed: false, surplusColorCount: 0, surplusKg: 0 }, parseField(raw.dyeing, {}));
             if (dyeing.mode !== 'external') dyeing.mode = 'internal';
             if (!Array.isArray(dyeing.items)) dyeing.items = [];
             let dyeingMigrated = false;
@@ -2897,7 +2901,7 @@
                 dueDate: dueDate,
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
-                dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [] },
+                dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [], plannedColorCount: 0, plannedKg: 0, surplusUsed: false, surplusColorCount: 0, surplusKg: 0 },
                 weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0 },
                 finishing: { status: 'waiting', percent: 0, items: [] },
                 readyToShip: false,
@@ -2935,6 +2939,8 @@
         // Planning is a fixed 2-step checklist (not a repeatable item list): "คำนวณสเปคแล้ว" and
         // "ลงแผนงานแล้ว" — ticking both makes the department 100% complete.
         function renderPlanningChecklistHtml(order, orderIndex) {
+            const dyeing = order.dyeing;
+            const weaving = order.weaving;
             return `
                 <div class="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
                     <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded w-4 h-4"> คำนวณสเปคแล้ว</label>
@@ -2944,7 +2950,52 @@
                     <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded w-4 h-4"> ลงแผนงานแล้ว</label>
                     <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(order.planning.planEnteredBy || '')}" onchange="updateOrderField(${orderIndex}, 'planning.planEnteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
+
+                <!-- Planning decides internal-vs-external for both dyeing and weaving up front, plus the
+                     dyeing order plan (colors/kg + any surplus yarn used) — see renderStageModeToggleHtml
+                     and the surplus fields below. Dyeing/weaving departments still see the chosen mode
+                     (and, for dyeing, this plan) from their own section, read-only, so they know what
+                     was decided without needing to come back here. -->
+                <div class="bg-violet-50/60 border border-violet-100 p-2.5 rounded-xl space-y-2">
+                    <p class="text-xs font-bold text-violet-700 flex items-center gap-1.5"><i class="fa-solid fa-droplet"></i> งานย้อม</p>
+                    ${renderStageModeToggleHtml(orderIndex, 'dyeing', dyeing.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท')}
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">สั่งย้อมกี่สี</label>
+                            <input type="number" min="0" value="${dyeing.plannedColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.plannedColorCount', Number(this.value))" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">สั่งย้อมกี่กิโล</label>
+                            <input type="number" min="0" step="0.01" value="${dyeing.plannedKg || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.plannedKg', Number(this.value))" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${dyeing.surplusUsed ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'dyeing.surplusUsed', this.checked)" class="rounded"> ใช้ไหม surplus (ไหมที่มีอยู่แล้วในคลัง)</label>
+                    ${dyeing.surplusUsed ? `
+                    <div class="grid grid-cols-2 gap-2 pl-2 border-l-2 border-violet-300">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">ไหม surplus กี่สี</label>
+                            <input type="number" min="0" value="${dyeing.surplusColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.surplusColorCount', Number(this.value))" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">ไหม surplus กี่กิโล</label>
+                            <input type="number" min="0" step="0.01" value="${dyeing.surplusKg || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.surplusKg', Number(this.value))" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>` : ''}
+                </div>
+
+                <div class="bg-teal-50/60 border border-teal-100 p-2.5 rounded-xl space-y-2">
+                    <p class="text-xs font-bold text-teal-700 flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart"></i> งานทอ</p>
+                    ${renderStageModeToggleHtml(orderIndex, 'weaving', weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ')}
+                </div>
             `;
+        }
+
+        // Read-only mode indicator shown inside the dyeing/weaving section itself — the mode is now
+        // decided from the Planning section (see renderPlanningChecklistHtml), so dyeing/weaving staff
+        // just see what was chosen here rather than being able to change it from their own tab.
+        function renderStageModeBadgeHtml(currentMode, internalLabel, externalLabel) {
+            const isExternal = currentMode === 'external';
+            return `<p class="text-[11px] text-slate-500 mb-2"><i class="fa-solid fa-circle-info mr-1"></i>โหมด: <span class="font-semibold ${isExternal ? 'text-amber-700' : 'text-indigo-700'}">${escapeHtml(isExternal ? externalLabel : internalLabel)}</span> <span class="text-slate-400">(กำหนดโดยแผนกวางแผน)</span></p>`;
         }
 
         // Two shapes per color row depending on order.dyeing.mode: internal (ย้อมในบริษัท — จำนวน/วัน,
@@ -3136,9 +3187,16 @@
 
             let modeToggleHtml = '';
             if (stage === 'dyeing') {
-                modeToggleHtml = renderStageModeToggleHtml(orderIndex, 'dyeing', order.dyeing.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท');
+                const d = order.dyeing;
+                const planParts = [];
+                if (d.plannedColorCount || d.plannedKg) planParts.push(`สั่งย้อม ${d.plannedColorCount || 0} สี ${d.plannedKg || 0} กก.`);
+                if (d.surplusUsed) planParts.push(`ใช้ไหม surplus ${d.surplusColorCount || 0} สี ${d.surplusKg || 0} กก.`);
+                const planLineHtml = planParts.length > 0
+                    ? `<p class="text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-2 py-1 mb-2"><i class="fa-solid fa-clipboard-list mr-1"></i>แผนจากแผนกวางแผน: ${escapeHtml(planParts.join(' • '))}</p>`
+                    : '';
+                modeToggleHtml = renderStageModeBadgeHtml(d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท') + planLineHtml;
             } else if (stage === 'weaving') {
-                modeToggleHtml = renderStageModeToggleHtml(orderIndex, 'weaving', order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
+                modeToggleHtml = renderStageModeBadgeHtml(order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
             }
 
             let weavingChecks = '';
