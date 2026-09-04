@@ -200,6 +200,19 @@
             </div>
         </div>
 
+        <!-- Global M/O / S/O Filter Switch — persistent across every tab (ภาพรวม, แผนผังการผลิต,
+             รายงาน QC ทั้งหมด, รอส่ง, ส่งแล้ว). Narrows each tab's own content down to just the
+             selected order type; does not affect the weekly QC summary report, which is always
+             company-wide by design. -->
+        <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide"><i class="fa-solid fa-filter mr-1.5"></i>แสดงเฉพาะประเภท:</span>
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+                <button onclick="setOrderTypeFilter('all')" id="orderTypeFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
+                <button onclick="setOrderTypeFilter('MO')" id="orderTypeFilterMoBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">M/O</button>
+                <button onclick="setOrderTypeFilter('SO')" id="orderTypeFilterSoBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-amber-700 transition">S/O</button>
+            </div>
+        </div>
+
         <!-- Production Overview: split into an M/O box and an S/O box, each with its own running
              number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
              together in one list. -->
@@ -210,7 +223,7 @@
                     <input type="text" id="overviewSearchInput" oninput="renderProductionOverview()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทั้งสองกรอบ)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div id="overviewMoBoxContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-industry mr-2 text-indigo-600"></i> M/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
                     <span id="overviewMoCountBadge" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 M/O ในสายการผลิต</span>
@@ -240,7 +253,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div id="overviewSoBoxContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-4 bg-amber-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h3 class="font-bold text-amber-900 text-sm"><i class="fa-solid fa-swatchbook mr-2 text-amber-600"></i> S/O — เรียงตามกำหนดเสร็จ (วางแผน → ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง → ส่งแล้ว)</h3>
                     <span id="overviewSoCountBadge" class="text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">0 S/O ในสายการผลิต</span>
@@ -286,31 +299,31 @@
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                <div class="bg-blue-50/60 border border-blue-100 border-t-4 border-t-blue-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
-                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-indigo-500"></i> วางแผน</h4>
-                        <span id="boardCount-planning" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                        <h4 class="font-bold text-blue-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-blue-500"></i> วางแผน</h4>
+                        <span id="boardCount-planning" class="text-[11px] bg-white text-blue-700 font-semibold px-2 py-0.5 rounded-full border border-blue-200">0</span>
                     </div>
                     <div id="boardColumn-planning" class="flex flex-col gap-3"></div>
                 </div>
-                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                <div class="bg-violet-50/60 border border-violet-100 border-t-4 border-t-violet-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
-                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-droplet text-indigo-500"></i> ย้อม</h4>
-                        <span id="boardCount-dyeing" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                        <h4 class="font-bold text-violet-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-droplet text-violet-500"></i> ย้อม</h4>
+                        <span id="boardCount-dyeing" class="text-[11px] bg-white text-violet-700 font-semibold px-2 py-0.5 rounded-full border border-violet-200">0</span>
                     </div>
                     <div id="boardColumn-dyeing" class="flex flex-col gap-3"></div>
                 </div>
-                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                <div class="bg-teal-50/60 border border-teal-100 border-t-4 border-t-teal-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
-                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-indigo-500"></i> ทอ</h4>
-                        <span id="boardCount-weaving" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                        <h4 class="font-bold text-teal-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-teal-500"></i> ทอ</h4>
+                        <span id="boardCount-weaving" class="text-[11px] bg-white text-teal-700 font-semibold px-2 py-0.5 rounded-full border border-teal-200">0</span>
                     </div>
                     <div id="boardColumn-weaving" class="flex flex-col gap-3"></div>
                 </div>
-                <div class="bg-slate-100/70 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                <div class="bg-fuchsia-50/60 border border-fuchsia-100 border-t-4 border-t-fuchsia-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
-                        <h4 class="font-bold text-slate-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-indigo-500"></i> ตกแต่ง/บรรจุ</h4>
-                        <span id="boardCount-finishing" class="text-[11px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-200">0</span>
+                        <h4 class="font-bold text-fuchsia-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-fuchsia-500"></i> ตกแต่ง/บรรจุ</h4>
+                        <span id="boardCount-finishing" class="text-[11px] bg-white text-fuchsia-700 font-semibold px-2 py-0.5 rounded-full border border-fuchsia-200">0</span>
                     </div>
                     <div id="boardColumn-finishing" class="flex flex-col gap-3"></div>
                 </div>
@@ -790,6 +803,10 @@
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
         let currentView = 'overview'; // 'overview' | 'board' | 'records' | 'summary' | 'shipping'
+        // Global M/O / S/O switch — applies across every tab in the whole system at once (not just
+        // Overview). 'all' shows everything; 'MO'/'SO' narrows every tab's list/table/board down to
+        // just that order type. Persists across tab switches until the user changes it again.
+        let orderTypeFilter = 'all'; // 'all' | 'MO' | 'SO'
 
         // Manual stages tracked on each production order; 'ready_to_ship' and 'shipped' are derived
         // live from the existing QC/shipping data (packaging department PASS + the "ยืนยันส่งแล้ว" flag),
@@ -805,6 +822,20 @@
             shipped: 'ส่งแล้ว'
         };
         const NEXT_STAGE = { planning: 'dyeing', dyeing: 'weaving', weaving: 'finishing' };
+
+        // Distinct color per department/stage — used on the Kanban board columns (แผนผังการผลิต) and
+        // the stage-progress stepper on the Overview table, so it's easy to tell at a glance which
+        // department an M/O, S/O is currently sitting in, without reading the text label every time.
+        // Picked to stay clearly apart from the colors already used elsewhere for other meanings
+        // (indigo = M/O badge, amber = S/O badge, rose = FAIL/overdue/delete).
+        const STAGE_COLORS = {
+            planning:      { solid: 'bg-blue-500 border-blue-500',         current: 'bg-blue-600 border-blue-600 ring-blue-200',         light: 'bg-blue-50 border-blue-200 text-blue-400',         text: 'text-blue-700',     connector: 'bg-blue-400' },
+            dyeing:        { solid: 'bg-violet-500 border-violet-500',     current: 'bg-violet-600 border-violet-600 ring-violet-200',   light: 'bg-violet-50 border-violet-200 text-violet-400',   text: 'text-violet-700',   connector: 'bg-violet-400' },
+            weaving:       { solid: 'bg-teal-500 border-teal-500',         current: 'bg-teal-600 border-teal-600 ring-teal-200',         light: 'bg-teal-50 border-teal-200 text-teal-400',         text: 'text-teal-700',     connector: 'bg-teal-400' },
+            finishing:     { solid: 'bg-fuchsia-500 border-fuchsia-500',   current: 'bg-fuchsia-600 border-fuchsia-600 ring-fuchsia-200', light: 'bg-fuchsia-50 border-fuchsia-200 text-fuchsia-400', text: 'text-fuchsia-700', connector: 'bg-fuchsia-400' },
+            ready_to_ship: { solid: 'bg-orange-500 border-orange-500',     current: 'bg-orange-600 border-orange-600 ring-orange-200',   light: 'bg-orange-50 border-orange-200 text-orange-400',   text: 'text-orange-700',   connector: 'bg-orange-400' },
+            shipped:       { solid: 'bg-emerald-500 border-emerald-500',   current: 'bg-emerald-600 border-emerald-600 ring-emerald-200', light: 'bg-emerald-50 border-emerald-200 text-emerald-400', text: 'text-emerald-700', connector: 'bg-emerald-400' }
+        };
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedLocal = localStorage.getItem('qc_comprehensive_data_v2');
@@ -838,9 +869,8 @@
 
         function initApp() {
             populateMoSoFilterOptions();
-            renderTable(qcData);
+            filterTable(); // applies the search/status/dept/month filters plus the global M/O, S/O switch, and renders both the records table and the shipping list
             renderWeeklyQcSummary();
-            renderShippingTable(qcData);
             renderProductionOverview();
             renderProductionBoard();
             renderQcShippedArchive();
@@ -874,6 +904,27 @@
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
             if (view === 'shipped') renderQcShippedArchive();
+        }
+
+        // Global M/O, S/O switch (see the `orderTypeFilter` declaration above) — one switch that
+        // narrows every tab in the whole system down to just the selected order type, until changed
+        // back. Re-renders every view so switching tabs afterwards always shows the already-filtered
+        // content, not a stale full list.
+        function setOrderTypeFilter(type) {
+            orderTypeFilter = (type === 'MO' || type === 'SO') ? type : 'all';
+
+            const activeCls = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition";
+            const inactiveCls = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
+            const btnByType = { all: 'orderTypeFilterAllBtn', MO: 'orderTypeFilterMoBtn', SO: 'orderTypeFilterSoBtn' };
+            Object.keys(btnByType).forEach(key => {
+                const btnEl = document.getElementById(btnByType[key]);
+                if (btnEl) btnEl.className = key === orderTypeFilter ? activeCls : inactiveCls;
+            });
+
+            filterTable(); // re-applies search/status/dept/month + the new order-type filter to records + shipping list
+            renderProductionOverview();
+            renderProductionBoard();
+            renderQcShippedArchive();
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -1442,12 +1493,14 @@
             });
             const legacyList = Object.values(latestByMoSo)
                 .filter(item => item.status === 'PASS' && !(item.extraData && item.extraData.shipped))
+                .filter(item => orderTypeFilter === 'all' || getOrderTypeByMoSo(item.moSo) === orderTypeFilter)
                 .map(item => ({ source: 'qc', moSo: item.moSo, date: item.date, inspector: item.inspector, qcRecord: item }));
 
             const legacyMoSoKeys = legacyList.map(l => (l.moSo || '').trim());
             const orderList = [];
             productionOrders.forEach((order, orderIndex) => {
                 if (!order.readyToShip || order.shipped) return;
+                if (orderTypeFilter !== 'all' && (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== orderTypeFilter) return;
                 const key = (order.moSo || '').trim();
                 if (legacyMoSoKeys.includes(key)) return;
                 orderList.push({ source: 'order', moSo: order.moSo, date: order.lastUpdated, inspector: '-', orderIndex });
@@ -2231,15 +2284,16 @@
         function renderStageStepper(effectiveStage) {
             const idx = ALL_STAGES.indexOf(effectiveStage);
             const dots = ALL_STAGES.map((s, i) => {
-                let cls = 'bg-slate-100 text-slate-400 border-slate-200';
-                let content = i + 1;
-                if (i < idx) { cls = 'bg-emerald-500 text-white border-emerald-500'; content = '<i class="fa-solid fa-check text-[9px]"></i>'; }
-                else if (i === idx) { cls = 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200'; }
+                const colors = STAGE_COLORS[s];
+                let cls, content;
+                if (i < idx) { cls = `${colors.solid} text-white`; content = '<i class="fa-solid fa-check text-[9px]"></i>'; }
+                else if (i === idx) { cls = `${colors.current} text-white ring-2`; content = i + 1; }
+                else { cls = colors.light; content = i + 1; }
                 const dot = `<div class="w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold ${cls}" title="${escapeHtml(STAGE_LABELS[s])}">${content}</div>`;
-                const connector = i < ALL_STAGES.length - 1 ? `<div class="w-3 sm:w-5 h-0.5 ${i < idx ? 'bg-emerald-400' : 'bg-slate-200'}"></div>` : '';
+                const connector = i < ALL_STAGES.length - 1 ? `<div class="w-3 sm:w-5 h-0.5 ${i < idx ? colors.connector : 'bg-slate-200'}"></div>` : '';
                 return dot + connector;
             }).join('');
-            return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold text-indigo-700 mt-1.5">${escapeHtml(STAGE_LABELS[effectiveStage])}</div>`;
+            return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold ${STAGE_COLORS[effectiveStage].text} mt-1.5">${escapeHtml(STAGE_LABELS[effectiveStage])}</div>`;
         }
 
         // One row of the Overview table — shared by the M/O box and the S/O box. runningNo is the
@@ -2306,6 +2360,13 @@
             const soTbody = document.getElementById('overviewSoTableBody');
             if (!moTbody || !soTbody) return;
 
+            // Global M/O, S/O switch: when narrowed to one type, hide the other type's box entirely
+            // instead of just showing it empty.
+            const moBox = document.getElementById('overviewMoBoxContainer');
+            const soBox = document.getElementById('overviewSoBoxContainer');
+            if (moBox) moBox.classList.toggle('hidden', orderTypeFilter === 'SO');
+            if (soBox) soBox.classList.toggle('hidden', orderTypeFilter === 'MO');
+
             const today = new Date().toISOString().split('T')[0];
 
             // Once an M/O, S/O is confirmed shipped it's archived out of the main working views
@@ -2371,6 +2432,10 @@
             productionOrders.forEach((order, orderIndex) => {
                 if (getEffectiveStage(order) === 'shipped') shippedOrders.push({ order, orderIndex });
             });
+
+            if (orderTypeFilter !== 'all') {
+                shippedOrders = shippedOrders.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === orderTypeFilter);
+            }
 
             if (searchTerm) {
                 shippedOrders = shippedOrders.filter(({ order }) => {
@@ -2440,6 +2505,9 @@
                 column.innerHTML = '';
 
                 let ordersHere = productionOrders.filter(o => getEffectiveStage(o) === stage);
+                if (orderTypeFilter !== 'all') {
+                    ordersHere = ordersHere.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === orderTypeFilter);
+                }
                 if (searchTerm) {
                     ordersHere = ordersHere.filter(order => {
                         const haystack = [order.moSo, order.customerName, order.customerPO]
@@ -3262,8 +3330,9 @@
                 const matchDept = deptVal === '' || item.department === deptVal;
                 const matchMonth = monthVal === '' || String(item.date || '').startsWith(monthVal);
                 const matchMoSo = moSoVal === '' || (item.moSo || '').trim() === moSoVal;
+                const matchOrderType = orderTypeFilter === 'all' || getOrderTypeByMoSo(item.moSo) === orderTypeFilter;
 
-                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo;
+                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo && matchOrderType;
             });
 
             renderTable(filtered);
@@ -3276,8 +3345,7 @@
             document.getElementById('deptFilter').value = '';
             if (document.getElementById('monthFilter')) document.getElementById('monthFilter').value = '';
             if (document.getElementById('moSoFilterSelect')) document.getElementById('moSoFilterSelect').value = '';
-            renderTable(qcData);
-            renderShippingTable(qcData);
+            filterTable(); // keeps the global M/O, S/O switch in effect — this button only clears the Records-tab search/status/dept/month fields
         }
 
         function openModal() {
