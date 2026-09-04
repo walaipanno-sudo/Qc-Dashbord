@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -1920,6 +1922,35 @@
             }
         }
 
+        // Sends a LINE broadcast (to everyone who's added the company's LINE Official Account as a
+        // friend) when an M/O, S/O is confirmed "งานเสร็จ พร้อมส่ง". Always goes through the Apps Script
+        // backend (?type=lineNotify) rather than calling LINE's API directly from the browser — LINE's
+        // Messaging API doesn't allow direct browser calls anyway, and this keeps the LINE channel
+        // access token on the server side only, never exposed in this client-side file. Best-effort:
+        // if it fails (or Google Sheet sync isn't configured yet), the ready-to-ship confirmation
+        // itself is unaffected — sending the LINE message is not a requirement for that step.
+        async function notifyLineReadyToShip(order) {
+            if (!gasWebAppUrl) return;
+            const messageLines = [
+                '🟢 พรมเสร็จ พร้อมส่ง',
+                `M/O, S/O: ${order.moSo || '-'}`
+            ];
+            if (order.customerName) messageLines.push(`ลูกค้า: ${order.customerName}`);
+            if (order.customerPO) messageLines.push(`PO: ${order.customerPO}`);
+            if (order.dueDate) messageLines.push(`กำหนดส่ง: ${order.dueDate}`);
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE ready-to-ship notification:", err);
+            }
+        }
+
         // =========================================================================================
         // Design images ("รูปดีไซน์"): one optional image per M/O overall, plus one optional image
         // per line item ("ชิ้นที่") in the ย้อม/ทอ/ตกแต่ง departments. Images are uploaded to Google
@@ -2706,10 +2737,12 @@
             showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
         }
 
-        // Finishing reaches "รอส่ง" directly once its own work is 100% complete — no QC record needed
-        // anymore, same rule as every other stage. (The QC-record button below is still available for
-        // anyone who wants to log an actual packaging QC check for audit purposes, but it no longer
-        // gates anything.)
+        // Finishing reaches "รอส่ง" once its own work is 100% complete AND the packaging-department QC
+        // check for this M/O, S/O has been recorded as PASS — unlike every other stage transfer (which
+        // only needs 100%), this specific step is the last gate before shipping, so it requires an
+        // actual passed QC record, not just a self-reported percentage. Fires a LINE broadcast once
+        // confirmed (see notifyLineReadyToShip) so the team finds out the carpet is ready without
+        // needing to check the dashboard.
         function markOrderReadyToShip(orderIndex) {
             const order = productionOrders[orderIndex];
             if (!order) return;
@@ -2718,9 +2751,14 @@
                 showToast(`แผนกตกแต่ง/บรรจุยังทำงานไม่ครบ 100% (ตอนนี้ ${percent}%) กรุณาอัปเดตให้ครบก่อน`, 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
+            if (!hasQcPass(order.moSo, PACKAGING_DEPARTMENT)) {
+                showToast(`ต้องบันทึกผล QC แผนกตกแต่ง/บรรจุภัณฑ์เป็น "PASS" ก่อน จึงจะยืนยันพร้อมส่งได้`, 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
             order.readyToShip = true;
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
+            notifyLineReadyToShip(order);
             showToast(`M/O "${order.moSo}" งานเสร็จครบแล้ว ย้ายไปรายการรอส่ง`, 'fa-truck-fast', 'text-emerald-400');
         }
 
@@ -3262,9 +3300,10 @@
                             <button onclick="markOrderShipped(${orderIndex})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"><i class="fa-solid fa-truck-fast"></i> ยืนยันส่งของแล้ว</button>
                         `;
                     } else {
+                        const qcPassed = hasQcPass(order.moSo, PACKAGING_DEPARTMENT);
                         actionHtml = `
-                            <button onclick="attemptOpenPackagingQc(${orderIndex})" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์ (ไม่บังคับ)</button>
-                            <button onclick="markOrderReadyToShip(${orderIndex})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"><i class="fa-solid fa-truck-fast"></i> ยืนยันงานเสร็จ พร้อมส่ง</button>
+                            <button onclick="attemptOpenPackagingQc(${orderIndex})" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"><i class="fa-solid fa-clipboard-check"></i> บันทึกผล QC บรรจุภัณฑ์ ${qcPassed ? '' : '(ต้อง PASS ก่อนยืนยันพร้อมส่ง)'}</button>
+                            <button onclick="markOrderReadyToShip(${orderIndex})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5" title="${qcPassed ? '' : 'ต้องบันทึกผล QC แผนกตกแต่ง/บรรจุภัณฑ์เป็น PASS ก่อน'}"><i class="fa-solid fa-truck-fast"></i> ยืนยันงานเสร็จ พร้อมส่ง</button>
                         `;
                     }
                 } else {
