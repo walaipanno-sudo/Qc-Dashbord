@@ -47,6 +47,30 @@
             body.print-single-mode > *:not(#printArea) { display: none !important; }
             body.print-single-mode #printArea { display: block !important; }
         }
+
+        /* ===== Overview mascot: "น้องไหม" — carpet/yarn-factory themed corner companion =====
+           Idle bob loop + periodic blink keep it feeling alive without being distracting; the
+           bigger "excited" bounce and speech bubble only fire on meaningful data updates. */
+        .mascot-idle { animation: mascotBob 3.2s ease-in-out infinite; transform-origin: 50% 92%; }
+        @keyframes mascotBob {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50%      { transform: translateY(-5px) rotate(2deg); }
+        }
+        .mascot-blink #mascotEyes { animation: mascotBlink 0.28s ease-in-out; transform-origin: 50px 52px; }
+        @keyframes mascotBlink {
+            0%, 100% { transform: scaleY(1); }
+            50%      { transform: scaleY(0.1); }
+        }
+        .mascot-excited { animation: mascotExcited 0.9s cubic-bezier(.36,1.7,.55,1) !important; }
+        @keyframes mascotExcited {
+            0%   { transform: translateY(0) scale(1, 1) rotate(0deg); }
+            20%  { transform: translateY(-16px) scale(0.9, 1.15) rotate(-6deg); }
+            45%  { transform: translateY(2px) scale(1.12, 0.88) rotate(4deg); }
+            65%  { transform: translateY(-8px) scale(0.96, 1.06) rotate(-3deg); }
+            100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        }
+        .mascot-bubble { transition: opacity 0.35s ease, transform 0.35s ease; opacity: 0; transform: translateY(6px); }
+        .mascot-bubble.show { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -217,6 +241,42 @@
              number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
              together in one list. -->
         <div id="overviewViewContainer" class="space-y-4">
+            <!-- Mascot: "น้องไหม" (Nong Mai) — a cute yarn-ball character themed after the carpet/
+                 yarn factory, sitting quietly in the corner and cheering when data updates happen.
+                 Nested here so it's automatically shown/hidden with the Overview tab via the
+                 existing switchView() `hidden`-class toggle on this container — no extra JS needed. -->
+            <div id="mascotWidget" class="fixed bottom-4 left-4 z-40 flex flex-col items-start pointer-events-none select-none no-print" aria-hidden="true">
+                <div id="mascotBubble" class="mascot-bubble mb-1 max-w-[190px] bg-white border border-amber-200 shadow-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] leading-snug text-amber-900 font-medium">
+                    <span id="mascotBubbleText">ยินดีต้อนรับค่ะ! น้องไหมคอยดูอยู่นะ 🧶</span>
+                </div>
+                <div id="mascotCharacter" class="mascot-idle w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                        <!-- little rug the mascot sits on -->
+                        <ellipse cx="50" cy="88" rx="30" ry="5" fill="#9a3412" opacity="0.15"/>
+                        <rect x="22" y="81" width="56" height="4.5" rx="2.25" fill="#f97316"/>
+                        <rect x="22" y="86" width="56" height="4.5" rx="2.25" fill="#fbbf24"/>
+                        <!-- loose yarn tail wisps -->
+                        <path d="M20 60 C10 56, 8 66, 14 72" stroke="#f59e0b" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <path d="M80 58 C90 56, 90 66, 83 70" stroke="#fb923c" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <!-- yarn-ball body -->
+                        <circle cx="50" cy="54" r="32" fill="#fb923c"/>
+                        <path d="M50 22 C34 29, 34 79, 50 86" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.6"/>
+                        <path d="M50 22 C66 29, 66 79, 50 86" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.6"/>
+                        <path d="M18 54 C30 41, 70 41, 82 54" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.5"/>
+                        <path d="M18 54 C30 67, 70 67, 82 54" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.5"/>
+                        <!-- cheeks -->
+                        <ellipse cx="33" cy="59" rx="5" ry="3.5" fill="#fca5a5" opacity="0.55"/>
+                        <ellipse cx="67" cy="59" rx="5" ry="3.5" fill="#fca5a5" opacity="0.55"/>
+                        <!-- eyes (blink target) -->
+                        <g id="mascotEyes">
+                            <ellipse cx="40" cy="51" rx="3.2" ry="4" fill="#422006"/>
+                            <ellipse cx="60" cy="51" rx="3.2" ry="4" fill="#422006"/>
+                        </g>
+                        <!-- smile -->
+                        <path d="M40 63 Q50 70 60 63" stroke="#422006" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
                 <div class="relative w-full sm:w-80">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
@@ -837,6 +897,43 @@
             shipped:       { solid: 'bg-emerald-500 border-emerald-500',   current: 'bg-emerald-600 border-emerald-600 ring-emerald-200', light: 'bg-emerald-50 border-emerald-200 text-emerald-400', text: 'text-emerald-700', connector: 'bg-emerald-400' }
         };
 
+        // ===== Overview mascot: "น้องไหม" — a cute yarn-ball character themed after the carpet/
+        // yarn factory that sits quietly in the corner of the Overview tab and cheers when
+        // something meaningful happens (new order, stage transfer, ready-to-ship, shipped, manual
+        // sync). Purely decorative/client-side — no backend or schema changes needed. Deliberately
+        // NOT wired into persistOrderChange(), which fires on nearly every field edit — that would
+        // make the mascot pop up constantly and undercut the "delight" it's meant to add.
+        const MASCOT_MESSAGES = {
+            newOrder:    ['มี M/O, S/O ใหม่เข้ามาแล้ว!', 'งานเข้าอีกแล้วน้าา 🧶'],
+            transfer:    ['โอนงานสำเร็จ ไปแผนกถัดไปแล้ว!', 'เก่งมาก โอนงานเรียบร้อย'],
+            readyToShip: ['พรมเสร็จ พร้อมส่งแล้วค่ะ!', 'เย้! งานนี้พร้อมส่งแล้ว 🎉'],
+            shipped:     ['ส่งมอบสำเร็จแล้วน้าา 🎉', 'จัดส่งเรียบร้อย เก่งมาก!'],
+            sync:        ['ข้อมูลอัปเดตล่าสุดแล้วค่ะ', 'ซิงค์ข้อมูลเรียบร้อย!']
+        };
+        let mascotBubbleTimer = null;
+        function mascotCelebrate(kind) {
+            const character = document.getElementById('mascotCharacter');
+            const bubble = document.getElementById('mascotBubble');
+            const bubbleText = document.getElementById('mascotBubbleText');
+            if (!character || !bubble || !bubbleText) return; // mascot markup not present for some reason — fail quietly
+            const messages = MASCOT_MESSAGES[kind] || MASCOT_MESSAGES.sync;
+            bubbleText.textContent = messages[Math.floor(Math.random() * messages.length)];
+            character.classList.remove('mascot-excited');
+            void character.offsetWidth; // force reflow so the animation restarts even if it's already mid-way
+            character.classList.add('mascot-excited');
+            bubble.classList.add('show');
+            if (mascotBubbleTimer) clearTimeout(mascotBubbleTimer);
+            mascotBubbleTimer = setTimeout(() => { bubble.classList.remove('show'); }, 2500);
+        }
+        function startMascotBlinkLoop() {
+            setInterval(() => {
+                const character = document.getElementById('mascotCharacter');
+                if (!character) return;
+                character.classList.add('mascot-blink');
+                setTimeout(() => character.classList.remove('mascot-blink'), 320);
+            }, 4200 + Math.random() * 1800);
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             const savedLocal = localStorage.getItem('qc_comprehensive_data_v2');
             if (savedLocal) {
@@ -850,6 +947,7 @@
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
             switchView('overview');
+            startMascotBlinkLoop();
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
                 fetchOrdersFromGoogleSheet(false);
@@ -1003,7 +1101,7 @@
                     saveToLocal();
                     initApp();
                     updateSyncStatus(true, `ซิงค์สำเร็จ (${qcData.length} รายการ)`);
-                    if (isManual) showToast(`ซิงค์ข้อมูลสำเร็จ! โหลด ${qcData.length} รายการ`);
+                    if (isManual) { showToast(`ซิงค์ข้อมูลสำเร็จ! โหลด ${qcData.length} รายการ`); mascotCelebrate('sync'); }
                 }
             } catch(e) {
                 console.error("Fetch error:", e);
@@ -1654,7 +1752,7 @@
                     renderProductionBoard();
                     renderQcShippedArchive();
                     renderShippingTable(qcData);
-                    if (isManual) showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`);
+                    if (isManual) { showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`); mascotCelebrate('sync'); }
                 }
             } catch(e) {
                 console.error("Fetch production orders error (backend may not support order sync yet):", e);
@@ -2733,6 +2831,7 @@
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
             showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
+            mascotCelebrate('transfer');
         }
 
         // Finishing reaches "รอส่ง" once its own work is 100% complete AND the packaging-department QC
@@ -2758,6 +2857,7 @@
             rerenderOrderViews(orderIndex);
             notifyLineReadyToShip(order);
             showToast(`M/O "${order.moSo}" งานเสร็จครบแล้ว ย้ายไปรายการรอส่ง`, 'fa-truck-fast', 'text-emerald-400');
+            mascotCelebrate('readyToShip');
         }
 
         // Marks a ready-to-ship order as actually shipped — the order-level counterpart of the
@@ -2770,6 +2870,7 @@
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
             showToast(`บันทึกว่าส่งมอบ M/O "${order.moSo}" แล้ว`, 'fa-truck-fast', 'text-emerald-400');
+            mascotCelebrate('shipped');
         }
 
         // Optional: still lets staff log an actual packaging QC check for this M/O if they want an
@@ -2952,6 +3053,7 @@
             renderProductionOverview();
             closeNewOrderModal();
             showToast(`เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`);
+            mascotCelebrate('newOrder');
         }
 
         // =========================================================================================
