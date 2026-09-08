@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -246,6 +248,21 @@
                 <button onclick="setOrderTypeFilter('all')" id="orderTypeFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
                 <button onclick="setOrderTypeFilter('MO')" id="orderTypeFilterMoBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">M/O</button>
                 <button onclick="setOrderTypeFilter('SO')" id="orderTypeFilterSoBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-amber-700 transition">S/O</button>
+            </div>
+        </div>
+
+        <!-- NEW (2026-09c): Global market (ตลาด) Filter Switch — same "persistent across every tab"
+             behavior as the M/O/S/O switch above, but on a separate axis: ต่างประเทศ (export) vs
+             ในประเทศ (domestic). The two switches combine (e.g. M/O + ต่างประเทศ shows only export M/O).
+             Orders saved before this feature existed have no market set and only show up under
+             "ทั้งหมด" (there's no way to guess export/domestic from the M/O number the way order type
+             can be guessed from it) until someone tags them via the order detail modal. -->
+        <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide"><i class="fa-solid fa-earth-asia mr-1.5"></i>แสดงเฉพาะตลาด:</span>
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+                <button onclick="setMarketFilter('all')" id="marketFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
+                <button onclick="setMarketFilter('export')" id="marketFilterExportBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-sky-700 transition">ต่างประเทศ</button>
+                <button onclick="setMarketFilter('domestic')" id="marketFilterDomesticBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition">ในประเทศ</button>
             </div>
         </div>
 
@@ -639,6 +656,25 @@
                     </label>
                 </div>
             </div>
+            <!-- NEW (2026-09c): market (ตลาด) — a separate classification from M/O vs S/O above, so an
+                 order can be e.g. an export M/O or a domestic S/O. Required (no default selected) so a
+                 new order is always explicitly tagged; see marketFilter/matchesMarketFilter for how
+                 this drives the global "แสดงเฉพาะตลาด" filter switch. -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ตลาด</label>
+                <div class="flex gap-2">
+                    <label id="newOrderMarketExportLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
+                        <input type="radio" name="newOrderMarket" id="newOrderMarketExport" value="export" class="hidden" onchange="updateNewOrderMarketStyle()"> ต่างประเทศ
+                    </label>
+                    <label id="newOrderMarketDomesticLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
+                        <input type="radio" name="newOrderMarket" id="newOrderMarketDomestic" value="domestic" class="hidden" onchange="updateNewOrderMarketStyle()"> ในประเทศ
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อเซล (Sale)</label>
+                <input type="text" id="newOrderSalesName" placeholder="ชื่อพนักงานขายที่ดูแล M/O, S/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
                 <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -648,8 +684,42 @@
                 <input type="text" id="newOrderCustomerName" placeholder="เช่น บริษัท เอบีซี จำกัด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า</label>
-                <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า / ชื่อโปรเจกต์</label>
+                <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO และชื่อโปรเจกต์ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่เปิด M/O</label>
+                <input type="date" id="newOrderOpenDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <!-- NEW (2026-09): the fields below mirror the sales team's "เปิด M/O" Excel worksheet columns
+                 (LOCATION / QUALITY / PACKAGING / COLORS / CARPET SIZE / INCO-TERMS / DISPATCH /
+                 POSTPONE DISPATCH / DESIGN / REF. / REMARKS) so opening an order here captures the same
+                 information that used to live only in that spreadsheet — everything EXCEPT the price
+                 columns (Unit Price, Amount, Grand Total), which this dashboard has no use for. All
+                 optional: leave blank if not known yet, editable later from the order detail screen. -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่/ชื่อสถานที่ติดตั้ง</label>
+                <input type="text" id="newOrderLocationName" placeholder="เช่น GROUND FLOOR - MAJLIS" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">คุณภาพ (เส้นด้าย/ลาย)</label>
+                    <input type="text" id="newOrderQuality" placeholder="เช่น HWO-450 CUT (9 MM.)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">บรรจุภัณฑ์</label>
+                    <input type="text" id="newOrderPackaging" placeholder="เช่น กล่อง / ม้วนพลาสติก" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">จำนวนสี</label>
+                    <input type="number" min="0" id="newOrderColorsCount" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รหัสดีไซน์ (Design Ref.)</label>
+                    <input type="text" id="newOrderDesignRef" placeholder="เช่น RLS-26-002-02" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
             </div>
             <div>
                 <div class="flex items-center justify-between mb-1">
@@ -665,8 +735,30 @@
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">กำหนดเสร็จ</label>
-                <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รายละเอียดขนาด (ข้อความอิสระ ถ้ามีหลายไซส์ในใบเดียว)</label>
+                <textarea id="newOrderCarpetSizeNote" rows="2" placeholder='เช่น No.1-2: 1.828 x 3.048 M. (6&apos;-0" x 10&apos;-0") – 2 PCS' class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันกำหนดส่ง (Dispatch Date)</label>
+                    <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันเลื่อนส่ง (ถ้ามี)</label>
+                    <input type="date" id="newOrderPostponeDispatchDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">INCOTERMS</label>
+                <input type="text" id="newOrderIncoterms" placeholder="เช่น C&amp;F BAHRAIN, VIA A/F" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">อ้างอิง (REF.)</label>
+                <textarea id="newOrderRefNote" rows="2" placeholder="เช่น อ้าง: S/O 0388/24 สีและคุณภาพ (+เพิ่มแกะลายขอบ BORDER)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">หมายเหตุ (Remarks)</label>
+                <textarea id="newOrderRemark" rows="2" placeholder="หมายเหตุเพิ่มเติมสำหรับ M/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
@@ -704,6 +796,18 @@
                         <option value="MO">M/O</option>
                         <option value="SO">S/O</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตลาด</label>
+                    <select id="orderDetailMarket" onchange="updateOrderField(currentDetailOrderIndex, 'market', this.value)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold">
+                        <option value="">ยังไม่ระบุ</option>
+                        <option value="export">ต่างประเทศ</option>
+                        <option value="domestic">ในประเทศ</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชื่อเซล</label>
+                    <input type="text" id="orderDetailSalesName" onchange="updateOrderField(currentDetailOrderIndex, 'salesName', this.value)" placeholder="ชื่อเซล" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs w-32">
                 </div>
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชื่อลูกค้า</label>
@@ -915,6 +1019,12 @@
         // just that order type. Persists across tab switches until the user changes it again.
         let orderTypeFilter = 'all'; // 'all' | 'MO' | 'SO'
 
+        // NEW (2026-09c): Global market (ตลาด) switch — a second, independent filter axis alongside
+        // orderTypeFilter above: ต่างประเทศ (export) vs ในประเทศ (domestic). Combines with the M/O/S/O
+        // switch (both narrow the same views together). An order with market === '' (not yet tagged —
+        // true for every order saved before this feature existed) only ever matches 'all'.
+        let marketFilter = 'all'; // 'all' | 'export' | 'domestic'
+
         // Manual stages tracked on each production order; 'ready_to_ship' and 'shipped' are derived
         // live from the existing QC/shipping data (packaging department PASS + the "ยืนยันส่งแล้ว" flag),
         // so they don't need their own field on the order object.
@@ -1070,6 +1180,35 @@
             renderProductionOverview();
             renderProductionBoard();
             renderQcShippedArchive();
+        }
+
+        // NEW (2026-09c): Global market switch (see the `marketFilter` declaration above) — same
+        // "re-render every view immediately" behavior as setOrderTypeFilter(), just on the export/
+        // domestic axis instead of the M/O/S/O axis.
+        function setMarketFilter(market) {
+            marketFilter = (market === 'export' || market === 'domestic') ? market : 'all';
+
+            const activeCls = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition";
+            const inactiveCls = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-sky-700 transition";
+            const btnByMarket = { all: 'marketFilterAllBtn', export: 'marketFilterExportBtn', domestic: 'marketFilterDomesticBtn' };
+            Object.keys(btnByMarket).forEach(key => {
+                const btnEl = document.getElementById(btnByMarket[key]);
+                if (btnEl) btnEl.className = key === marketFilter ? activeCls : inactiveCls;
+            });
+
+            filterTable();
+            renderProductionOverview();
+            renderProductionBoard();
+            renderQcShippedArchive();
+        }
+
+        // Shared predicate used everywhere marketFilter needs to be applied to an order (mirrors how
+        // orderTypeFilter is checked inline at each call site) — a plain function (not inlined) since
+        // it's used in more places than orderTypeFilter's check and duplicating the '' vs 'all' logic
+        // inline would be easy to get subtly wrong in one of them.
+        function matchesMarketFilter(order) {
+            if (marketFilter === 'all') return true;
+            return (order && order.market) === marketFilter;
         }
 
         function updateSyncStatus(isConnected, message) {
@@ -1554,7 +1693,7 @@
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
                     <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
                     <td class="py-3.5 px-4 font-medium text-xs">${escapeHtml(item.department)}</td>
-                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${orderTypeBadgeHtml(getOrderTypeByMoSo(item.moSo))}${escapeHtml(item.moSo)}</td>
+                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${orderTypeBadgeHtml(getOrderTypeByMoSo(item.moSo))}${marketBadgeHtml(getMarketByMoSo(item.moSo))}${escapeHtml(item.moSo)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate" title="${escapeHtml(summaryText)}">${escapeHtml(summaryText)}</td>
                     <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${escapeHtml(item.status)}</span></td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
@@ -1639,6 +1778,7 @@
             const legacyList = Object.values(latestByMoSo)
                 .filter(item => item.status === 'PASS' && !(item.extraData && item.extraData.shipped))
                 .filter(item => orderTypeFilter === 'all' || getOrderTypeByMoSo(item.moSo) === orderTypeFilter)
+                .filter(item => marketFilter === 'all' || getMarketByMoSo(item.moSo) === marketFilter)
                 .map(item => ({ source: 'qc', moSo: item.moSo, date: item.date, inspector: item.inspector, qcRecord: item }));
 
             const legacyMoSoKeys = legacyList.map(l => (l.moSo || '').trim());
@@ -1646,6 +1786,7 @@
             productionOrders.forEach((order, orderIndex) => {
                 if (!order.readyToShip || order.shipped) return;
                 if (orderTypeFilter !== 'all' && (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== orderTypeFilter) return;
+                if (!matchesMarketFilter(order)) return;
                 const key = (order.moSo || '').trim();
                 if (legacyMoSoKeys.includes(key)) return;
                 orderList.push({ source: 'order', moSo: order.moSo, date: order.lastUpdated, inspector: '-', orderIndex });
@@ -1709,7 +1850,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold ${orderTypeTextClass(getOrderTypeByMoSo(row.moSo))} text-xs font-mono">${orderTypeBadgeHtml(getOrderTypeByMoSo(row.moSo))}${escapeHtml(row.moSo)}</td>
+                    <td class="py-3.5 px-4 font-bold ${orderTypeTextClass(getOrderTypeByMoSo(row.moSo))} text-xs font-mono">${orderTypeBadgeHtml(getOrderTypeByMoSo(row.moSo))}${marketBadgeHtml(getMarketByMoSo(row.moSo))}${escapeHtml(row.moSo)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(row.date || '-')}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-sm truncate" title="${escapeHtml(detailText)}">${escapeHtml(detailText)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(row.inspector || '-')}</td>
@@ -1759,6 +1900,7 @@
             if (orderTypeFilter !== 'all') {
                 list = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === orderTypeFilter);
             }
+            list = list.filter(({ order }) => matchesMarketFilter(order));
             list.sort((a, b) => {
                 // Not-yet-shipped first (still actionable), then most recently shipped first.
                 if (!!a.order.shipped !== !!b.order.shipped) return a.order.shipped ? 1 : -1;
@@ -1775,7 +1917,7 @@
             container.innerHTML = list.map(({ order, orderIndex }) => `
                 <div class="border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row gap-3">
                     <div class="sm:w-56 shrink-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         <p class="text-[11px] mt-1 ${order.shipped ? 'text-emerald-600' : 'text-orange-600'} font-semibold">${order.shipped ? `ส่งแล้ว (${escapeHtml(order.shippedDate || '-')})` : 'รอส่ง'}</p>
                     </div>
@@ -1922,6 +2064,14 @@
             const order = findOrderByMoSo(moSo);
             return order ? (order.orderType || detectOrderTypeFromMoSo(order.moSo)) : detectOrderTypeFromMoSo(moSo);
         }
+        // NEW (2026-09c): market lookup by M/O, S/O text key — the QC records table and shipping list
+        // only have this string on hand, same reasoning as getOrderTypeByMoSo() above. Unlike order
+        // type, there's no way to guess market from the moSo text itself, so an order that hasn't been
+        // tagged yet (or wasn't found at all) returns '' (matches only marketFilter === 'all').
+        function getMarketByMoSo(moSo) {
+            const order = findOrderByMoSo(moSo);
+            return order ? (order.market || '') : '';
+        }
         function orderTypeBadgeHtml(type) {
             return type === 'SO'
                 ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-200 align-middle mr-1.5">S/O</span>'
@@ -1929,6 +2079,14 @@
         }
         function orderTypeTextClass(type) {
             return type === 'SO' ? 'text-amber-700' : 'text-indigo-700';
+        }
+        // NEW (2026-09c): market badge — same style/placement convention as orderTypeBadgeHtml() above,
+        // shown alongside it wherever an M/O, S/O's badges are rendered. '' (not yet tagged) shows no
+        // badge at all rather than a misleading default.
+        function marketBadgeHtml(market) {
+            if (market === 'export') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-100 text-sky-700 border border-sky-200 align-middle mr-1.5">ต่างประเทศ</span>';
+            if (market === 'domestic') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 align-middle mr-1.5">ในประเทศ</span>';
+            return '';
         }
 
         // Converts an order coming from localStorage/Google Sheets into the current item-list-based
@@ -2060,7 +2218,27 @@
                 isInserted: !!raw.isInserted,
                 // shippingMark: free-text "Shipping Mark & Nos" content for the printable label on the
                 // "รายการรอส่ง" tab's Mark & Nos sub-tab (see renderMarkNosSubview() / printMarkNos()).
-                shippingMark: raw.shippingMark || ''
+                shippingMark: raw.shippingMark || '',
+                // NEW (2026-09): fields brought in from the sales team's "เปิด M/O" Excel worksheet, so
+                // the same information gets captured right when the order is opened instead of living
+                // only in a separate spreadsheet — everything from that sheet EXCEPT price/amount
+                // columns (Unit Price, Amount, Grand Total), which this dashboard has no use for.
+                openDate: normalizeDateString(raw.openDate) || raw.createdAt || '',
+                locationName: raw.locationName || '',           // LOCATION NUMBER & LOCATION NAME
+                quality: raw.quality || '',                     // QUALITY (YARNS COUNT & TEXTURE TUFTING)
+                packaging: raw.packaging || '',                 // PACKAGING
+                colorsCount: Number(raw.colorsCount) || 0,       // COLORS (จำนวนสีของดีไซน์นี้)
+                carpetSizeNote: raw.carpetSizeNote || '',        // CARPET SIZE (คำอธิบายขนาดแบบข้อความอิสระ)
+                incoterms: raw.incoterms || '',                 // INCO-TERMS
+                postponeDispatchDate: normalizeDateString(raw.postponeDispatchDate) || '', // POSTPONE DISPATCH DATE
+                designRef: raw.designRef || '',                 // DESIGN (รหัสอ้างอิงดีไซน์)
+                refNote: raw.refNote || '',                     // REF.
+                orderRemark: raw.orderRemark || '',             // REMARKS (หมายเหตุระดับ M/O)
+                // NEW (2026-09c): market (ตลาด) — 'export' (ต่างประเทศ) or 'domestic' (ในประเทศ), plus
+                // the salesperson's name for this order. '' means not yet tagged (orders saved before
+                // this feature existed) — see marketFilter/matchesMarketFilter for how that's handled.
+                market: (raw.market === 'export' || raw.market === 'domestic') ? raw.market : '',
+                salesName: raw.salesName || ''
             };
             // Only auto-recalculate % from items that were genuinely saved as items (new-style data).
             // For a stage whose single item was just synthesized here from old scalar fields, keep the
@@ -2482,6 +2660,66 @@
             `;
         }
 
+        // NEW (2026-09): editable view of the Excel-worksheet-style fields captured when the M/O, S/O
+        // was opened (see submitNewOrder()/normalizeOrder()) — kept viewable/correctable here for the
+        // life of the order, same "onchange -> updateOrderField -> persist+rerender" pattern as every
+        // other field in this modal. Deliberately excludes price/amount/billing columns (Unit Price,
+        // Amount, Grand Total, PI NO., INV. NO., payment terms) per the user's request.
+        function renderOrderExtraInfoBlock(order, orderIndex) {
+            const f = (field, value) => `updateOrderField(${orderIndex}, '${field}', this.value)`;
+            return `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                    <span class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-file-lines mr-1"></i> ข้อมูลเพิ่มเติม (จากใบเปิด M/O)</span>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">วันที่เปิด M/O</label>
+                            <input type="date" value="${order.openDate || ''}" onchange="${f('openDate')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">เลขที่/ชื่อหน้างาน (Location)</label>
+                            <input type="text" value="${escapeHtml(order.locationName || '')}" onchange="${f('locationName')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">คุณภาพ (เบอร์ไหม/ลาย Tufting)</label>
+                            <input type="text" value="${escapeHtml(order.quality || '')}" onchange="${f('quality')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">บรรจุภัณฑ์ (Packaging)</label>
+                            <input type="text" value="${escapeHtml(order.packaging || '')}" onchange="${f('packaging')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">จำนวนสี (Colors)</label>
+                            <input type="number" min="0" step="1" value="${order.colorsCount || ''}" onchange="updateOrderField(${orderIndex}, 'colorsCount', Number(this.value))" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ดีไซน์ (รหัสอ้างอิง)</label>
+                            <input type="text" value="${escapeHtml(order.designRef || '')}" onchange="${f('designRef')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">เลื่อนกำหนดส่งเป็น</label>
+                            <input type="date" value="${order.postponeDispatchDate || ''}" onchange="${f('postponeDispatchDate')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">INCO-TERMS</label>
+                            <input type="text" value="${escapeHtml(order.incoterms || '')}" onchange="${f('incoterms')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">REF.</label>
+                            <input type="text" value="${escapeHtml(order.refNote || '')}" onchange="${f('refNote')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ขนาดพรม (Carpet Size, ข้อความอิสระ)</label>
+                        <textarea rows="2" onchange="${f('carpetSizeNote')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.carpetSizeNote || '')}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">หมายเหตุ (Remarks)</label>
+                        <textarea rows="2" onchange="${f('orderRemark')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.orderRemark || '')}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
         let currentDetailOrderIndex = null; // which order's cross-department detail modal is currently open, if any
 
         function persistOrderChange(order) {
@@ -2728,6 +2966,9 @@
             const customerLineHtml = (order.customerName || order.customerPO)
                 ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName || '-')}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>`
                 : '';
+            const salesLineHtml = order.salesName
+                ? `<p class="text-[11px] text-slate-400 mt-0.5"><i class="fa-solid fa-user-tie mr-1"></i>เซล: ${escapeHtml(order.salesName)}</p>`
+                : '';
             const sqmPiecesLineHtml = (order.totalSqm || order.totalPieces)
                 ? `<p class="text-[11px] text-slate-400 mt-0.5">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>`
                 : '';
@@ -2740,8 +2981,9 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
+                                ${salesLineHtml}
                                 ${sqmPiecesLineHtml}
                             </div>
                         </div>
@@ -2867,6 +3109,7 @@
                     return haystack.includes(searchTerm);
                 });
             }
+            activeWithIndex = activeWithIndex.filter(({ order }) => matchesMarketFilter(order));
 
             const moList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) !== 'SO').sort(sortByDueDateAsc);
             const soList = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) === 'SO').sort(sortByDueDateAsc);
@@ -2914,6 +3157,7 @@
             if (orderTypeFilter !== 'all') {
                 shippedOrders = shippedOrders.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === orderTypeFilter);
             }
+            shippedOrders = shippedOrders.filter(({ order }) => matchesMarketFilter(order));
 
             if (searchTerm) {
                 shippedOrders = shippedOrders.filter(({ order }) => {
@@ -2950,7 +3194,7 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
                             </div>
                         </div>
@@ -2986,6 +3230,7 @@
                 if (orderTypeFilter !== 'all') {
                     ordersHere = ordersHere.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === orderTypeFilter);
                 }
+                ordersHere = ordersHere.filter(o => matchesMarketFilter(o));
                 if (searchTerm) {
                     ordersHere = ordersHere.filter(order => {
                         const haystack = [order.moSo, order.customerName, order.customerPO]
@@ -3039,7 +3284,7 @@
                 <div class="flex justify-between items-start gap-2">
                     ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
@@ -3260,8 +3505,28 @@
             document.getElementById('newOrderCustomerName').value = '';
             document.getElementById('newOrderCustomerPO').value = '';
             document.getElementById('newOrderDueDate').value = '';
+            // NEW (2026-09): the Excel-worksheet-style fields — see submitNewOrder() for how each maps
+            // onto the order object. openDate defaults to today (matching how most rows in that sheet
+            // are opened the same day they're entered) but stays editable in case of backdating.
+            document.getElementById('newOrderOpenDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('newOrderLocationName').value = '';
+            document.getElementById('newOrderQuality').value = '';
+            document.getElementById('newOrderPackaging').value = '';
+            document.getElementById('newOrderColorsCount').value = '';
+            document.getElementById('newOrderDesignRef').value = '';
+            document.getElementById('newOrderCarpetSizeNote').value = '';
+            document.getElementById('newOrderPostponeDispatchDate').value = '';
+            document.getElementById('newOrderIncoterms').value = '';
+            document.getElementById('newOrderRefNote').value = '';
+            document.getElementById('newOrderRemark').value = '';
             document.getElementById('newOrderTypeMo').checked = true;
             updateNewOrderTypeStyle();
+            // NEW (2026-09c): market has no default (must be explicitly chosen — see submitNewOrder()'s
+            // validation), so both radios are cleared rather than one being pre-checked.
+            document.getElementById('newOrderMarketExport').checked = false;
+            document.getElementById('newOrderMarketDomestic').checked = false;
+            updateNewOrderMarketStyle();
+            document.getElementById('newOrderSalesName').value = '';
             document.getElementById('newOrderSizeItemsBody').innerHTML = '';
             addNewOrderSizeRow();
             document.getElementById('newOrderModal').classList.remove('hidden');
@@ -3373,15 +3638,49 @@
             soLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isSo ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-300 text-amber-700'}`;
         }
 
+        // NEW (2026-09c): mirrors updateNewOrderTypeStyle() above, for the ต่างประเทศ/ในประเทศ toggle —
+        // unlike the M/O/S/O toggle, neither option is pre-selected, so both labels can be in the
+        // "unselected" (slate) state at once, right after openNewOrderModal() resets the form.
+        function updateNewOrderMarketStyle() {
+            const isExport = document.getElementById('newOrderMarketExport').checked;
+            const isDomestic = document.getElementById('newOrderMarketDomestic').checked;
+            const exportLabel = document.getElementById('newOrderMarketExportLabel');
+            const domesticLabel = document.getElementById('newOrderMarketDomesticLabel');
+            exportLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isExport ? 'bg-sky-600 border-sky-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`;
+            domesticLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isDomestic ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`;
+        }
+
         function submitNewOrder() {
             const moSo = document.getElementById('newOrderMoSo').value.trim();
             const orderType = document.getElementById('newOrderTypeSo').checked ? 'SO' : 'MO';
+            // NEW (2026-09c): market (ตลาด) + ชื่อเซล — see the newOrderModal radio toggle above and
+            // matchesMarketFilter()/getMarketByMoSo() for how market drives the global filter switch.
+            const market = document.getElementById('newOrderMarketExport').checked ? 'export'
+                : (document.getElementById('newOrderMarketDomestic').checked ? 'domestic' : '');
+            const salesName = document.getElementById('newOrderSalesName').value.trim();
             const customerName = document.getElementById('newOrderCustomerName').value.trim();
             const customerPO = document.getElementById('newOrderCustomerPO').value.trim();
             const { sizeItems, totalSqm, totalPieces } = collectNewOrderSizeItems();
             const dueDate = document.getElementById('newOrderDueDate').value;
+            // NEW (2026-09): Excel-worksheet-style fields, all optional — see normalizeOrder() for the
+            // matching defaults applied when an older order (saved before this update) is loaded back.
+            const openDate = document.getElementById('newOrderOpenDate').value;
+            const locationName = document.getElementById('newOrderLocationName').value.trim();
+            const quality = document.getElementById('newOrderQuality').value.trim();
+            const packaging = document.getElementById('newOrderPackaging').value.trim();
+            const colorsCount = Number(document.getElementById('newOrderColorsCount').value) || 0;
+            const designRef = document.getElementById('newOrderDesignRef').value.trim();
+            const carpetSizeNote = document.getElementById('newOrderCarpetSizeNote').value.trim();
+            const postponeDispatchDate = document.getElementById('newOrderPostponeDispatchDate').value;
+            const incoterms = document.getElementById('newOrderIncoterms').value.trim();
+            const refNote = document.getElementById('newOrderRefNote').value.trim();
+            const orderRemark = document.getElementById('newOrderRemark').value.trim();
             if (!moSo) {
                 showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (!market) {
+                showToast('กรุณาเลือกตลาด: ต่างประเทศ หรือ ในประเทศ', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
             if (productionOrders.some(o => o.moSo.trim() === moSo)) {
@@ -3403,6 +3702,8 @@
             const order = {
                 moSo: moSo,
                 orderType: orderType,
+                market: market,
+                salesName: salesName,
                 customerName: customerName,
                 customerPO: customerPO,
                 sizeItems: sizeItems,
@@ -3410,6 +3711,17 @@
                 totalPieces: totalPieces,
                 designImageUrl: '',
                 dueDate: dueDate,
+                openDate: openDate,
+                locationName: locationName,
+                quality: quality,
+                packaging: packaging,
+                colorsCount: colorsCount,
+                carpetSizeNote: carpetSizeNote,
+                postponeDispatchDate: postponeDispatchDate,
+                incoterms: incoterms,
+                designRef: designRef,
+                refNote: refNote,
+                orderRemark: orderRemark,
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
                 dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [], plannedColorCount: 0, plannedKg: 0, surplusUsed: false, surplusColorCount: 0, surplusKg: 0 },
@@ -3828,6 +4140,8 @@
             document.getElementById('orderDetailTitle').textContent = `รายละเอียด M/O, S/O: ${order.moSo}`;
             document.getElementById('orderDetailMoSoLabel').textContent = order.moSo || '-';
             document.getElementById('orderDetailOrderType').value = order.orderType === 'SO' ? 'SO' : 'MO';
+            document.getElementById('orderDetailMarket').value = order.market || '';
+            document.getElementById('orderDetailSalesName').value = order.salesName || '';
             document.getElementById('orderDetailCustomerName').value = order.customerName || '';
             document.getElementById('orderDetailCustomerPO').value = order.customerPO || '';
             document.getElementById('orderDetailTotalSqm').value = order.totalSqm || '';
@@ -3857,7 +4171,8 @@
             document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order)) + (detailWarningHtml ? `<div class="mt-1.5">${detailWarningHtml}</div>` : '');
             const orderSizeItemsHtml = renderOrderSizeItemsBlock(order, orderIndex);
             const orderDesignImageHtml = renderDesignImageBlock(order, orderIndex, 'order', null, 'รูปดีไซน์ของ M/O นี้ (ถ้ามี)');
-            document.getElementById('orderDetailBody').innerHTML = orderSizeItemsHtml + orderDesignImageHtml + ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
+            const orderExtraInfoHtml = renderOrderExtraInfoBlock(order, orderIndex);
+            document.getElementById('orderDetailBody').innerHTML = orderSizeItemsHtml + orderDesignImageHtml + orderExtraInfoHtml + ORDER_STAGES.map(stage => renderOrderDetailStageSection(order, orderIndex, stage)).join('');
         }
 
         function openOrderDetailModal(orderIndex, focusStage) {
@@ -3914,8 +4229,9 @@
                 const matchMonth = monthVal === '' || String(item.date || '').startsWith(monthVal);
                 const matchMoSo = moSoVal === '' || (item.moSo || '').trim() === moSoVal;
                 const matchOrderType = orderTypeFilter === 'all' || getOrderTypeByMoSo(item.moSo) === orderTypeFilter;
+                const matchMarket = marketFilter === 'all' || getMarketByMoSo(item.moSo) === marketFilter;
 
-                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo && matchOrderType;
+                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo && matchOrderType && matchMarket;
             });
 
             renderTable(filtered);
