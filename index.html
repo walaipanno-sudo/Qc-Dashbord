@@ -58,7 +58,7 @@
             0%, 100% { transform: translateY(0) rotate(-2deg); }
             50%      { transform: translateY(-5px) rotate(2deg); }
         }
-        .mascot-blink #mascotEyes { animation: mascotBlink 0.28s ease-in-out; transform-origin: 50px 52px; }
+        .mascot-blink #mascotEyes { animation: mascotBlink 0.28s ease-in-out; transform-origin: 50px 45px; }
         @keyframes mascotBlink {
             0%, 100% { transform: scaleY(1); }
             50%      { transform: scaleY(0.1); }
@@ -142,6 +142,80 @@
         <div id="toast" class="hidden no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-10 opacity-0">
             <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
             <span id="toast-msg" class="text-sm font-medium">บันทึกข้อมูลสำเร็จ</span>
+        </div>
+
+        <!-- Mascot: "น้องไหม" (Nong Mai) — a rolled-carpet superhero, redesigned to be a distinctive,
+             "เท่ห์" (cool), unmistakably Siam Carpets character (nobody mistakes this for a plain
+             ball anymore): a standing carpet roll with a cape, sneakers, cool shades, and an "SC"
+             belt-buckle badge. Sits quietly in the corner and cheers when data updates happen.
+             Lives at this top level (sibling of every tab's view container, not nested inside one)
+             so it stays visible on EVERY tab, not just "ภาพรวมการผลิต" — switchView()'s hidden-class
+             toggle only ever targets the tab containers listed in its own `tabs` map, so a fixed
+             element living outside all of them is never touched by it. -->
+        <div id="mascotWidget" class="fixed bottom-4 left-4 z-40 flex flex-col items-start pointer-events-none select-none no-print" aria-hidden="true">
+            <div id="mascotBubble" class="mascot-bubble mb-1 max-w-[190px] bg-white border border-amber-200 shadow-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] leading-snug text-amber-900 font-medium">
+                <span id="mascotBubbleText">ยินดีต้อนรับค่ะ! น้องไหมคอยดูอยู่นะ 🧶</span>
+            </div>
+            <div id="mascotCharacter" class="mascot-idle w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                    <!-- ground shadow -->
+                    <ellipse cx="50" cy="94" rx="22" ry="3.6" fill="#000" opacity="0.12"/>
+                    <!-- cape: dramatic two-tone flowing fabric behind the body -->
+                    <path d="M40 40 C20 46, 10 66, 16 86 C22 78, 28 68, 38 62 Z" fill="#7c2d12"/>
+                    <path d="M60 40 C80 46, 90 66, 84 86 C78 78, 72 68, 62 62 Z" fill="#991b1b"/>
+                    <!-- legs + sneakers -->
+                    <rect x="40" y="80" width="7" height="9" rx="3" fill="#450a0a"/>
+                    <rect x="53" y="80" width="7" height="9" rx="3" fill="#450a0a"/>
+                    <ellipse cx="43" cy="90.5" rx="6.5" ry="3.2" fill="#fefce8"/>
+                    <ellipse cx="56" cy="90.5" rx="6.5" ry="3.2" fill="#fefce8"/>
+                    <rect x="38" y="89" width="10" height="1.6" fill="#dc2626"/>
+                    <rect x="51" y="89" width="10" height="1.6" fill="#dc2626"/>
+                    <!-- body: rolled-carpet cylinder, tall & narrow so it reads as a roll, not a ball -->
+                    <rect x="35" y="28" width="30" height="55" rx="14" fill="#b91c1c"/>
+                    <!-- carpet fringe along the bottom hem -->
+                    <g stroke="#fde68a" stroke-width="1.5" stroke-linecap="round">
+                        <line x1="37" y1="81" x2="37" y2="86"/>
+                        <line x1="41" y1="82" x2="41" y2="87.5"/>
+                        <line x1="45" y1="82.5" x2="45" y2="88"/>
+                        <line x1="55" y1="82.5" x2="55" y2="88"/>
+                        <line x1="59" y1="82" x2="59" y2="87.5"/>
+                        <line x1="63" y1="81" x2="63" y2="86"/>
+                    </g>
+                    <!-- gold "belt" band, with the SC badge sitting on it like a belt buckle -->
+                    <rect x="35" y="70" width="30" height="4.5" fill="#eab308"/>
+                    <rect x="35" y="70" width="30" height="1.4" fill="#fde68a"/>
+                    <circle cx="50" cy="72.2" r="5.4" fill="#fde68a" stroke="#78350f" stroke-width="1.5"/>
+                    <text x="50" y="74.6" font-family="Arial, sans-serif" font-size="5.6" font-weight="900" fill="#78350f" text-anchor="middle">SC</text>
+                    <!-- rolled top end, drawn as an ellipse (3D disc) so it reads as the open end of a rolled rug -->
+                    <ellipse cx="50" cy="28" rx="15" ry="9" fill="#78350f"/>
+                    <ellipse cx="50" cy="27.3" rx="12" ry="7.2" fill="#eab308"/>
+                    <ellipse cx="50" cy="26.7" rx="8.6" ry="5.2" fill="#b91c1c"/>
+                    <ellipse cx="50" cy="26.1" rx="5.2" ry="3.1" fill="#fde68a"/>
+                    <!-- arms: clearly attached at the shoulder, one raised in a confident fist-pump, one on the hip -->
+                    <path d="M36 46 C24 44, 16 34, 17 22" stroke="#991b1b" stroke-width="7" fill="none" stroke-linecap="round"/>
+                    <circle cx="17" cy="21" r="5.6" fill="#fde68a"/>
+                    <path d="M64 46 C74 50, 78 58, 74 66" stroke="#991b1b" stroke-width="7" fill="none" stroke-linecap="round"/>
+                    <circle cx="73" cy="67" r="5.6" fill="#fde68a"/>
+                    <!-- eyes (blink target) — kept as real, visible eyes so the existing blink animation
+                         still works; the shades below sit lower on the "nose" so the eyes peek out above -->
+                    <g id="mascotEyes">
+                        <ellipse cx="43" cy="45" rx="3.2" ry="4" fill="#2d1a09"/>
+                        <ellipse cx="57" cy="45" rx="3.2" ry="4" fill="#2d1a09"/>
+                        <circle cx="44.1" cy="43.5" r="0.9" fill="#fff"/>
+                        <circle cx="58.1" cy="43.5" r="0.9" fill="#fff"/>
+                    </g>
+                    <!-- cool shades, pushed down the nose -->
+                    <g>
+                        <rect x="36.5" y="47.5" width="11" height="6.4" rx="3.2" fill="#111827" opacity="0.94"/>
+                        <rect x="52.5" y="47.5" width="11" height="6.4" rx="3.2" fill="#111827" opacity="0.94"/>
+                        <rect x="47.5" y="49.5" width="5" height="1.8" fill="#111827"/>
+                        <rect x="38.5" y="49" width="3.6" height="1.8" rx="0.9" fill="#93c5fd" opacity="0.85"/>
+                        <rect x="54.5" y="49" width="3.6" height="1.8" rx="0.9" fill="#93c5fd" opacity="0.85"/>
+                    </g>
+                    <!-- smile -->
+                    <path d="M44 58 Q50 62.5 56 58" stroke="#2d1a09" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
         </div>
 
         <!-- Print-only header: shows only on the printed page, not on screen -->
@@ -290,43 +364,6 @@
              number (เลขรัน 1, 2, 3...) sorted by due date, so the two order types are never mixed
              together in one list. -->
         <div id="overviewViewContainer" class="space-y-4">
-            <!-- Mascot: "น้องไหม" (Nong Mai) — a cute yarn-ball character themed after the carpet/
-                 yarn factory, sitting quietly in the corner and cheering when data updates happen.
-                 Nested here so it's automatically shown/hidden with the Overview tab via the
-                 existing switchView() `hidden`-class toggle on this container — no extra JS needed. -->
-            <div id="mascotWidget" class="fixed bottom-4 left-4 z-40 flex flex-col items-start pointer-events-none select-none no-print" aria-hidden="true">
-                <div id="mascotBubble" class="mascot-bubble mb-1 max-w-[190px] bg-white border border-amber-200 shadow-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] leading-snug text-amber-900 font-medium">
-                    <span id="mascotBubbleText">ยินดีต้อนรับค่ะ! น้องไหมคอยดูอยู่นะ 🧶</span>
-                </div>
-                <div id="mascotCharacter" class="mascot-idle w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                        <!-- little rug the mascot sits on -->
-                        <ellipse cx="50" cy="88" rx="30" ry="5" fill="#9a3412" opacity="0.15"/>
-                        <rect x="22" y="81" width="56" height="4.5" rx="2.25" fill="#f97316"/>
-                        <rect x="22" y="86" width="56" height="4.5" rx="2.25" fill="#fbbf24"/>
-                        <!-- loose yarn tail wisps -->
-                        <path d="M20 60 C10 56, 8 66, 14 72" stroke="#f59e0b" stroke-width="3" fill="none" stroke-linecap="round"/>
-                        <path d="M80 58 C90 56, 90 66, 83 70" stroke="#fb923c" stroke-width="3" fill="none" stroke-linecap="round"/>
-                        <!-- yarn-ball body -->
-                        <circle cx="50" cy="54" r="32" fill="#fb923c"/>
-                        <path d="M50 22 C34 29, 34 79, 50 86" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.6"/>
-                        <path d="M50 22 C66 29, 66 79, 50 86" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.6"/>
-                        <path d="M18 54 C30 41, 70 41, 82 54" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.5"/>
-                        <path d="M18 54 C30 67, 70 67, 82 54" stroke="#ea580c" stroke-width="2.5" fill="none" opacity="0.5"/>
-                        <!-- cheeks -->
-                        <ellipse cx="33" cy="59" rx="5" ry="3.5" fill="#fca5a5" opacity="0.55"/>
-                        <ellipse cx="67" cy="59" rx="5" ry="3.5" fill="#fca5a5" opacity="0.55"/>
-                        <!-- eyes (blink target) -->
-                        <g id="mascotEyes">
-                            <ellipse cx="40" cy="51" rx="3.2" ry="4" fill="#422006"/>
-                            <ellipse cx="60" cy="51" rx="3.2" ry="4" fill="#422006"/>
-                        </g>
-                        <!-- smile -->
-                        <path d="M40 63 Q50 70 60 63" stroke="#422006" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                    </svg>
-                </div>
-            </div>
-
             <!-- Overview summary panel: company-wide totals at a glance. Populated by
                  renderOverviewSummaryPanel() (called from renderProductionOverview()). -->
             <div id="overviewSummaryPanel" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
@@ -1234,22 +1271,45 @@
             transfer:    ['โอนงานสำเร็จ ไปแผนกถัดไปแล้ว!', 'เก่งมาก โอนงานเรียบร้อย'],
             readyToShip: ['พรมเสร็จ พร้อมส่งแล้วค่ะ!', 'เย้! งานนี้พร้อมส่งแล้ว 🎉'],
             shipped:     ['ส่งมอบสำเร็จแล้วน้าา 🎉', 'จัดส่งเรียบร้อย เก่งมาก!'],
-            sync:        ['ข้อมูลอัปเดตล่าสุดแล้วค่ะ', 'ซิงค์ข้อมูลเรียบร้อย!']
+            sync:        ['ข้อมูลอัปเดตล่าสุดแล้วค่ะ', 'ซิงค์ข้อมูลเรียบร้อย!'],
+            // NEW: celebrates every new QC record entered — this is the specific action ("ลงรายการ")
+            // the mascot is meant to encourage, so it gets its own upbeat message set distinct from
+            // the more matter-of-fact "sync" messages above.
+            qcSaved:     ['บันทึกข้อมูลเรียบร้อยแล้วค่ะ! เก่งมาก 🧶', 'ขอบคุณที่ลงข้อมูลนะคะ น้องไหมชื่นใจ!', 'บันทึกสำเร็จแล้ว! สู้ๆต่อนะคะ 💪']
         };
         let mascotBubbleTimer = null;
-        function mascotCelebrate(kind) {
+        // customMessage lets a caller override the random pick from MASCOT_MESSAGES[kind] — used by
+        // the QC-entry milestone celebration below, which needs to show a specific count rather than
+        // a generic message.
+        function mascotCelebrate(kind, customMessage) {
             const character = document.getElementById('mascotCharacter');
             const bubble = document.getElementById('mascotBubble');
             const bubbleText = document.getElementById('mascotBubbleText');
             if (!character || !bubble || !bubbleText) return; // mascot markup not present for some reason — fail quietly
             const messages = MASCOT_MESSAGES[kind] || MASCOT_MESSAGES.sync;
-            bubbleText.textContent = messages[Math.floor(Math.random() * messages.length)];
+            bubbleText.textContent = customMessage || messages[Math.floor(Math.random() * messages.length)];
             character.classList.remove('mascot-excited');
             void character.offsetWidth; // force reflow so the animation restarts even if it's already mid-way
             character.classList.add('mascot-excited');
             bubble.classList.add('show');
             if (mascotBubbleTimer) clearTimeout(mascotBubbleTimer);
             mascotBubbleTimer = setTimeout(() => { bubble.classList.remove('show'); }, 2500);
+        }
+
+        // Called every time a QC record is successfully saved (see saveQCItem()) — the mascot cheers
+        // every entry, and gives an extra, longer-lasting shout-out at little milestones (5, 10, 20...
+        // records logged by anyone, that day) so there's a small reason to keep going, not just a
+        // one-off "thanks". This is the direct answer to "ทำให้พนักงานสนใจลงรายการ" — a bit of instant,
+        // visible delight tied to the exact action we want to encourage.
+        function mascotCelebrateQcEntry() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayCount = qcData.filter(item => item && item.date === todayStr).length;
+            const milestones = [5, 10, 20, 30, 50, 75, 100];
+            if (milestones.includes(todayCount)) {
+                mascotCelebrate('qcSaved', `🎉 วันนี้ช่วยกันบันทึกไปแล้ว ${todayCount} รายการ! เก่งมากทุกคนเลยค่ะ`);
+            } else {
+                mascotCelebrate('qcSaved');
+            }
         }
         function startMascotBlinkLoop() {
             setInterval(() => {
@@ -5154,6 +5214,7 @@
             } else {
                 qcData.unshift(newItem);
                 showToast('เพิ่มรายการ QC ใหม่สำเร็จ');
+                mascotCelebrateQcEntry(); // only for brand-new records, not edits — keeps the cheer tied to "ลงรายการ" specifically
             }
 
             saveToLocal();
