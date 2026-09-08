@@ -200,6 +200,12 @@
                 <button onclick="switchView('board')" id="tabBoardBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-table-columns mr-1.5"></i> แผนผังการผลิต
                 </button>
+                <!-- NEW: Gantt-style timeline of every active M/O, S/O's planned dates across all
+                     departments in one chronological view — answers "ทำภาพรวมแผนการผลิต" by showing
+                     the whole production schedule at a glance instead of one order at a time. -->
+                <button onclick="switchView('timeline')" id="tabTimelineBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-timeline mr-1.5"></i> ไทม์ไลน์การผลิต
+                </button>
                 <button onclick="switchView('records')" id="tabRecordsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-list mr-1.5"></i> รายงาน QC ทั้งหมด
                 </button>
@@ -436,6 +442,47 @@
                         <span id="boardCount-finishing" class="text-[11px] bg-white text-fuchsia-700 font-semibold px-2 py-0.5 rounded-full border border-fuchsia-200">0</span>
                     </div>
                     <div id="boardColumn-finishing" class="flex flex-col gap-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Timeline: Gantt-style view of every active M/O, S/O's plan across departments
+             in one chronological strip, built from order.planDates (ย้อม/ทอ/ตกแต่ง) and dueDate —
+             so a manager can see the whole production plan at a glance instead of opening each order
+             one by one. When a department has no plan date yet, its segment simply widens into the
+             next one rather than leaving a gap, since a bar can only be drawn between two known dates. -->
+        <div id="timelineViewContainer" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-timeline mr-2 text-indigo-600"></i> ไทม์ไลน์การผลิต — ทุกแผนกในหน้าเดียว</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">แถบสีคือช่วงเวลาที่วางแผนไว้ของแต่ละแผนก เรียงจากกำหนดส่งใกล้สุดขึ้นก่อน คลิกที่ชื่อ M/O, S/O เพื่อเปิดดู/แก้ไขรายละเอียด</p>
+                </div>
+                <div class="relative w-full sm:w-72">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="timelineSearchInput" oninput="renderProductionTimeline()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-600">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-violet-500 inline-block"></span> ย้อม</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-teal-500 inline-block"></span> ทอ</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-fuchsia-500 inline-block"></span> ตกแต่ง/บรรจุ</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-orange-500 inline-block"></span> รอส่ง (หลังตกแต่งเสร็จ → กำหนดส่ง)</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-flag text-slate-400"></i> กำหนดส่ง</span>
+                <span class="flex items-center gap-1.5 sm:ml-auto"><span class="w-0.5 h-3 bg-rose-400 inline-block"></span> วันนี้</span>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div id="timelineScrollWrapper" class="overflow-x-auto">
+                    <div id="timelineGrid" class="relative">
+                        <!-- header row + order rows injected via JS -->
+                    </div>
+                </div>
+                <div id="emptyTimelineState" class="hidden py-12 text-center">
+                    <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                        <i class="fa-solid fa-timeline"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ยังไม่มี M/O, S/O ในสายการผลิตที่จะแสดงในไทม์ไลน์</p>
                 </div>
             </div>
         </div>
@@ -1261,6 +1308,7 @@
             renderWeeklyQcSummary();
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             renderQcShippedArchive();
             updateStats();
             updateIssuesCountBadge(); // NEW (2026-09e): open-issue count on the tab badge, independent of which tab is active
@@ -1271,6 +1319,7 @@
             const tabs = {
                 overview: { btn: 'tabOverviewBtn', container: 'overviewViewContainer' },
                 board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
+                timeline: { btn: 'tabTimelineBtn', container: 'timelineViewContainer' },
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
                 shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
                 shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' },
@@ -1293,6 +1342,7 @@
             if (view === 'shipping') { renderShippingTable(qcData); renderMarkNosSubview(); }
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
+            if (view === 'timeline') renderProductionTimeline();
             if (view === 'shipped') renderQcShippedArchive();
             if (view === 'issues') renderIssuesTable();
         }
@@ -1315,6 +1365,7 @@
             filterTable(); // re-applies search/status/dept/month + the new order-type filter to records + shipping list
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             renderQcShippedArchive();
         }
 
@@ -1335,6 +1386,7 @@
             filterTable();
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             renderQcShippedArchive();
         }
 
@@ -2172,6 +2224,7 @@
                     saveOrdersToLocal();
                     renderProductionOverview();
                     renderProductionBoard();
+                    renderProductionTimeline();
                     renderQcShippedArchive();
                     renderShippingTable(qcData);
                     if (isManual) { showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`); mascotCelebrate('sync'); }
@@ -2287,6 +2340,7 @@
             updateIssuesCountBadge();
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             showToast('แจ้งปัญหาสำเร็จ กำลังแจ้งเตือนผ่าน LINE...', 'fa-triangle-exclamation', 'text-rose-400');
 
             syncIssueToSheet(issue);
@@ -2420,6 +2474,7 @@
             renderIssuesTable();
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             showToast('ปิดปัญหาเรียบร้อยแล้ว');
             syncIssueToSheet(issue);
         }
@@ -2435,6 +2490,7 @@
             renderIssuesTable();
             renderProductionOverview();
             renderProductionBoard();
+            renderProductionTimeline();
             showToast('ลบรายการปัญหาแล้ว', 'fa-circle-xmark', 'text-rose-400');
             if (gasWebAppUrl) {
                 const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteIssue&id=' + encodeURIComponent(id);
@@ -3174,6 +3230,7 @@
         // table, and — if it's currently open — the cross-department detail modal for this order.
         function rerenderOrderViews(orderIndex) {
             renderProductionBoard();
+            renderProductionTimeline();
             renderProductionOverview();
             renderShippingTable(qcData); // keeps "รายการรอส่ง" badge/count in sync with readyToShip/shipped changes
             renderQcShippedArchive(); // keeps the "ส่งมอบแล้ว" QC archive in sync once an order gets shipped
@@ -3725,6 +3782,195 @@
             });
         }
 
+        // =========================================================================================
+        // Production Timeline ("ไทม์ไลน์การผลิต"): a Gantt-style single view of every active M/O, S/O's
+        // planned schedule across ย้อม → ทอ → ตกแต่ง/บรรจุ → รอส่ง, built entirely from data that
+        // already exists (order.planDates + dueDate — see the Phase 1 "กำหนดวันเสร็จแต่ละแผนก"
+        // feature). Puts every order's plan on one calendar strip instead of one row/card at a time,
+        // so a manager can see the whole production plan at a glance — this is what answers
+        // "ทำภาพรวมแผนการผลิต".
+        // =========================================================================================
+
+        // UTC-day arithmetic helpers, consistent with parseDateOnly()/formatDateKeyUTC() used by the
+        // weekly QC summary above — avoids local-timezone day-shift bugs when adding/diffing dates.
+        function addDaysUTC(dateObj, days) {
+            const d = new Date(dateObj.getTime());
+            d.setUTCDate(d.getUTCDate() + days);
+            return d;
+        }
+        function daysBetweenUTC(d1, d2) {
+            return Math.round((d2.getTime() - d1.getTime()) / 86400000);
+        }
+
+        // Turns one order's known dates into a chain of stage segments for the timeline bar. The only
+        // dates that ever exist here are a start (when the order was opened) and a series of
+        // "finish-by" target dates — so a segment is simply the span between two consecutive KNOWN
+        // dates. If a department's plan date hasn't been set yet, it's skipped and the next known
+        // date's segment widens to cover it, rather than leaving a gap that would wrongly suggest
+        // "nothing is planned here".
+        function computeOrderTimelineSegments(order) {
+            const startRaw = normalizeDateString(order.openDate) || normalizeDateString(order.createdAt) || normalizeDateString(order.lastUpdated);
+            const start = startRaw || formatDateKeyUTC(new Date());
+            const pd = order.planDates || {};
+            const points = [
+                { date: start, stage: null },
+                { date: normalizeDateString(pd.dyeing), stage: 'dyeing' },
+                { date: normalizeDateString(pd.weaving), stage: 'weaving' },
+                { date: normalizeDateString(pd.finishing), stage: 'finishing' },
+                { date: normalizeDateString(order.dueDate), stage: 'ready_to_ship' }
+            ].filter(p => p.date);
+
+            const segments = [];
+            for (let i = 1; i < points.length; i++) {
+                const segStart = points[i - 1].date;
+                const segEnd = points[i].date < segStart ? segStart : points[i].date;
+                segments.push({ start: segStart, end: segEnd, stage: points[i].stage });
+            }
+            return segments;
+        }
+
+        // Finds the [minDate, maxDate] window (as UTC Date objects) the timeline needs to cover every
+        // visible order's known dates, padded a few days on each side so bars don't touch the edge,
+        // and capped to a sane maximum width so one order with a badly wrong date can't blow up the
+        // render.
+        function computeTimelineRange(orders) {
+            const today = parseDateOnly(formatDateKeyUTC(new Date()));
+            let minDate = addDaysUTC(today, -3);
+            let maxDate = addDaysUTC(today, 30);
+
+            orders.forEach(order => {
+                computeOrderTimelineSegments(order).forEach(seg => {
+                    const s = parseDateOnly(seg.start);
+                    const e = parseDateOnly(seg.end);
+                    if (s && s < minDate) minDate = s;
+                    if (e && e > maxDate) maxDate = e;
+                });
+            });
+
+            minDate = addDaysUTC(minDate, -2);
+            maxDate = addDaysUTC(maxDate, 2);
+
+            const MAX_DAYS = 150; // hard cap so one stray bad date can't render a timeline thousands of days wide
+            if (daysBetweenUTC(minDate, maxDate) > MAX_DAYS) {
+                maxDate = addDaysUTC(minDate, MAX_DAYS);
+            }
+            return { minDate, maxDate };
+        }
+
+        // Renders the whole timeline: a fixed-width grid (label column + a day-by-day track, both
+        // built from inline px offsets rather than Tailwind's arbitrary-value classes, so every
+        // computed position is guaranteed to apply regardless of when/how the CDN's class scanner
+        // runs). Same M/O, S/O + market filters as every other view; sorted by due date ascending so
+        // the most urgent orders sit at the top.
+        function renderProductionTimeline() {
+            const grid = document.getElementById('timelineGrid');
+            const emptyState = document.getElementById('emptyTimelineState');
+            if (!grid) return;
+
+            const searchInputEl = document.getElementById('timelineSearchInput');
+            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
+
+            let activeWithIndex = [];
+            productionOrders.forEach((order, orderIndex) => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                activeWithIndex.push({ order, orderIndex });
+            });
+
+            if (orderTypeFilter !== 'all') {
+                activeWithIndex = activeWithIndex.filter(x => (x.order.orderType || detectOrderTypeFromMoSo(x.order.moSo)) === orderTypeFilter);
+            }
+            activeWithIndex = activeWithIndex.filter(x => matchesMarketFilter(x.order));
+            if (searchTerm) {
+                activeWithIndex = activeWithIndex.filter(({ order }) => {
+                    const haystack = [order.moSo, order.customerName, order.customerPO]
+                        .map(v => String(v || '').toLowerCase())
+                        .join(' ');
+                    return haystack.includes(searchTerm);
+                });
+            }
+            activeWithIndex.sort(sortByDueDateAsc);
+
+            if (activeWithIndex.length === 0) {
+                grid.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+
+            const { minDate, maxDate } = computeTimelineRange(activeWithIndex.map(x => x.order));
+            const totalDays = Math.max(1, daysBetweenUTC(minDate, maxDate) + 1);
+            const dayWidth = totalDays > 100 ? 10 : (totalDays > 55 ? 16 : (totalDays > 30 ? 22 : 28));
+            const trackWidthPx = totalDays * dayWidth;
+            const labelWidthPx = 240;
+            const todayUTC = parseDateOnly(formatDateKeyUTC(new Date()));
+            const todayOffsetPx = daysBetweenUTC(minDate, todayUTC) * dayWidth;
+            const showTodayLine = todayOffsetPx >= 0 && todayOffsetPx <= trackWidthPx;
+
+            // ---- Header: day ticks (day number, weekend shading, month label at each month start) ----
+            let headerTicksHtml = '';
+            for (let i = 0; i < totalDays; i++) {
+                const d = addDaysUTC(minDate, i);
+                const dow = d.getUTCDay();
+                const isWeekend = dow === 0 || dow === 6;
+                const isMonthStart = d.getUTCDate() === 1 || i === 0;
+                const showNumber = dayWidth >= 16 || isMonthStart || dow === 1;
+                headerTicksHtml += `
+                    <div class="absolute top-0 bottom-0 flex flex-col items-center justify-center text-[9px] ${isWeekend ? 'bg-slate-50' : ''} border-r border-slate-100" style="left:${i * dayWidth}px; width:${dayWidth}px;">
+                        ${isMonthStart ? `<span class="font-bold text-indigo-600 leading-none">${THAI_SHORT_MONTHS[d.getUTCMonth()]}</span>` : ''}
+                        ${showNumber ? `<span class="text-slate-400 leading-none mt-0.5">${d.getUTCDate()}</span>` : ''}
+                    </div>`;
+            }
+
+            // ---- Rows: one per order — sticky label cell + a track cell of absolutely-positioned bars ----
+            let rowsHtml = '';
+            activeWithIndex.forEach(({ order, orderIndex }) => {
+                const segments = computeOrderTimelineSegments(order);
+                const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+                const isMo = (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO';
+
+                const barsHtml = segments.filter(seg => seg.stage).map(seg => {
+                    const colorCls = STAGE_COLORS[seg.stage].solid;
+                    const leftPx = daysBetweenUTC(minDate, parseDateOnly(seg.start)) * dayWidth;
+                    const spanDays = Math.max(daysBetweenUTC(parseDateOnly(seg.start), parseDateOnly(seg.end)), 0);
+                    const widthPx = Math.max(spanDays * dayWidth, Math.max(dayWidth * 0.5, 8));
+                    return `<div class="absolute top-2 h-4 rounded ${colorCls} opacity-90" style="left:${leftPx}px; width:${widthPx}px;" title="${escapeHtml(STAGE_LABELS[seg.stage])}: ${escapeHtml(seg.start)} → ${escapeHtml(seg.end)}"></div>`;
+                }).join('');
+
+                let dueFlagHtml = '';
+                const dueDateNorm = normalizeDateString(order.dueDate);
+                if (dueDateNorm) {
+                    const dueOffsetPx = daysBetweenUTC(minDate, parseDateOnly(dueDateNorm)) * dayWidth;
+                    const flagColorCls = deadlineWarningHtml ? 'text-rose-500' : 'text-slate-400';
+                    dueFlagHtml = `<div class="absolute top-0 -translate-x-1/2 ${flagColorCls}" style="left:${dueOffsetPx + dayWidth / 2}px;" title="กำหนดส่ง: ${escapeHtml(dueDateNorm)}"><i class="fa-solid fa-flag text-[10px]"></i></div>`;
+                }
+
+                rowsHtml += `
+                    <div class="flex border-b border-slate-100 hover:bg-slate-50/60 transition">
+                        <div class="shrink-0 sticky left-0 z-10 bg-white border-r border-slate-200 px-3 py-2.5 cursor-pointer" style="width:${labelWidthPx}px;" onclick="openOrderDetailModal(${orderIndex})">
+                            <p class="font-bold ${isMo ? 'text-indigo-700' : 'text-amber-700'} text-[11px] font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                            <p class="text-[10px] text-slate-500 truncate">${escapeHtml(order.customerName || '-')}</p>
+                            ${deadlineWarningHtml ? `<div class="mt-1">${deadlineWarningHtml}</div>` : ''}
+                        </div>
+                        <div class="relative shrink-0" style="width:${trackWidthPx}px; height:52px;">
+                            ${barsHtml}
+                            ${dueFlagHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = `
+                <div class="relative" style="width:${labelWidthPx + trackWidthPx}px;">
+                    ${showTodayLine ? `<div class="absolute top-0 bottom-0 w-0.5 bg-rose-400 z-20 pointer-events-none" style="left:${labelWidthPx + todayOffsetPx}px;"></div>` : ''}
+                    <div class="flex border-b border-slate-200">
+                        <div class="shrink-0 sticky left-0 z-10 bg-white border-r border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-500 uppercase flex items-end" style="width:${labelWidthPx}px;">M/O, S/O</div>
+                        <div class="relative shrink-0" style="width:${trackWidthPx}px; height:32px;">${headerTicksHtml}</div>
+                    </div>
+                    ${rowsHtml}
+                </div>
+            `;
+        }
+
         // Compact Kanban card for the CURRENT stage of an order: just a live summary (done-count, QC
         // status — no numeric % anymore) plus a link into the full cross-department detail modal —
         // where the actual line items get added/edited (any department can be corrected there at any
@@ -4198,6 +4444,7 @@
             saveOrdersToLocal();
             syncOrderToSheet(order);
             renderProductionBoard();
+            renderProductionTimeline();
             renderProductionOverview();
             closeNewOrderModal();
             showToast(isInserted
@@ -5043,6 +5290,7 @@
             productionOrders.splice(orderIndex, 1);
             saveOrdersToLocal();
             renderProductionBoard();
+            renderProductionTimeline();
             renderProductionOverview();
             renderShippingTable(qcData);
             renderQcShippedArchive();
