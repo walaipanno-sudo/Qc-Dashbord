@@ -2305,11 +2305,22 @@
                 };
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=uploadImage' : gasWebAppUrl + '?type=uploadImage';
 
+                // FIX (2026-09): this used to treat "couldn't read the response" and "the server read
+                // fine and reported result:'error'" as the same case, showing the same falsely-upbeat
+                // "sent to Drive, just sync later" toast either way — which completely hid real
+                // server-side failures (e.g. a missing Drive permission on the Apps Script project)
+                // from view. A response that parses with an explicit error now shows that error
+                // directly instead of the generic "keep waiting" message.
                 let resultUrl = null;
+                let serverError = null;
                 try {
                     const resp = await fetch(postUrl, { method: 'POST', body: JSON.stringify(payload) });
                     const json = await resp.json();
-                    if (json && json.result === 'success' && json.url) resultUrl = json.url;
+                    if (json && json.result === 'success' && json.url) {
+                        resultUrl = json.url;
+                    } else if (json && json.result === 'error') {
+                        serverError = json.message || 'ไม่ทราบสาเหตุ';
+                    }
                 } catch (err) {
                     console.warn('Could not read the upload response directly (this can happen with Apps Script + CORS) — relying on the next sync to pick up the image instead:', err);
                 }
@@ -2317,6 +2328,9 @@
                 if (resultUrl) {
                     applyDesignImageUrl(orderIndex, target, itemIndex, resultUrl);
                     showToast('อัปโหลดรูปดีไซน์สำเร็จ', 'fa-image');
+                } else if (serverError) {
+                    console.error('Design image upload server error:', serverError);
+                    showToast(`อัปโหลดรูปไม่สำเร็จ: ${serverError}`, 'fa-circle-exclamation', 'text-rose-400');
                 } else {
                     showToast('ส่งรูปไปบันทึกที่ Google Drive แล้ว แต่ยังไม่ได้รับลิงก์ยืนยันกลับมา กด "ซิงค์ข้อมูล" อีกครั้งในไม่กี่วินาทีถ้ารูปยังไม่ขึ้น', 'fa-cloud-arrow-up', 'text-amber-400');
                 }
