@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -296,6 +294,12 @@
                 <button onclick="switchView('issues')" id="tabIssuesBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-700 transition">
                     <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> ปัญหาที่ต้องติดตาม
                     <span id="issuesCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
+                </button>
+                <!-- NEW: cross-cutting analytics view — draws on QC records, issue reports, and live
+                     order deadlines together, so trends that are invisible one tab at a time (which
+                     problem recurs most, which department is most often at risk) become visible. -->
+                <button onclick="switchView('analytics')" id="tabAnalyticsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-chart-column mr-1.5"></i> วิเคราะห์ข้อมูล
                 </button>
             </div>
 
@@ -662,6 +666,67 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <p id="emptyIssuesStateText" class="text-slate-500 font-medium">ไม่มีปัญหาที่ต้องติดตามในขณะนี้</p>
+            </div>
+        </div>
+
+        <!-- Analytics View: a cross-cutting dashboard over QC records, issue reports, and live order
+             deadlines together — see renderAnalyticsDashboard() for how each figure is computed. -->
+        <div id="analyticsViewContainer" class="hidden space-y-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">M/O, S/O ในสายการผลิต</p>
+                    <p id="kpiActiveOrders" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                    <p id="kpiActiveOrdersSplit" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">ปัญหาที่ยังไม่ปิด</p>
+                    <p id="kpiOpenIssues" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+                    <p id="kpiOpenIssuesNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">อัตราผ่าน QC (30 วันล่าสุด)</p>
+                    <p id="kpiPassRate30d" class="text-2xl font-bold text-slate-800 mt-1">-</p>
+                    <p id="kpiPassRate30dNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">ส่งตรงเวลา (30 วันล่าสุด)</p>
+                    <p id="kpiOnTimeRate30d" class="text-2xl font-bold text-slate-800 mt-1">-</p>
+                    <p id="kpiOnTimeRate30dNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-chart-column mr-2 text-indigo-600"></i> อัตราผ่าน QC รายสัปดาห์ (8 สัปดาห์ล่าสุด)</h3>
+                <p class="text-[11px] text-slate-400 mb-4">เส้นประคือเป้าหมาย 90% — สีของแท่งบอกสถานะสัปดาห์นั้น: เขียว = ผ่านเป้า, เหลือง = ใกล้เป้า, แดง = ต่ำกว่าเป้ามาก</p>
+                <div id="passRateChart" class="relative"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-indigo-600"></i> ปัญหาที่แจ้งบ่อยที่สุด แยกตามประเภท</h3>
+                    <p class="text-[11px] text-slate-400 mb-3">นับรวมทุกปัญหาที่เคยแจ้ง ทั้งที่ปิดแล้วและยังเปิดอยู่</p>
+                    <div id="issuesByTypeChart" class="space-y-2.5"></div>
+                    <p id="issuesByTypeEmpty" class="hidden text-xs text-slate-400 text-center py-6">ยังไม่มีข้อมูลปัญหาที่แจ้งเข้ามา</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-industry mr-2 text-teal-600"></i> ปัญหาที่แจ้ง แยกตามแผนก</h3>
+                    <p class="text-[11px] text-slate-400 mb-3">นับรวมทุกปัญหาที่เคยแจ้ง ทั้งที่ปิดแล้วและยังเปิดอยู่</p>
+                    <div id="issuesByDeptChart" class="space-y-2.5"></div>
+                    <p id="issuesByDeptEmpty" class="hidden text-xs text-slate-400 text-center py-6">ยังไม่มีข้อมูลปัญหาที่แจ้งเข้ามา</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-hourglass-half mr-2 text-amber-600"></i> M/O, S/O ที่กำลังเสี่ยงไม่ทันกำหนด แยกตามแผนก</h3>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span> ใกล้ถึงกำหนด</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> เลยกำหนดแล้ว</span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mb-3">นับเฉพาะ M/O, S/O ที่ยังไม่ส่งมอบ ณ ขณะนี้ — เป็นข้อมูลสด อัปเดตทุกครั้งที่เข้าแท็บนี้</p>
+                <div id="atRiskByDeptChart" class="space-y-2.5"></div>
+                <p id="atRiskByDeptEmpty" class="hidden text-xs text-slate-400 text-center py-6">ตอนนี้ไม่มี M/O, S/O ที่เสี่ยงไม่ทันกำหนดเลย 🎉</p>
             </div>
         </div>
 
@@ -1383,7 +1448,8 @@
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
                 shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
                 shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' },
-                issues: { btn: 'tabIssuesBtn', container: 'issuesViewContainer' }
+                issues: { btn: 'tabIssuesBtn', container: 'issuesViewContainer' },
+                analytics: { btn: 'tabAnalyticsBtn', container: 'analyticsViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
@@ -1405,6 +1471,7 @@
             if (view === 'timeline') renderProductionTimeline();
             if (view === 'shipped') renderQcShippedArchive();
             if (view === 'issues') renderIssuesTable();
+            if (view === 'analytics') renderAnalyticsDashboard();
         }
 
         // Global M/O, S/O switch (see the `orderTypeFilter` declaration above) — one switch that
@@ -1883,6 +1950,246 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        // =========================================================================================
+        // Analytics ("วิเคราะห์ข้อมูล"): a cross-cutting dashboard over QC records, issue reports, and
+        // live order deadlines together — surfaces trends that are invisible one tab at a time
+        // (which problem recurs most, which department is most often at risk). Colors reuse the
+        // app's own existing status language (emerald/amber/rose for pass rate & deadline risk —
+        // the same trio already on the Overview badges and the weekly QC table above; indigo/teal
+        // for the two "count by category" bars, the app's brand hue plus a second harmonious stage
+        // color) rather than introducing a new palette. Every bar carries a direct count/percentage
+        // label so nothing here depends on color alone to be read correctly.
+        // =========================================================================================
+
+        // Same 8-week bucketing as renderWeeklyQcSummary() above, but returned oldest-first (so the
+        // chart reads left-to-right like a timeline) and as plain data rather than table rows.
+        function computeWeeklyPassRateSeries() {
+            const now = new Date();
+            const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+            const currentWeekStart = getWeekStartUTC(todayUTC);
+            const WEEKS_TO_SHOW = 8;
+            const weeks = [];
+            for (let i = WEEKS_TO_SHOW - 1; i >= 0; i--) {
+                const weekStart = new Date(currentWeekStart);
+                weekStart.setUTCDate(weekStart.getUTCDate() - (i * 7));
+                weeks.push({ key: formatDateKeyUTC(weekStart), start: weekStart, total: 0, pass: 0 });
+            }
+            const weekByKey = {};
+            weeks.forEach(w => { weekByKey[w.key] = w; });
+
+            qcData.forEach(item => {
+                const d = parseDateOnly(item.date);
+                if (!d) return;
+                const wk = weekByKey[formatDateKeyUTC(getWeekStartUTC(d))];
+                if (!wk) return;
+                wk.total++;
+                if (item.status === 'PASS') wk.pass++;
+            });
+
+            return weeks.map(w => ({
+                label: formatThaiShortDateUTC(w.start),
+                passRate: w.total > 0 ? Math.round((w.pass / w.total) * 1000) / 10 : null,
+                total: w.total
+            }));
+        }
+
+        // Groups every issue ever reported by one field (issueType or department), sorted by
+        // frequency descending. Caps the number of bars shown — extra categories fold into "อื่นๆ" —
+        // so a handful of one-off free-typed issue types (from the "อื่นๆ" option in the report
+        // modal) can't turn the chart into a long unreadable list.
+        function groupIssuesBy(field, maxBars) {
+            const counts = {};
+            issuesData.forEach(iss => {
+                const key = (iss && iss[field]) ? String(iss[field]).trim() : 'ไม่ระบุ';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+            let entries = Object.keys(counts).map(key => ({ label: key, value: counts[key] })).sort((a, b) => b.value - a.value);
+            if (entries.length > maxBars) {
+                const kept = entries.slice(0, maxBars - 1);
+                const otherTotal = entries.slice(maxBars - 1).reduce((sum, e) => sum + e.value, 0);
+                entries = kept.concat([{ label: 'อื่นๆ', value: otherTotal }]);
+            }
+            return entries;
+        }
+
+        // Live snapshot (not historical) of every active order currently at risk of, or already
+        // past, its own deadline — reuses getDeadlineWarning() exactly as the Overview/Board/Timeline
+        // badges do, so the counts here always agree with what a manager sees on those tabs.
+        function computeAtRiskByDepartment() {
+            const buckets = {};
+            productionOrders.forEach(order => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                const warning = getDeadlineWarning(order);
+                if (!warning) return;
+                const stage = warning.stage;
+                if (!buckets[stage]) buckets[stage] = { warning: 0, overdue: 0 };
+                buckets[stage][warning.level === 'overdue' ? 'overdue' : 'warning']++;
+            });
+            return Object.keys(buckets)
+                .map(stage => ({ label: STAGE_LABELS[stage] || stage, warning: buckets[stage].warning, overdue: buckets[stage].overdue, total: buckets[stage].warning + buckets[stage].overdue }))
+                .sort((a, b) => b.total - a.total);
+        }
+
+        // Renders one horizontal-bar list into `containerId` from `items` ([{label, value}], already
+        // sorted) using a single hue (`colorCls`) — the "compare magnitude, sorted" form. Direct value
+        // label sits at the bar's tip so the number is always readable without hovering; the browser's
+        // native title tooltip adds the full sentence on hover as a bonus, never as the only way to
+        // read the value.
+        function renderHorizontalBarList(containerId, emptyId, items, colorCls) {
+            const container = document.getElementById(containerId);
+            const emptyEl = document.getElementById(emptyId);
+            if (!container) return;
+            const total = items.reduce((s, it) => s + it.value, 0);
+            if (!items.length || total === 0) {
+                container.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+            const maxVal = Math.max(...items.map(it => it.value), 1);
+            container.innerHTML = items.map(it => {
+                const pct = Math.max((it.value / maxVal) * 100, 4); // keep a visible sliver even for small values
+                return `
+                    <div class="flex items-center gap-2.5" title="${escapeHtml(it.label)}: ${it.value} รายการ">
+                        <div class="w-24 sm:w-28 shrink-0 text-[11px] text-slate-600 text-right truncate">${escapeHtml(it.label)}</div>
+                        <div class="flex-1 bg-slate-100 rounded-md h-5 overflow-hidden">
+                            <div class="h-5 rounded-r-md ${colorCls}" style="width:${pct}%"></div>
+                        </div>
+                        <div class="w-8 shrink-0 text-xs font-bold text-slate-700 text-right">${it.value}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Grouped variant for the at-risk-by-department chart: two STATES side by side per
+        // department (ใกล้ถึงกำหนด / เลยกำหนดแล้ว), not two arbitrary series — so it uses the app's
+        // existing status colors (amber/rose), always paired with the count label and the legend
+        // above it, never relying on color alone.
+        function renderAtRiskChart(containerId, emptyId, items) {
+            const container = document.getElementById(containerId);
+            const emptyEl = document.getElementById(emptyId);
+            if (!container) return;
+            if (!items.length) {
+                container.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+            const maxVal = Math.max(...items.map(it => it.total), 1);
+            container.innerHTML = items.map(it => {
+                const warningPct = it.warning > 0 ? Math.max((it.warning / maxVal) * 100, 3) : 0;
+                const overduePct = it.overdue > 0 ? Math.max((it.overdue / maxVal) * 100, 3) : 0;
+                return `
+                    <div class="flex items-center gap-2.5" title="แผนก${escapeHtml(it.label)}: ใกล้ถึงกำหนด ${it.warning} รายการ • เลยกำหนดแล้ว ${it.overdue} รายการ">
+                        <div class="w-24 sm:w-28 shrink-0 text-[11px] text-slate-600 text-right truncate">${escapeHtml(it.label)}</div>
+                        <div class="flex-1 bg-slate-100 rounded-md h-5 overflow-hidden flex">
+                            ${it.warning > 0 ? `<div class="h-5 bg-amber-500" style="width:${warningPct}%"></div>` : ''}
+                            ${it.overdue > 0 ? `<div class="h-5 bg-rose-500 ${it.warning === 0 ? 'rounded-r-md' : ''}" style="width:${overduePct}%"></div>` : ''}
+                        </div>
+                        <div class="w-16 shrink-0 text-xs font-bold text-slate-700 text-right">${it.total} ใบ</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPassRateChart() {
+            const container = document.getElementById('passRateChart');
+            if (!container) return;
+            const series = computeWeeklyPassRateSeries();
+            const BAR_AREA_HEIGHT = 130;
+            const barsHtml = series.map(w => {
+                const hasData = w.passRate !== null;
+                const heightPct = hasData ? Math.max(w.passRate, 2) : 2;
+                const colorCls = !hasData ? 'bg-slate-200' : (w.passRate >= 90 ? 'bg-emerald-500' : (w.passRate >= 70 ? 'bg-amber-500' : 'bg-rose-500'));
+                const textCls = !hasData ? 'text-slate-300' : (w.passRate >= 90 ? 'text-emerald-700' : (w.passRate >= 70 ? 'text-amber-700' : 'text-rose-700'));
+                // Icon rides alongside every label (never color alone) — status is readable even in
+                // grayscale or for a colorblind viewer without needing to tell emerald from rose.
+                const icon = !hasData ? '' : (w.passRate >= 90 ? '<i class="fa-solid fa-circle-check"></i> ' : (w.passRate >= 70 ? '<i class="fa-solid fa-triangle-exclamation"></i> ' : '<i class="fa-solid fa-circle-xmark"></i> '));
+                return `
+                    <div class="flex-1 flex flex-col items-center justify-end h-full" title="${escapeHtml(w.label)}: ${hasData ? w.passRate + '% (' + w.total + ' รายการ)' : 'ไม่มีข้อมูลสัปดาห์นี้'}">
+                        <span class="text-[10px] font-bold ${textCls} mb-1 whitespace-nowrap">${icon}${hasData ? w.passRate + '%' : '-'}</span>
+                        <div class="w-full max-w-[28px] rounded-t-md ${colorCls}" style="height:${heightPct}%"></div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="relative flex items-end gap-2" style="height:${BAR_AREA_HEIGHT}px;">
+                    <div class="absolute left-0 right-0 border-t-2 border-dashed border-slate-300" style="bottom:90%;"></div>
+                    <div class="absolute right-0 text-[9px] text-slate-400 bg-white pl-1" style="bottom:calc(90% - 6px);">เป้า 90%</div>
+                    ${barsHtml}
+                </div>
+                <div class="flex gap-2 mt-1.5">
+                    ${series.map(w => `<div class="flex-1 text-center text-[9px] text-slate-400 truncate">${escapeHtml(w.label)}</div>`).join('')}
+                </div>
+            `;
+        }
+
+        // Top-level entry point — called by switchView() whenever the "วิเคราะห์ข้อมูล" tab is opened,
+        // so every figure here is always a fresh snapshot, never a stale cached render.
+        function renderAnalyticsDashboard() {
+            let activeMo = 0, activeSo = 0;
+            productionOrders.forEach(order => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                if ((order.orderType || detectOrderTypeFromMoSo(order.moSo)) === 'SO') activeSo++; else activeMo++;
+            });
+            const kpiActiveOrdersEl = document.getElementById('kpiActiveOrders');
+            if (kpiActiveOrdersEl) kpiActiveOrdersEl.textContent = String(activeMo + activeSo);
+            const kpiActiveOrdersSplitEl = document.getElementById('kpiActiveOrdersSplit');
+            if (kpiActiveOrdersSplitEl) kpiActiveOrdersSplitEl.textContent = `${activeMo} M/O • ${activeSo} S/O`;
+
+            const openIssuesCount = issuesData.filter(iss => iss.status !== 'resolved').length;
+            const kpiOpenIssuesEl = document.getElementById('kpiOpenIssues');
+            if (kpiOpenIssuesEl) kpiOpenIssuesEl.textContent = String(openIssuesCount);
+            const urgentOpenCount = issuesData.filter(iss => iss.status !== 'resolved' && iss.severity === 'urgent').length;
+            const kpiOpenIssuesNoteEl = document.getElementById('kpiOpenIssuesNote');
+            if (kpiOpenIssuesNoteEl) kpiOpenIssuesNoteEl.textContent = urgentOpenCount > 0 ? `${urgentOpenCount} รายการเร่งด่วน` : 'ไม่มีรายการเร่งด่วน';
+
+            const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
+            const THIRTY_DAYS_MS = 30 * 86400000;
+            const qcLast30 = qcData.filter(item => {
+                const d = parseDateOnly(item.date);
+                if (!d) return false;
+                const diff = todayMs - d.getTime();
+                return diff >= 0 && diff <= THIRTY_DAYS_MS;
+            });
+            const qcLast30Pass = qcLast30.filter(item => item.status === 'PASS').length;
+            const passRate30d = qcLast30.length > 0 ? Math.round((qcLast30Pass / qcLast30.length) * 1000) / 10 : null;
+            const kpiPassRateEl = document.getElementById('kpiPassRate30d');
+            if (kpiPassRateEl) {
+                kpiPassRateEl.textContent = passRate30d === null ? '-' : passRate30d + '%';
+                kpiPassRateEl.className = 'text-2xl font-bold mt-1 ' + (passRate30d === null ? 'text-slate-400' : (passRate30d >= 90 ? 'text-emerald-600' : (passRate30d >= 70 ? 'text-amber-600' : 'text-rose-600')));
+            }
+            const kpiPassRateNoteEl = document.getElementById('kpiPassRate30dNote');
+            if (kpiPassRateNoteEl) kpiPassRateNoteEl.textContent = `จาก ${qcLast30.length} รายการตรวจ`;
+
+            const shippedLast30 = productionOrders.filter(order => {
+                if (!order.shippedDate) return false;
+                const d = parseDateOnly(normalizeDateString(order.shippedDate));
+                if (!d) return false;
+                const diff = todayMs - d.getTime();
+                return diff >= 0 && diff <= THIRTY_DAYS_MS;
+            });
+            const onTimeCount = shippedLast30.filter(order => {
+                const due = normalizeDateString(order.dueDate);
+                const shipped = normalizeDateString(order.shippedDate);
+                return !due || shipped <= due; // no due date on record means there was no deadline to miss
+            }).length;
+            const onTimeRate = shippedLast30.length > 0 ? Math.round((onTimeCount / shippedLast30.length) * 1000) / 10 : null;
+            const kpiOnTimeEl = document.getElementById('kpiOnTimeRate30d');
+            if (kpiOnTimeEl) {
+                kpiOnTimeEl.textContent = onTimeRate === null ? '-' : onTimeRate + '%';
+                kpiOnTimeEl.className = 'text-2xl font-bold mt-1 ' + (onTimeRate === null ? 'text-slate-400' : (onTimeRate >= 90 ? 'text-emerald-600' : (onTimeRate >= 70 ? 'text-amber-600' : 'text-rose-600')));
+            }
+            const kpiOnTimeNoteEl = document.getElementById('kpiOnTimeRate30dNote');
+            if (kpiOnTimeNoteEl) kpiOnTimeNoteEl.textContent = `จาก ${shippedLast30.length} งานที่ส่งแล้ว`;
+
+            renderPassRateChart();
+            renderHorizontalBarList('issuesByTypeChart', 'issuesByTypeEmpty', groupIssuesBy('issueType', 8), 'bg-indigo-500');
+            renderHorizontalBarList('issuesByDeptChart', 'issuesByDeptEmpty', groupIssuesBy('department', 8), 'bg-teal-500');
+            renderAtRiskChart('atRiskByDeptChart', 'atRiskByDeptEmpty', computeAtRiskByDepartment());
         }
 
         function renderTable(dataToRender) {
