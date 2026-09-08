@@ -2238,7 +2238,17 @@
                 // the salesperson's name for this order. '' means not yet tagged (orders saved before
                 // this feature existed) — see marketFilter/matchesMarketFilter for how that's handled.
                 market: (raw.market === 'export' || raw.market === 'domestic') ? raw.market : '',
-                salesName: raw.salesName || ''
+                salesName: raw.salesName || '',
+                // NEW (2026-09d): per-department target/plan finish dates ("กำหนดงานเสร็จของแต่ละแผนก")
+                // — set once by Planning (see renderPlanningChecklistHtml) and used by
+                // getDeadlineWarning() to warn the specific department that's actually behind, instead
+                // of only the M/O's overall dueDate. '' means not set (falls back to the old
+                // whole-order dueDate warning — see getDeadlineWarning()).
+                planDates: {
+                    dyeing: normalizeDateString((raw.planDates || {}).dyeing) || '',
+                    weaving: normalizeDateString((raw.planDates || {}).weaving) || '',
+                    finishing: normalizeDateString((raw.planDates || {}).finishing) || ''
+                }
             };
             // Only auto-recalculate % from items that were genuinely saved as items (new-style data).
             // For a stage whose single item was just synthesized here from old scalar fields, keep the
@@ -2893,8 +2903,13 @@
         // still not 100% complete. An order that's already shipped/ready-to-ship, has no due date, or
         // whose current stage is already at 100% (just hasn't been transferred out yet) never warns.
         const DEADLINE_WARNING_DAYS = 7;
+        // NEW (2026-09d): now prefers the CURRENT stage's own target finish date (order.planDates[stage]
+        // — set once by Planning, see renderPlanningChecklistHtml) over the M/O's overall dueDate, since
+        // "แผนกย้อมช้ากว่าแผนที่วางไว้" points staff at the department actually behind, instead of the
+        // more generic "ทั้ง M/O เสี่ยงไม่ทันกำหนดส่ง". Falls back to dueDate when no plan date is set
+        // (every order saved before this feature existed, or where Planning left it blank) so the
+        // original warning keeps working unchanged for those.
         function getDeadlineWarning(order) {
-            if (!order.dueDate) return null;
             const effectiveStage = getEffectiveStage(order);
             if (effectiveStage === 'shipped' || effectiveStage === 'ready_to_ship') return null;
 
@@ -2902,13 +2917,18 @@
             const percent = (order[stage] && order[stage].percent) || 0;
             if (percent >= 100) return null;
 
-            const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
-            const dueMs = new Date(order.dueDate).getTime();
-            if (isNaN(dueMs)) return null;
-            const daysRemaining = Math.round((dueMs - todayMs) / 86400000);
+            const planDate = order.planDates && order.planDates[stage];
+            const targetDateStr = planDate || order.dueDate;
+            if (!targetDateStr) return null;
 
-            if (daysRemaining < 0) return { level: 'overdue', daysRemaining, stage };
-            if (daysRemaining <= DEADLINE_WARNING_DAYS) return { level: 'at_risk', daysRemaining, stage };
+            const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
+            const targetMs = new Date(targetDateStr).getTime();
+            if (isNaN(targetMs)) return null;
+            const daysRemaining = Math.round((targetMs - todayMs) / 86400000);
+            const usingPlanDate = !!planDate;
+
+            if (daysRemaining < 0) return { level: 'overdue', daysRemaining, stage, usingPlanDate };
+            if (daysRemaining <= DEADLINE_WARNING_DAYS) return { level: 'at_risk', daysRemaining, stage, usingPlanDate };
             return null;
         }
 
@@ -2918,11 +2938,18 @@
             const warning = getDeadlineWarning(order);
             if (!warning) return '';
             const stageLabel = STAGE_LABELS[warning.stage];
+            // NEW (2026-09d): wording differs depending on which date tripped the warning — a plan-date
+            // warning names the specific department's own target ("ช้ากว่าแผนที่วางไว้"), while the
+            // dueDate fallback keeps the original, more general "M/O ทั้งใบเสี่ยงไม่ทันกำหนดส่ง" wording.
             if (warning.level === 'overdue') {
                 const lateDays = Math.abs(warning.daysRemaining);
-                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i class="fa-solid fa-triangle-exclamation"></i> เลยกำหนดแล้ว ${lateDays} วัน — แผนก${escapeHtml(stageLabel)}ยังไม่เสร็จ</span>`;
+                return warning.usingPlanDate
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i class="fa-solid fa-triangle-exclamation"></i> แผนก${escapeHtml(stageLabel)}ช้ากว่าแผนที่วางไว้แล้ว ${lateDays} วัน</span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i class="fa-solid fa-triangle-exclamation"></i> เลยกำหนดแล้ว ${lateDays} วัน — แผนก${escapeHtml(stageLabel)}ยังไม่เสร็จ</span>`;
             }
-            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> เหลืออีก ${warning.daysRemaining} วันถึงกำหนด — แผนก${escapeHtml(stageLabel)}เสี่ยงไม่ทัน</span>`;
+            return warning.usingPlanDate
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> เหลืออีก ${warning.daysRemaining} วันถึงกำหนดของแผนก${escapeHtml(stageLabel)}</span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> เหลืออีก ${warning.daysRemaining} วันถึงกำหนด — แผนก${escapeHtml(stageLabel)}เสี่ยงไม่ทัน</span>`;
         }
 
         function renderStageStepper(effectiveStage) {
@@ -3781,6 +3808,29 @@
                     <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(order.planning.planEnteredBy || '')}" onchange="updateOrderField(${orderIndex}, 'planning.planEnteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
 
+                <!-- NEW (2026-09d): กำหนดงานเสร็จของแต่ละแผนก — Planning sets a target finish date per
+                     department (ย้อม/ทอ/ตกแต่ง), working backward from the M/O's overall dueDate. Each
+                     department sees its own date read-only in its own section (renderStagePlanDateBadgeHtml)
+                     and getDeadlineWarning() warns against THIS date once set, instead of only the
+                     whole-order dueDate — so a warning names the department that's actually behind. -->
+                <div class="bg-sky-50/60 border border-sky-100 p-2.5 rounded-xl space-y-2">
+                    <p class="text-xs font-bold text-sky-700 flex items-center gap-1.5"><i class="fa-solid fa-calendar-check"></i> กำหนดวันเสร็จแต่ละแผนก (ไม่บังคับ — เว้นว่างได้ถ้ายังไม่วางแผน)</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">แผนกย้อม ต้องเสร็จวันที่</label>
+                            <input type="date" value="${order.planDates.dyeing || ''}" onchange="updateOrderField(${orderIndex}, 'planDates.dyeing', this.value)" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">แผนกทอ ต้องเสร็จวันที่</label>
+                            <input type="date" value="${order.planDates.weaving || ''}" onchange="updateOrderField(${orderIndex}, 'planDates.weaving', this.value)" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">แผนกตกแต่ง/บรรจุ ต้องเสร็จวันที่</label>
+                            <input type="date" value="${order.planDates.finishing || ''}" onchange="updateOrderField(${orderIndex}, 'planDates.finishing', this.value)" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Planning decides internal-vs-external for both dyeing and weaving up front, plus the
                      dyeing order plan (colors/kg + any surplus yarn used) — see renderStageModeToggleHtml
                      and the surplus fields below. Dyeing/weaving departments still see the chosen mode
@@ -3826,6 +3876,21 @@
         function renderStageModeBadgeHtml(currentMode, internalLabel, externalLabel) {
             const isExternal = currentMode === 'external';
             return `<p class="text-[11px] text-slate-500 mb-2"><i class="fa-solid fa-circle-info mr-1"></i>โหมด: <span class="font-semibold ${isExternal ? 'text-amber-700' : 'text-indigo-700'}">${escapeHtml(isExternal ? externalLabel : internalLabel)}</span> <span class="text-slate-400">(กำหนดโดยแผนกวางแผน)</span></p>`;
+        }
+
+        // NEW (2026-09d): read-only badge showing THIS department's own target finish date — set once
+        // from the Planning section (see renderPlanningChecklistHtml's "กำหนดวันเสร็จแต่ละแผนก" block),
+        // same "decided by Planning, shown read-only here" convention as renderStageModeBadgeHtml above.
+        // Turns red once today is past the date and the department still isn't at 100% — matching what
+        // getDeadlineWarning() also checks for the global warning badge.
+        function renderStagePlanDateBadgeHtml(order, stage) {
+            const planDate = order.planDates && order.planDates[stage];
+            if (!planDate) return '';
+            const today = new Date().toISOString().split('T')[0];
+            const percent = (order[stage] && order[stage].percent) || 0;
+            const isOverdue = planDate < today && percent < 100;
+            const cls = isOverdue ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-sky-700 bg-sky-50 border-sky-100';
+            return `<p class="text-[11px] ${cls} border rounded-lg px-2 py-1 mb-2"><i class="fa-solid fa-calendar-day mr-1"></i>กำหนดเสร็จแผนกนี้: <span class="font-semibold">${escapeHtml(planDate)}</span>${isOverdue ? ' — เลยกำหนดแล้ว' : ''} <span class="text-slate-400">(กำหนดโดยแผนกวางแผน)</span></p>`;
         }
 
         // Two shapes per color row depending on order.dyeing.mode: internal (ย้อมในบริษัท — จำนวน/วัน,
@@ -4024,9 +4089,11 @@
                 const planLineHtml = planParts.length > 0
                     ? `<p class="text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-2 py-1 mb-2"><i class="fa-solid fa-clipboard-list mr-1"></i>แผนจากแผนกวางแผน: ${escapeHtml(planParts.join(' • '))}</p>`
                     : '';
-                modeToggleHtml = renderStageModeBadgeHtml(d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท') + planLineHtml;
+                modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage) + renderStageModeBadgeHtml(d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท') + planLineHtml;
             } else if (stage === 'weaving') {
-                modeToggleHtml = renderStageModeBadgeHtml(order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
+                modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage) + renderStageModeBadgeHtml(order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
+            } else if (stage === 'finishing') {
+                modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage);
             }
 
             let weavingChecks = '';
