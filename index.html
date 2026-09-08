@@ -71,6 +71,18 @@
         }
         .mascot-bubble { transition: opacity 0.35s ease, transform 0.35s ease; opacity: 0; transform: translateY(6px); }
         .mascot-bubble.show { opacity: 1; transform: translateY(0); }
+
+        /* "New" badge on a freshly-created M/O, S/O (see isOrderNew()) — a clearly-highlighted,
+           gently pulsing pill so a new job stands out in the Overview table / Kanban card at a glance. */
+        .new-order-badge { animation: newOrderPulse 1.6s ease-in-out infinite; }
+        @keyframes newOrderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.35); }
+            50%      { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
+        }
+
+        /* Mark & Nos print sheet: a bold, stencil-like box for the free-text shipping mark, meant to
+           read the way an actual carton/crate marking would. */
+        .mark-nos-box { border: 3px solid #1e293b; border-radius: 6px; padding: 18px; font-size: 18px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; text-align: center; letter-spacing: 0.02em; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -277,6 +289,13 @@
                     </svg>
                 </div>
             </div>
+
+            <!-- Overview summary panel: company-wide totals at a glance. Populated by
+                 renderOverviewSummaryPanel() (called from renderProductionOverview()). -->
+            <div id="overviewSummaryPanel" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
+                <!-- injected via JS -->
+            </div>
+
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
                 <div class="relative w-full sm:w-80">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
@@ -486,38 +505,66 @@
 
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
-            <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-truck-fast mr-2 text-emerald-600"></i> รายการที่บรรจุภัณฑ์เรียบร้อยแล้ว รอส่งมอบ</h3>
-                <span id="shippingListCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">0 รายการรอส่ง</span>
+            <!-- Sub-tabs: "รายการรอส่ง" (the existing ready-to-ship table) and "ใบส่งของ Mark & Nos"
+                 (per-M/O shipping-mark editor + print). See switchShippingSubTab(). -->
+            <div class="px-4 pt-3 flex items-center gap-1.5 bg-emerald-50/50 border-b border-slate-100">
+                <button onclick="switchShippingSubTab('list')" id="shippingSubTabListBtn" class="px-3.5 py-2 rounded-t-lg text-xs font-semibold bg-white text-emerald-700 border border-b-0 border-slate-200 -mb-px">
+                    <i class="fa-solid fa-truck-fast mr-1.5"></i> รายการรอส่ง
+                </button>
+                <button onclick="switchShippingSubTab('marknos')" id="shippingSubTabMarkNosBtn" class="px-3.5 py-2 rounded-t-lg text-xs font-semibold text-emerald-800/70 hover:text-emerald-700">
+                    <i class="fa-solid fa-tags mr-1.5"></i> ใบส่งของ Mark &amp; Nos
+                </button>
             </div>
-            <div class="px-4 pt-3">
-                <div class="relative w-full sm:w-72">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="shippingSearchInput" oninput="renderShippingTable(qcData)" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO, ผู้ตรวจ..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+
+            <div id="shippingListSubview">
+                <div class="p-4 bg-emerald-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h3 class="font-bold text-emerald-900 text-sm"><i class="fa-solid fa-truck-fast mr-2 text-emerald-600"></i> รายการที่บรรจุภัณฑ์เรียบร้อยแล้ว รอส่งมอบ</h3>
+                    <span id="shippingListCountBadge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">0 รายการรอส่ง</span>
+                </div>
+                <div class="px-4 pt-3">
+                    <div class="relative w-full sm:w-72">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                        <input type="text" id="shippingSearchInput" oninput="renderShippingTable(qcData)" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO, ผู้ตรวจ..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                                <th class="py-3.5 px-4">M/O, S/O</th>
+                                <th class="py-3.5 px-4">วันที่ตรวจผ่านบรรจุภัณฑ์</th>
+                                <th class="py-3.5 px-4">รายละเอียดบรรจุภัณฑ์</th>
+                                <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
+                                <th class="py-3.5 px-4 text-center action-col">การจัดส่ง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shippingTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Ready-to-ship rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Empty Shipping State -->
+                <div id="emptyShippingState" class="hidden py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <p id="emptyShippingStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง">ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง</p>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
-                            <th class="py-3.5 px-4">M/O, S/O</th>
-                            <th class="py-3.5 px-4">วันที่ตรวจผ่านบรรจุภัณฑ์</th>
-                            <th class="py-3.5 px-4">รายละเอียดบรรจุภัณฑ์</th>
-                            <th class="py-3.5 px-4">ผู้ตรวจสอบ</th>
-                            <th class="py-3.5 px-4 text-center action-col">การจัดส่ง</th>
-                        </tr>
-                    </thead>
-                    <tbody id="shippingTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                        <!-- Ready-to-ship rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Empty Shipping State -->
-            <div id="emptyShippingState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i class="fa-solid fa-box-open"></i>
+
+            <!-- Mark & Nos subview: pick an M/O, S/O, type/edit its free-text Shipping Mark & Nos, then
+                 print a labeled sheet for the crates/cartons. See renderMarkNosSubview() / printMarkNos(). -->
+            <div id="markNosSubview" class="hidden p-4 space-y-3">
+                <p class="text-xs text-slate-500">พิมพ์ใบระบุ "Shipping Mark &amp; Nos" (เครื่องหมาย/เลขหีบห่อ) แนบไปกับสินค้า — พิมพ์ข้อความอิสระที่ต้องการให้ปรากฏบนใบต่อ M/O, S/O แต่ละรายการ แล้วกด "พิมพ์ใบ Mark &amp; Nos"</p>
+                <div id="markNosListContainer" class="space-y-3">
+                    <!-- Mark & Nos cards injected via JS -->
                 </div>
-                <p id="emptyShippingStateText" class="text-slate-500 font-medium" data-default-text="ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง">ยังไม่มีรายการที่บรรจุภัณฑ์เรียบร้อยรอส่ง</p>
+                <div id="emptyMarkNosState" class="hidden py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">ยังไม่มีรายการรอส่ง/ส่งแล้วให้ออกใบ Mark &amp; Nos</p>
+                </div>
             </div>
         </div>
 
@@ -998,7 +1045,7 @@
             const globalSearchFilterWrapper = document.getElementById('globalSearchFilterWrapper');
             if (globalSearchFilterWrapper) globalSearchFilterWrapper.classList.toggle('hidden', view !== 'records');
 
-            if (view === 'shipping') renderShippingTable(qcData);
+            if (view === 'shipping') { renderShippingTable(qcData); renderMarkNosSubview(); }
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
             if (view === 'shipped') renderQcShippedArchive();
@@ -1682,6 +1729,102 @@
 
         let currentShippingReadyList = [];
 
+        // ===== Mark & Nos sub-tab (see the sub-tab bar in #shippingViewContainer) =====
+
+        function switchShippingSubTab(tab) {
+            const listBtn = document.getElementById('shippingSubTabListBtn');
+            const markNosBtn = document.getElementById('shippingSubTabMarkNosBtn');
+            const listView = document.getElementById('shippingListSubview');
+            const markNosView = document.getElementById('markNosSubview');
+            const activeCls = "px-3.5 py-2 rounded-t-lg text-xs font-semibold bg-white text-emerald-700 border border-b-0 border-slate-200 -mb-px";
+            const inactiveCls = "px-3.5 py-2 rounded-t-lg text-xs font-semibold text-emerald-800/70 hover:text-emerald-700";
+            if (listBtn) listBtn.className = tab === 'list' ? activeCls : inactiveCls;
+            if (markNosBtn) markNosBtn.className = tab === 'marknos' ? activeCls : inactiveCls;
+            if (listView) listView.classList.toggle('hidden', tab !== 'list');
+            if (markNosView) markNosView.classList.toggle('hidden', tab !== 'marknos');
+            if (tab === 'marknos') renderMarkNosSubview();
+        }
+
+        // Lists every M/O, S/O that's ready-to-ship or already shipped (kept visible even after
+        // shipping, so a duplicate label can still be reprinted later) with an editable free-text
+        // "Shipping Mark & Nos" field and a print button each.
+        function renderMarkNosSubview() {
+            const container = document.getElementById('markNosListContainer');
+            const emptyState = document.getElementById('emptyMarkNosState');
+            if (!container) return;
+
+            let list = productionOrders
+                .map((order, orderIndex) => ({ order, orderIndex }))
+                .filter(({ order }) => order.readyToShip || order.shipped);
+            if (orderTypeFilter !== 'all') {
+                list = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === orderTypeFilter);
+            }
+            list.sort((a, b) => {
+                // Not-yet-shipped first (still actionable), then most recently shipped first.
+                if (!!a.order.shipped !== !!b.order.shipped) return a.order.shipped ? 1 : -1;
+                return String(b.order.shippedDate || '').localeCompare(String(a.order.shippedDate || ''));
+            });
+
+            if (list.length === 0) {
+                container.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+
+            container.innerHTML = list.map(({ order, orderIndex }) => `
+                <div class="border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row gap-3">
+                    <div class="sm:w-56 shrink-0">
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] mt-1 ${order.shipped ? 'text-emerald-600' : 'text-orange-600'} font-semibold">${order.shipped ? `ส่งแล้ว (${escapeHtml(order.shippedDate || '-')})` : 'รอส่ง'}</p>
+                    </div>
+                    <div class="flex-grow">
+                        <label class="block text-[10px] text-slate-500 mb-0.5">Shipping Mark &amp; Nos (ข้อความอิสระ — จะพิมพ์ตามที่พิมพ์ไว้นี้เป๊ะๆ)</label>
+                        <textarea rows="3" placeholder="เช่น ชื่อ/โลโก้ลูกค้า, ท่าปลายทาง, เลขที่หีบห่อ 1/5, 2/5..." onchange="updateOrderField(${orderIndex}, 'shippingMark', this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">${escapeHtml(order.shippingMark || '')}</textarea>
+                    </div>
+                    <div class="sm:w-36 shrink-0 flex sm:flex-col justify-end gap-2">
+                        <button onclick="printMarkNos(${orderIndex})" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-3 py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-print"></i> พิมพ์ใบ Mark &amp; Nos
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Builds the printable "Mark & Nos" sheet for one M/O, S/O: minimal identifying info (M/O, S/O
+        // + customer, so whoever handles the crate can match it back to the order) plus the free-text
+        // shipping mark in a large stencil-style box. Reuses the same #printArea / print-single-mode
+        // mechanism as buildPrintDetailHTML() for the QC print sheet.
+        function buildMarkNosPrintHTML(order) {
+            return `
+                <div class="print-sheet">
+                    <div class="print-header">
+                        <h1>ใบ Shipping Mark &amp; Nos</h1>
+                        <p>Siam Carpets Manufacturing</p>
+                    </div>
+                    <table class="print-info-table">
+                        <tr><th>M/O, S/O</th><td>${escapeHtml(order.moSo || '-')}</td></tr>
+                        ${order.customerName ? `<tr><th>ลูกค้า</th><td>${escapeHtml(order.customerName)}</td></tr>` : ''}
+                        ${order.customerPO ? `<tr><th>PO</th><td>${escapeHtml(order.customerPO)}</td></tr>` : ''}
+                        ${order.dueDate ? `<tr><th>กำหนดส่ง</th><td>${escapeHtml(order.dueDate)}</td></tr>` : ''}
+                    </table>
+                    <div class="mark-nos-box">${escapeHtml(order.shippingMark || '(ยังไม่ได้ระบุ Shipping Mark)')}</div>
+                    <p class="print-footer-note">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
+                </div>
+            `;
+        }
+
+        function printMarkNos(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildMarkNosPrintHTML(order);
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบ Mark & Nos... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
+            setTimeout(() => window.print(), 150);
+        }
+
         function promptShipItem(rowIdx) {
             document.getElementById('shipTargetIndex').value = rowIdx;
             document.getElementById('shipModal').classList.remove('hidden');
@@ -1847,7 +1990,7 @@
             // mode: 'internal' (ทอในบริษัท, default) or 'external' (จ้างภายนอกทอ — ส่งผ้าพร้อมไหมออกไป
             // ให้โรงงานภายนอกทอแล้วรอรับพรมคืน). External mode replaces the internal checklist/items
             // with a single outsourced-job record (see the `external` object below).
-            const weaving = Object.assign({ mode: 'internal', receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0 }, parseField(raw.weaving, {}));
+            const weaving = Object.assign({ mode: 'internal', receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0 }, parseField(raw.weaving, {}));
             if (weaving.mode !== 'external') weaving.mode = 'internal';
             if (!Array.isArray(weaving.items)) weaving.items = [];
             weaving.external = Object.assign(
@@ -1905,7 +2048,19 @@
                 readyToShip: !!raw.readyToShip,
                 shipped: !!raw.shipped,
                 shippedDate: raw.shippedDate || '',
-                lastUpdated: normalizeDateString(raw.lastUpdated) || ''
+                lastUpdated: normalizeDateString(raw.lastUpdated) || '',
+                // createdAt: when this M/O, S/O was first opened — drives the "New" badge (see
+                // isOrderNew()). An order saved before this field existed falls back to lastUpdated
+                // (or, failing that, an old fixed date) rather than "now" — otherwise every pre-existing
+                // order would suddenly show as "New" the moment this update ships.
+                createdAt: raw.createdAt || normalizeDateString(raw.lastUpdated) || '2000-01-01',
+                // isInserted: true if this M/O, S/O was created with a due date earlier than an
+                // already-queued order's — i.e. it jumped the queue ("แทรกงาน") — decided once at
+                // creation time in submitNewOrder() and kept as a permanent record from then on.
+                isInserted: !!raw.isInserted,
+                // shippingMark: free-text "Shipping Mark & Nos" content for the printable label on the
+                // "รายการรอส่ง" tab's Mark & Nos sub-tab (see renderMarkNosSubview() / printMarkNos()).
+                shippingMark: raw.shippingMark || ''
             };
             // Only auto-recalculate % from items that were genuinely saved as items (new-style data).
             // For a stage whose single item was just synthesized here from old scalar fields, keep the
@@ -2044,6 +2199,32 @@
                 });
             } catch(err) {
                 console.error("Error sending LINE ready-to-ship notification:", err);
+            }
+        }
+
+        // Sends a LINE broadcast every time an M/O, S/O is handed from one department to the next
+        // ("แต่ละ M/O,S/O ถ้ามีการโอนย้ายให้แจ้งเตือนผ่านไลน์") — same best-effort broadcast mechanism as
+        // notifyLineReadyToShip() above, reusing the same ?type=lineNotify backend endpoint (no .gs
+        // changes needed for this). Never blocks the transfer itself if it fails.
+        async function notifyLineStageTransfer(order, fromStage, toStage) {
+            if (!gasWebAppUrl) return;
+            const messageLines = [
+                '🔄 โอนงานข้ามแผนก',
+                `M/O, S/O: ${order.moSo || '-'}`,
+                `${STAGE_LABELS[fromStage] || fromStage} → ${STAGE_LABELS[toStage] || toStage}`
+            ];
+            if (order.customerName) messageLines.push(`ลูกค้า: ${order.customerName}`);
+            if (order.dueDate) messageLines.push(`กำหนดส่ง: ${order.dueDate}`);
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE stage-transfer notification:", err);
             }
         }
 
@@ -2374,6 +2555,86 @@
             return order.currentStage;
         }
 
+        // ===== Overview summary panel: company-wide totals (see renderOverviewSummaryPanel()) =====
+
+        // "New" badge: shown for 3 days after an M/O, S/O is first created (see submitNewOrder() /
+        // normalizeOrder()'s createdAt field), then fades away on its own — no manual dismissal needed.
+        const NEW_ORDER_BADGE_DAYS = 3;
+        function isOrderNew(order) {
+            if (!order.createdAt) return false;
+            const created = new Date(order.createdAt + 'T00:00:00');
+            if (isNaN(created.getTime())) return false;
+            const ageDays = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
+            return ageDays >= 0 && ageDays <= NEW_ORDER_BADGE_DAYS;
+        }
+
+        // Total transfers counter ("ยอดรวมโอนไป") — a simple running count of every successful
+        // transferOrderStage() call, all-time. Kept in its own localStorage key (not inside
+        // qcData/productionOrders) since it's a pure activity counter, not a record tied to any one
+        // M/O, S/O.
+        const TRANSFER_COUNT_KEY = 'qc_transfer_count_v1';
+        function getTransferCount() {
+            return Number(localStorage.getItem(TRANSFER_COUNT_KEY)) || 0;
+        }
+        function incrementTransferCount() {
+            const next = getTransferCount() + 1;
+            localStorage.setItem(TRANSFER_COUNT_KEY, String(next));
+            return next;
+        }
+
+        // Finishing department capacity ("แต่งได้กี่ M/O ต่อวัน") — unlike dyeing (colors/day) and
+        // weaving (sqm/day), a single M/O doesn't have its own continuous "M/O per day" rate to enter,
+        // so this is one company-wide capacity number, set once from the Overview summary panel and
+        // kept in localStorage, rather than a per-order field.
+        const FINISHING_CAPACITY_KEY = 'qc_finishing_capacity_per_day_v1';
+        function getFinishingCapacityPerDay() {
+            return Number(localStorage.getItem(FINISHING_CAPACITY_KEY)) || 0;
+        }
+        function setFinishingCapacityPerDay(value) {
+            const n = Math.max(0, Number(value) || 0);
+            localStorage.setItem(FINISHING_CAPACITY_KEY, String(n));
+            return n;
+        }
+
+        // Sums every dyeing item's "ย้อมได้/วัน" across M/O, S/O currently AT the dyeing stage — i.e.
+        // the dyeing department's current total daily throughput, straight from the per-color capacity
+        // numbers already entered on each item (see renderDyeingItemsHtml).
+        function getDyeingColorsPerDayTotal() {
+            return productionOrders
+                .filter(o => getEffectiveStage(o) === 'dyeing')
+                .reduce((sum, o) => sum + (o.dyeing.items || []).reduce((s, it) => s + (Number(it.colorsPerDay) || 0), 0), 0);
+        }
+
+        // Sums "ทอได้กี่ตร.เมตร/วัน" (weaving.sqmPerDay, entered per M/O next to "ทอได้กี่ตารางเมตรแล้ว")
+        // across M/O, S/O currently AT the weaving stage.
+        function getWeavingSqmPerDayTotal() {
+            return productionOrders
+                .filter(o => getEffectiveStage(o) === 'weaving')
+                .reduce((sum, o) => sum + (Number(o.weaving.sqmPerDay) || 0), 0);
+        }
+
+        // One-stop snapshot of every number the Overview summary panel shows, computed fresh each render
+        // so it's always in sync with the current productionOrders / localStorage state.
+        function computeOverviewSummaryStats() {
+            const stageCounts = { planning: 0, dyeing: 0, weaving: 0, finishing: 0, ready_to_ship: 0, shipped: 0 };
+            let totalSqmReceived = 0;
+            productionOrders.forEach(o => {
+                const stage = getEffectiveStage(o);
+                if (stageCounts.hasOwnProperty(stage)) stageCounts[stage]++;
+                totalSqmReceived += Number(o.totalSqm) || 0;
+            });
+            return {
+                totalSqmReceived,
+                stageCounts,
+                dyeingColorsPerDay: getDyeingColorsPerDayTotal(),
+                weavingSqmPerDay: getWeavingSqmPerDayTotal(),
+                finishingMoPerDay: getFinishingCapacityPerDay(),
+                transferCount: getTransferCount(),
+                readyToShipCount: stageCounts.ready_to_ship,
+                shippedCount: stageCounts.shipped
+            };
+        }
+
         // Warns per-order when the CURRENT stage of that M/O looks like it won't make the due date:
         // 'overdue' once the due date has already passed while that stage is still not 100% complete,
         // or 'at_risk' once the due date is within DEADLINE_WARNING_DAYS days away and the stage is
@@ -2429,6 +2690,20 @@
 
         // One row of the Overview table — shared by the M/O box and the S/O box. runningNo is the
         // per-box sequential number (1, 2, 3... "เลขรัน"), independent between the two boxes.
+        // Shared "New" (3 days, see isOrderNew()) and "แทรกงาน" (queue-jump, see submitNewOrder())
+        // badges — both clearly-highlighted colored pills, reused on both the Overview table row and
+        // the Kanban card so a fresh or queue-jumping M/O, S/O stands out wherever it's shown.
+        function orderFlagBadgesHtml(order) {
+            let html = '';
+            if (isOrderNew(order)) {
+                html += `<span class="new-order-badge inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500 text-white align-middle mr-1"><i class="fa-solid fa-sparkles"></i> New</span>`;
+            }
+            if (order.isInserted) {
+                html += `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-amber-950 align-middle mr-1" title="เพิ่มโดยกำหนดส่งเร็วกว่ารายการที่คิวอยู่ก่อน"><i class="fa-solid fa-bolt"></i> แทรกงาน</span>`;
+            }
+            return html;
+        }
+
         function buildOverviewRowHtml(order, orderIndex, runningNo, today) {
             const effectiveStage = getEffectiveStage(order);
             const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
@@ -2451,7 +2726,7 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
                                 ${sqmPiecesLineHtml}
                             </div>
@@ -2486,7 +2761,65 @@
             return a.order.dueDate < b.order.dueDate ? -1 : (a.order.dueDate > b.order.dueDate ? 1 : 0);
         }
 
+        // One reusable little stat tile for the summary panel below.
+        function overviewStatTileHtml(iconClass, colorCls, label, valueHtml) {
+            return `
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+                    <p class="text-[10px] text-slate-500 flex items-center gap-1"><i class="fa-solid ${iconClass} ${colorCls}"></i> ${label}</p>
+                    <p class="text-sm font-bold text-slate-800 mt-0.5">${valueHtml}</p>
+                </div>
+            `;
+        }
+
+        // Renders the company-wide summary panel at the top of the Overview tab: total sqm received,
+        // per-department M/O, S/O counts, the three daily-throughput numbers (summed from capacity
+        // figures already entered elsewhere in the app), the all-time transfer counter, and the
+        // ready-to-ship / shipped counts. Called from renderProductionOverview() so it always reflects
+        // the latest data.
+        function renderOverviewSummaryPanel() {
+            const panel = document.getElementById('overviewSummaryPanel');
+            if (!panel) return;
+            const s = computeOverviewSummaryStats();
+
+            const deptChipsHtml = ['planning', 'dyeing', 'weaving', 'finishing', 'ready_to_ship', 'shipped'].map(stage => {
+                const c = STAGE_COLORS[stage];
+                return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${c.light}"><span class="w-1.5 h-1.5 rounded-full ${c.connector}"></span>${escapeHtml(STAGE_LABELS[stage])} ${s.stageCounts[stage]}</span>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-chart-simple mr-2 text-indigo-600"></i>สรุปภาพรวมทั้งบริษัท</h3>
+                    <span class="text-[11px] text-slate-400">อัปเดตอัตโนมัติตามข้อมูลปัจจุบัน</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+                    ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. รับเข้าทั้งหมด', `${s.totalSqmReceived.toLocaleString('th-TH')} ตร.ม.`)}
+                    ${overviewStatTileHtml('fa-droplet', 'text-violet-500', 'ย้อมได้/วัน (ที่กำลังย้อม)', `${s.dyeingColorsPerDay.toLocaleString('th-TH')} สี/วัน`)}
+                    ${overviewStatTileHtml('fa-hand-holding-heart', 'text-teal-500', 'ทอได้/วัน (ที่กำลังทอ)', `${s.weavingSqmPerDay.toLocaleString('th-TH')} ตร.ม./วัน`)}
+                    ${overviewStatTileHtml('fa-box-archive', 'text-fuchsia-500', 'แต่งได้/วัน (ตั้งค่ากำลังผลิต)', `
+                        <span class="inline-flex items-center gap-1">
+                            <input type="number" min="0" value="${s.finishingMoPerDay || ''}" placeholder="0" onchange="updateFinishingCapacityInput(this.value)" class="w-14 px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-800">
+                            <span class="text-xs font-semibold text-slate-500">M/O/วัน</span>
+                        </span>
+                    `)}
+                    ${overviewStatTileHtml('fa-arrow-right-arrow-left', 'text-sky-500', 'ยอดรวมโอนงานทั้งหมด', `${s.transferCount.toLocaleString('th-TH')} ครั้ง`)}
+                    ${overviewStatTileHtml('fa-truck-fast', 'text-orange-500', 'รายการรอส่ง', `${s.readyToShipCount.toLocaleString('th-TH')} M/O, S/O`)}
+                    ${overviewStatTileHtml('fa-circle-check', 'text-emerald-500', 'ส่งแล้ว', `${s.shippedCount.toLocaleString('th-TH')} M/O, S/O`)}
+                </div>
+                <div class="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
+                    ${deptChipsHtml}
+                </div>
+            `;
+        }
+
+        // Persists the finishing department's manually-set daily capacity number (see
+        // getFinishingCapacityPerDay()) and re-renders the panel so the tile reflects the saved value.
+        function updateFinishingCapacityInput(value) {
+            setFinishingCapacityPerDay(value);
+            renderOverviewSummaryPanel();
+        }
+
         function renderProductionOverview() {
+            renderOverviewSummaryPanel();
             const moTbody = document.getElementById('overviewMoTableBody');
             const soTbody = document.getElementById('overviewSoTableBody');
             if (!moTbody || !soTbody) return;
@@ -2654,6 +2987,19 @@
                     return;
                 }
 
+                // "งานที่กำลังทำอยู่ขึ้นก่อน งานที่ยังไม่ได้ทำไว้ด้านล่าง": within each column, an M/O, S/O
+                // with real progress in this department (percent > 0) sorts above one that hasn't been
+                // started here yet (percent === 0) — ties broken by due date, same as everywhere else.
+                ordersHere = ordersHere.slice().sort((a, b) => {
+                    const aStarted = (a[stage].percent || 0) > 0 ? 0 : 1;
+                    const bStarted = (b[stage].percent || 0) > 0 ? 0 : 1;
+                    if (aStarted !== bStarted) return aStarted - bStarted;
+                    if (!a.dueDate && !b.dueDate) return 0;
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0);
+                });
+
                 ordersHere.forEach(order => {
                     const orderIndex = productionOrders.indexOf(order);
                     column.appendChild(buildOrderCard(order, orderIndex, stage));
@@ -2679,7 +3025,7 @@
                 <div class="flex justify-between items-start gap-2">
                     ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
@@ -2829,9 +3175,11 @@
 
             order.currentStage = toStage;
             persistOrderChange(order);
+            incrementTransferCount();
             rerenderOrderViews(orderIndex);
             showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
             mascotCelebrate('transfer');
+            notifyLineStageTransfer(order, fromStage, toStage);
         }
 
         // Finishing reaches "รอส่ง" once its own work is 100% complete AND the packaging-department QC
@@ -3026,6 +3374,18 @@
                 showToast('มี M/O, S/O นี้อยู่ในสายการผลิตแล้ว', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
+
+            // "แทรกงาน" (queue-jump): true if this new order's due date is earlier than an already-queued,
+            // not-yet-shipped order of the same type (M/O vs S/O queue separately, matching how the
+            // Overview tab already sorts/splits them) — meaning it has to cut ahead of at least one
+            // order already in line. Decided once, here, and kept as a permanent record on the order.
+            let isInserted = false;
+            if (dueDate) {
+                isInserted = productionOrders.some(o =>
+                    !o.shipped && o.dueDate && (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === orderType && o.dueDate > dueDate
+                );
+            }
+
             const order = {
                 moSo: moSo,
                 orderType: orderType,
@@ -3039,12 +3399,15 @@
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
                 dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [], plannedColorCount: 0, plannedKg: 0, surplusUsed: false, surplusColorCount: 0, surplusKg: 0 },
-                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0 },
+                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0 },
                 finishing: { status: 'waiting', percent: 0, items: [] },
                 readyToShip: false,
                 shipped: false,
                 shippedDate: '',
-                lastUpdated: new Date().toISOString().split('T')[0]
+                lastUpdated: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString().split('T')[0],
+                isInserted: isInserted,
+                shippingMark: ''
             };
             productionOrders.push(order);
             saveOrdersToLocal();
@@ -3052,7 +3415,10 @@
             renderProductionBoard();
             renderProductionOverview();
             closeNewOrderModal();
-            showToast(`เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`);
+            showToast(isInserted
+                ? `เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว (⚡ งานแทรก แซงคิวก่อนรายการอื่นที่กำหนดส่งช้ากว่า)`
+                : `เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`,
+                isInserted ? 'fa-bolt' : undefined, isInserted ? 'text-amber-400' : undefined);
             mascotCelebrate('newOrder');
         }
 
@@ -3372,6 +3738,12 @@
                         <div>
                             <label class="block text-[10px] text-slate-500 mb-0.5">ตารางเมตรรวมของ M/O</label>
                             <p class="p-1.5 text-xs font-semibold text-slate-600">${totalSqm > 0 ? `${totalSqm} ตร.ม.` : 'ยังไม่ได้ระบุ (กรอกที่ด้านบน)'}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 mb-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">ทอได้กี่ตร.เมตร/วัน (กำลังผลิตของ M/O นี้ — ใช้รวมในแผงสรุปหน้าภาพรวม)</label>
+                            <input type="number" min="0" step="0.01" value="${order.weaving.sqmPerDay || ''}" onchange="updateOrderField(${orderIndex}, 'weaving.sqmPerDay', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                         </div>
                     </div>
                 `;
