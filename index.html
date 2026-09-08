@@ -116,6 +116,13 @@
                 <button onclick="openConfigModal()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-link"></i> ตั้งค่าลิงก์
                 </button>
+                <!-- NEW (2026-09e): global "แจ้งปัญหา" entry point, reachable from every tab (not just
+                     the order detail modal) — reporting a problem (e.g. ไหมด่าง) shouldn't require
+                     first finding and opening the right M/O. openReportIssueModal() with no argument
+                     leaves the M/O field blank for the reporter to fill in themselves. -->
+                <button onclick="openReportIssueModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3.5 py-2 rounded-xl shadow transition duration-200 text-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-triangle-exclamation"></i> แจ้งปัญหา
+                </button>
                 <button onclick="openModal()" id="addBtn" class="bg-indigo-600 hover:bg-indigo-800 text-white font-medium px-4 py-2 rounded-xl shadow transition duration-200 flex items-center gap-2 text-sm border border-indigo-400">
                     <i class="fa-solid fa-plus-circle"></i> เพิ่มบันทึก QC
                 </button>
@@ -202,6 +209,13 @@
                 </button>
                 <button onclick="switchView('shipped')" id="tabShippedBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition">
                     <i class="fa-solid fa-box-archive mr-1.5"></i> จัดส่งเรียบร้อยแล้ว
+                </button>
+                <!-- NEW (2026-09e): "แจ้งปัญหา" (report issue — e.g. ไหมด่าง) tracking tab. The badge
+                     shows how many issues are still open, so it's visible at a glance without opening
+                     the tab — same convention as shippingCountBadge above. -->
+                <button onclick="switchView('issues')" id="tabIssuesBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-700 transition">
+                    <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> ปัญหาที่ต้องติดตาม
+                    <span id="issuesCountBadge" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold hidden"></span>
                 </button>
             </div>
 
@@ -520,6 +534,53 @@
             </div>
         </div>
 
+        <!-- NEW (2026-09e): "ปัญหาที่ต้องติดตาม" — every problem reported via "แจ้งปัญหา" (e.g. ไหมด่าง),
+             from any M/O, any department, in one place. A new issue also fires an immediate LINE
+             broadcast (see notifyLineIssueReported()) so this tab is the "look it up later" half of
+             the "know immediately" ask — the broadcast is the "right now" half. -->
+        <div id="issuesViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
+            <div class="p-4 bg-rose-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 class="font-bold text-rose-900 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2 text-rose-600"></i> ปัญหาที่ต้องติดตาม</h3>
+                <button onclick="openReportIssueModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3.5 py-2 rounded-xl shadow transition text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus-circle"></i> แจ้งปัญหาใหม่
+                </button>
+            </div>
+            <div class="px-4 pt-3 flex flex-wrap items-center gap-3">
+                <div class="relative w-full sm:w-72">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="issuesSearchInput" oninput="renderIssuesTable()" placeholder="ค้นหา M/O, ประเภทปัญหา, รายละเอียด..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+                <select id="issuesStatusFilter" onchange="renderIssuesTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="open" selected>ยังไม่แก้ไข (เปิดอยู่)</option>
+                    <option value="resolved">แก้ไขแล้ว</option>
+                    <option value="all">ทั้งหมด</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto mt-1">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+                            <th class="py-3.5 px-4">M/O, S/O</th>
+                            <th class="py-3.5 px-4">ประเภทปัญหา / รายละเอียด</th>
+                            <th class="py-3.5 px-4">แผนก</th>
+                            <th class="py-3.5 px-4">วันที่แจ้ง / ผู้แจ้ง</th>
+                            <th class="py-3.5 px-4 text-center">สถานะ</th>
+                            <th class="py-3.5 px-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="issuesTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Issue rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyIssuesState" class="hidden py-12 text-center">
+                <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <p id="emptyIssuesStateText" class="text-slate-500 font-medium">ไม่มีปัญหาที่ต้องติดตามในขณะนี้</p>
+            </div>
+        </div>
+
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
             <!-- Sub-tabs: "รายการรอส่ง" (the existing ready-to-ship table) and "ใบส่งของ Mark & Nos"
@@ -777,6 +838,12 @@
                     <p class="text-xs text-indigo-200">แก้ไขข้อมูลแผนกใดก็ได้ ตลอดเวลา แม้จะโอนงานผ่านไปแล้ว</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <!-- NEW (2026-09e): contextual "แจ้งปัญหา" — pre-fills the M/O so reporting a
+                         problem while already looking at this order's detail doesn't require re-typing
+                         its number. See openReportIssueModal(). -->
+                    <button onclick="openReportIssueModal(productionOrders[currentDetailOrderIndex] ? productionOrders[currentDetailOrderIndex].moSo : '')" title="แจ้งปัญหาสำหรับ M/O, S/O นี้" class="text-indigo-200 hover:text-rose-300 transition text-sm">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </button>
                     <button onclick="promptDeleteProductionOrder(currentDetailOrderIndex)" title="ลบ M/O, S/O นี้ทั้งรายการ" class="text-indigo-200 hover:text-rose-300 transition text-sm">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -832,6 +899,58 @@
                 <div id="orderDetailStepper" class="flex-grow"></div>
             </div>
             <div id="orderDetailBody" class="p-6 space-y-5 overflow-y-auto flex-grow text-sm"></div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09e): Report Issue Modal ("แจ้งปัญหา") — the "know immediately" ask: submitting here
+         (a) saves the issue so it shows up on the "ปัญหาที่ต้องติดตาม" tab for anyone to see later, and
+         (b) fires an instant LINE broadcast (see notifyLineIssueReported()) so everyone following the
+         LINE OA finds out right away, without needing to be looking at the dashboard at that moment. -->
+    <div id="reportIssueModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> แจ้งปัญหา</h3>
+            <p class="text-[11px] text-slate-400 -mt-3"><i class="fa-solid fa-circle-info mr-1"></i>ส่งแล้วจะแจ้งเตือนผ่าน LINE ทันที และขึ้นในแท็บ "ปัญหาที่ต้องติดตาม" จนกว่าจะปิดปัญหา</p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O, S/O</label>
+                <input type="text" id="issueMoSo" placeholder="เช่น M/O: 6902-01" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ประเภทปัญหา</label>
+                <select id="issueType" onchange="updateIssueTypeOtherVisibility()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="ไหมด่าง">ไหมด่าง (สีไม่สม่ำเสมอ)</option>
+                    <option value="สีเพี้ยน">สีเพี้ยนจากสเปค</option>
+                    <option value="ทอไม่แน่น/ไม่ได้มาตรฐาน">ทอไม่แน่น/ไม่ได้มาตรฐาน</option>
+                    <option value="ขนาดผิดสเปค">ขนาดผิดสเปค</option>
+                    <option value="ของขาดส่งไม่ทัน">ของขาดส่งไม่ทัน</option>
+                    <option value="ลูกค้าติดตามงาน">ลูกค้าติดตามงาน / เร่งงาน</option>
+                    <option value="อื่นๆ">อื่นๆ (ระบุด้านล่าง)</option>
+                </select>
+                <input type="text" id="issueTypeOther" placeholder="ระบุประเภทปัญหา" class="w-full mt-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 hidden">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">แผนกที่เกี่ยวข้อง (ไม่บังคับ)</label>
+                <select id="issueDepartment" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">ไม่ระบุ</option>
+                    <option value="แผนกวางแผน">แผนกวางแผน</option>
+                    <option value="แผนกย้อม">แผนกย้อม</option>
+                    <option value="แผนกทอมือ">แผนกทอมือ</option>
+                    <option value="แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์">แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์</option>
+                    <option value="ฝ่ายขาย/ลูกค้า">ฝ่ายขาย/ลูกค้า</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รายละเอียดปัญหา</label>
+                <textarea id="issueDescription" rows="3" placeholder="อธิบายปัญหาโดยละเอียด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" id="issueUrgent" class="rounded w-4 h-4"> เร่งด่วน (จะขึ้นเครื่องหมาย 🔴 ในข้อความ LINE)</label>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ผู้แจ้ง</label>
+                <input type="text" id="issueReportedBy" placeholder="ชื่อผู้แจ้งปัญหา" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeReportIssueModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
+                <button onclick="submitIssueReport()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white shadow transition flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> ส่งแจ้งปัญหา</button>
+            </div>
         </div>
     </div>
 
@@ -1011,6 +1130,9 @@
 
         let qcData = [];
         let productionOrders = [];
+        // NEW (2026-09e): issue reports ("แจ้งปัญหา") — a separate flat list, same load/save/sync
+        // convention as qcData/productionOrders above (own localStorage key, own Google Sheet tab).
+        let issuesData = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
         let isDisplayMode = false;
         let currentView = 'overview'; // 'overview' | 'board' | 'records' | 'summary' | 'shipping'
@@ -1100,6 +1222,11 @@
             if (savedOrders) {
                 try { productionOrders = JSON.parse(savedOrders); } catch(e) {}
             }
+            // NEW (2026-09e): issue reports — same load-then-refresh-from-Sheet pattern as qcData/productionOrders.
+            const savedIssues = localStorage.getItem('qc_issues_v1');
+            if (savedIssues) {
+                try { issuesData = JSON.parse(savedIssues); } catch(e) {}
+            }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
@@ -1108,6 +1235,7 @@
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
                 fetchOrdersFromGoogleSheet(false);
+                fetchIssuesFromGoogleSheet(false);
             } else {
                 updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
                 openConfigModal();
@@ -1122,6 +1250,11 @@
             localStorage.setItem('qc_production_orders_v1', JSON.stringify(productionOrders));
         }
 
+        // NEW (2026-09e): persists issuesData locally, same convention as saveOrdersToLocal() above.
+        function saveIssuesToLocal() {
+            localStorage.setItem('qc_issues_v1', JSON.stringify(issuesData));
+        }
+
         function initApp() {
             populateMoSoFilterOptions();
             filterTable(); // applies the search/status/dept/month filters plus the global M/O, S/O switch, and renders both the records table and the shipping list
@@ -1130,6 +1263,7 @@
             renderProductionBoard();
             renderQcShippedArchive();
             updateStats();
+            updateIssuesCountBadge(); // NEW (2026-09e): open-issue count on the tab badge, independent of which tab is active
         }
 
         function switchView(view) {
@@ -1139,7 +1273,8 @@
                 board: { btn: 'tabBoardBtn', container: 'boardViewContainer' },
                 records: { btn: 'tabRecordsBtn', container: 'recordsViewContainer' },
                 shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
-                shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' }
+                shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' },
+                issues: { btn: 'tabIssuesBtn', container: 'issuesViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
@@ -1159,6 +1294,7 @@
             if (view === 'overview') renderProductionOverview();
             if (view === 'board') renderProductionBoard();
             if (view === 'shipped') renderQcShippedArchive();
+            if (view === 'issues') renderIssuesTable();
         }
 
         // Global M/O, S/O switch (see the `orderTypeFilter` declaration above) — one switch that
@@ -1229,6 +1365,7 @@
             showToast('กำลังซิงค์ข้อมูลกับ Google Sheets...');
             await fetchDataFromGoogleSheet(true);
             await fetchOrdersFromGoogleSheet(false);
+            await fetchIssuesFromGoogleSheet(false);
             setTimeout(() => icon.classList.remove('fa-spin'), 600);
         }
 
@@ -2044,6 +2181,281 @@
             }
         }
 
+        // NEW (2026-09e): mirrors fetchOrdersFromGoogleSheet() above for issue reports — same
+        // "silently keep working from localStorage if the backend doesn't support this endpoint yet"
+        // fallback, so this new feature never breaks the dashboard for a user who hasn't redeployed
+        // the updated .gs file yet.
+        async function fetchIssuesFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getIssues' : gasWebAppUrl + '?action=getIssues';
+                const response = await fetch(fetchUrl);
+                const text = await response.text();
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    return;
+                }
+                let result;
+                try { result = JSON.parse(text); } catch(e) { return; }
+                if (Array.isArray(result)) {
+                    issuesData = result;
+                    saveIssuesToLocal();
+                    renderIssuesTable();
+                    updateIssuesCountBadge();
+                    if (isManual) showToast(`ซิงค์รายการปัญหาสำเร็จ (${issuesData.length} รายการ)`);
+                }
+            } catch(e) {
+                console.error("Fetch issues error (backend may not support issue tracking yet):", e);
+            }
+        }
+
+        // =========================================================================================
+        // Issue Reporting System ("แจ้งปัญหา"): lets anyone flag a problem against an M/O, S/O
+        // (ไหมด่าง, สีเพี้ยน, ลูกค้าติดตามงาน ฯลฯ) so that (a) it broadcasts to LINE immediately and
+        // (b) it stays visible on the "ปัญหาที่ต้องติดตาม" tab — and right on the Overview row / Kanban
+        // card via issueBadgeHtml() above — until someone marks it resolved. Backed by the "Issues"
+        // sheet via the ?type=issue POST / ?action=getIssues,deleteIssue GET endpoints.
+        // =========================================================================================
+
+        // Opens the "แจ้งปัญหา" modal. prefilledMoSo lets the contextual button inside the Order
+        // Detail modal (and, in future, other per-order buttons) pre-fill the M/O, S/O field so the
+        // reporter doesn't have to retype a number they're already looking at; the global header
+        // button and the "แจ้งปัญหาใหม่" button on the Issues tab call this with no argument.
+        function openReportIssueModal(prefilledMoSo) {
+            document.getElementById('issueMoSo').value = prefilledMoSo || '';
+            document.getElementById('issueType').value = 'ไหมด่าง';
+            document.getElementById('issueTypeOther').value = '';
+            document.getElementById('issueTypeOther').classList.add('hidden');
+            document.getElementById('issueDepartment').value = '';
+            document.getElementById('issueDescription').value = '';
+            document.getElementById('issueUrgent').checked = false;
+            document.getElementById('issueReportedBy').value = '';
+            document.getElementById('reportIssueModal').classList.remove('hidden');
+        }
+
+        function closeReportIssueModal() {
+            document.getElementById('reportIssueModal').classList.add('hidden');
+        }
+
+        // Shows/hides the free-text "ระบุประเภทปัญหา" field when "อื่นๆ" is selected — same pattern as
+        // every other "select + conditional other field" combo already in this file.
+        function updateIssueTypeOtherVisibility() {
+            const select = document.getElementById('issueType');
+            const otherInput = document.getElementById('issueTypeOther');
+            otherInput.classList.toggle('hidden', select.value !== 'อื่นๆ');
+        }
+
+        // Validates + saves a new issue report: pushes it into issuesData (so it shows up on the
+        // Issues tab and every badge immediately, even before the network round-trip finishes),
+        // persists to localStorage, syncs to the Google Sheet, and fires the instant LINE broadcast —
+        // mirrors submitNewOrder()'s "local-first, sync best-effort" pattern used everywhere else.
+        function submitIssueReport() {
+            const moSo = document.getElementById('issueMoSo').value.trim();
+            if (!moSo) {
+                showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const typeSelectVal = document.getElementById('issueType').value;
+            const issueTypeOther = document.getElementById('issueTypeOther').value.trim();
+            if (typeSelectVal === 'อื่นๆ' && !issueTypeOther) {
+                showToast('กรุณาระบุประเภทปัญหา', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const issueType = typeSelectVal === 'อื่นๆ' ? issueTypeOther : typeSelectVal;
+            const description = document.getElementById('issueDescription').value.trim();
+            if (!description) {
+                showToast('กรุณาอธิบายรายละเอียดปัญหา', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const department = document.getElementById('issueDepartment').value;
+            const urgent = document.getElementById('issueUrgent').checked;
+            const reportedBy = document.getElementById('issueReportedBy').value.trim();
+
+            const issue = {
+                id: 'ISS-' + Math.floor(100000 + Math.random() * 900000),
+                moSo, issueType, description, department,
+                severity: urgent ? 'urgent' : 'normal',
+                reportedBy,
+                reportedDate: new Date().toISOString().split('T')[0],
+                status: 'open',
+                resolvedBy: '', resolvedDate: '', resolutionNote: ''
+            };
+
+            issuesData.push(issue);
+            saveIssuesToLocal();
+            closeReportIssueModal();
+            renderIssuesTable();
+            updateIssuesCountBadge();
+            renderProductionOverview();
+            renderProductionBoard();
+            showToast('แจ้งปัญหาสำเร็จ กำลังแจ้งเตือนผ่าน LINE...', 'fa-triangle-exclamation', 'text-rose-400');
+
+            syncIssueToSheet(issue);
+            notifyLineIssueReported(issue);
+        }
+
+        // POSTs one issue (new or updated, e.g. after resolving) to the Google Sheet — mirrors
+        // syncOrderToSheet() exactly, reusing the same fire-and-forget 'no-cors' pattern so a slow or
+        // failed sync never blocks the UI the reporter is looking at.
+        async function syncIssueToSheet(issue) {
+            if (!gasWebAppUrl) return;
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=issue' : gasWebAppUrl + '?type=issue';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(issue)
+                });
+            } catch(err) {
+                console.error("Error syncing issue to Google Sheet:", err);
+            }
+        }
+
+        // Sends the instant LINE broadcast for a newly-reported issue — same best-effort mechanism as
+        // notifyLineReadyToShip()/notifyLineStageTransfer() (reuses the existing ?type=lineNotify
+        // endpoint, so no .gs changes were needed for this). A 🔴 prefix marks "เร่งด่วน" reports so
+        // they stand out in the LINE chat at a glance.
+        async function notifyLineIssueReported(issue) {
+            if (!gasWebAppUrl) return;
+            const messageLines = [
+                (issue.severity === 'urgent' ? '🔴 แจ้งปัญหาด่วน' : '⚠️ แจ้งปัญหา'),
+                `M/O, S/O: ${issue.moSo || '-'}`,
+                `ประเภทปัญหา: ${issue.issueType || '-'}`
+            ];
+            if (issue.department) messageLines.push(`แผนกที่เกี่ยวข้อง: ${issue.department}`);
+            if (issue.description) messageLines.push(`รายละเอียด: ${issue.description}`);
+            if (issue.reportedBy) messageLines.push(`ผู้แจ้ง: ${issue.reportedBy}`);
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE issue-reported notification:", err);
+            }
+        }
+
+        // Renders the "ปัญหาที่ต้องติดตาม" table, filtered by the status dropdown (open/resolved/all —
+        // defaults to "open" so the list only ever shows what still needs attention unless someone
+        // deliberately asks to see more) and the search box (matches M/O, issue type, or description).
+        // Newest report first, since the most recently reported problem is usually the most urgent one
+        // to look at.
+        function renderIssuesTable() {
+            const tbody = document.getElementById('issuesTableBody');
+            const emptyState = document.getElementById('emptyIssuesState');
+            if (!tbody) return;
+
+            const statusFilterEl = document.getElementById('issuesStatusFilter');
+            const statusFilterVal = statusFilterEl ? statusFilterEl.value : 'open';
+            const searchInputEl = document.getElementById('issuesSearchInput');
+            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
+
+            let list = issuesData.slice();
+            if (statusFilterVal !== 'all') {
+                list = list.filter(iss => (statusFilterVal === 'resolved' ? iss.status === 'resolved' : iss.status !== 'resolved'));
+            }
+            if (searchTerm) {
+                list = list.filter(iss =>
+                    (iss.moSo || '').toLowerCase().includes(searchTerm) ||
+                    (iss.issueType || '').toLowerCase().includes(searchTerm) ||
+                    (iss.description || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            list.sort((a, b) => (b.reportedDate || '').localeCompare(a.reportedDate || '') || (b.id || '').localeCompare(a.id || ''));
+
+            tbody.innerHTML = '';
+            if (list.length === 0) {
+                emptyState.classList.remove('hidden');
+                document.getElementById('emptyIssuesStateText').textContent =
+                    statusFilterVal === 'all' ? 'ไม่มีรายการปัญหา' : (statusFilterVal === 'resolved' ? 'ยังไม่มีปัญหาที่แก้ไขแล้ว' : 'ไม่มีปัญหาที่ต้องติดตามในขณะนี้');
+            } else {
+                emptyState.classList.add('hidden');
+                list.forEach(iss => {
+                    const isResolved = iss.status === 'resolved';
+                    const statusBadge = isResolved
+                        ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">แก้ไขแล้ว</span>'
+                        : `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold ${iss.severity === 'urgent' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-700'}">${iss.severity === 'urgent' ? '🔴 ด่วน' : 'เปิดอยู่'}</span>`;
+                    const resolutionNoteHtml = isResolved && iss.resolutionNote
+                        ? `<p class="text-[11px] text-emerald-700 mt-1"><i class="fa-solid fa-check mr-1"></i>${escapeHtml(iss.resolutionNote)}</p>` : '';
+                    const actionsHtml = isResolved
+                        ? `<button onclick="deleteIssueRow('${iss.id}')" class="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-1.5 rounded-lg transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>`
+                        : `<div class="flex items-center justify-center gap-1.5">
+                                <button onclick="resolveIssueRow('${iss.id}')" class="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition"><i class="fa-solid fa-check"></i> ปิดปัญหา</button>
+                                <button onclick="deleteIssueRow('${iss.id}')" class="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>
+                           </div>`;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+                            <td class="py-3 px-4 text-xs font-bold font-mono text-slate-700 whitespace-nowrap">${escapeHtml(iss.moSo || '-')}</td>
+                            <td class="py-3 px-4">
+                                <p class="text-xs font-semibold text-slate-700">${escapeHtml(iss.issueType || '-')}</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(iss.description || '')}</p>
+                                ${resolutionNoteHtml}
+                            </td>
+                            <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${escapeHtml(iss.department || '-')}</td>
+                            <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(iss.reportedDate || '-')}${iss.reportedBy ? `<br>${escapeHtml(iss.reportedBy)}` : ''}</td>
+                            <td class="py-3 px-4 text-center">${statusBadge}</td>
+                            <td class="py-3 px-4 text-center">${actionsHtml}</td>
+                        </tr>
+                    `;
+                });
+            }
+            updateIssuesCountBadge();
+        }
+
+        // Marks an issue resolved in place (never deletes it — resolved issues stay visible under the
+        // "แก้ไขแล้ว" filter as a record of what happened) and syncs the change back to the sheet.
+        function resolveIssueRow(id) {
+            const issue = issuesData.find(iss => iss.id === id);
+            if (!issue) return;
+            const note = window.prompt('หมายเหตุการแก้ไข (ถ้ามี):', '') || '';
+            const resolvedByName = window.prompt('ชื่อผู้ปิดปัญหา (ถ้ามี):', '') || '';
+            issue.status = 'resolved';
+            issue.resolvedBy = resolvedByName.trim();
+            issue.resolvedDate = new Date().toISOString().split('T')[0];
+            issue.resolutionNote = note.trim();
+            saveIssuesToLocal();
+            renderIssuesTable();
+            renderProductionOverview();
+            renderProductionBoard();
+            showToast('ปิดปัญหาเรียบร้อยแล้ว');
+            syncIssueToSheet(issue);
+        }
+
+        // Permanently removes an issue report (e.g. it was logged by mistake) — confirms first since
+        // this can't be undone, same as every other destructive action in this file.
+        function deleteIssueRow(id) {
+            const issue = issuesData.find(iss => iss.id === id);
+            if (!issue) return;
+            if (!window.confirm(`ลบรายการปัญหานี้ถาวรหรือไม่?\n\nM/O, S/O: ${issue.moSo}\n${issue.issueType}`)) return;
+            issuesData = issuesData.filter(iss => iss.id !== id);
+            saveIssuesToLocal();
+            renderIssuesTable();
+            renderProductionOverview();
+            renderProductionBoard();
+            showToast('ลบรายการปัญหาแล้ว', 'fa-circle-xmark', 'text-rose-400');
+            if (gasWebAppUrl) {
+                const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteIssue&id=' + encodeURIComponent(id);
+                fetch(deleteUrl).catch(err => console.error("Error deleting issue from Google Sheet:", err));
+            }
+        }
+
+        // Updates the red count badge on the "ปัญหาที่ต้องติดตาม" tab button — same show/hide-when-zero
+        // convention as shippingCountBadge (see renderShippingTable()).
+        function updateIssuesCountBadge() {
+            const tabBadge = document.getElementById('issuesCountBadge');
+            if (!tabBadge) return;
+            const openCount = issuesData.filter(iss => iss.status !== 'resolved').length;
+            if (openCount > 0) {
+                tabBadge.textContent = openCount;
+                tabBadge.classList.remove('hidden');
+            } else {
+                tabBadge.classList.add('hidden');
+            }
+        }
+
         // Best-effort guess of M/O vs S/O for orders saved before the explicit orderType field existed —
         // looks at the free-text "M/O, S/O" number the person typed (e.g. "S/O: 45001") and defaults to
         // M/O when it can't tell, since that's the far more common case.
@@ -2087,6 +2499,26 @@
             if (market === 'export') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-100 text-sky-700 border border-sky-200 align-middle mr-1.5">ต่างประเทศ</span>';
             if (market === 'domestic') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 align-middle mr-1.5">ในประเทศ</span>';
             return '';
+        }
+
+        // Returns every still-open ("open") issue reported against this M/O, S/O — used to surface a
+        // "problem exists" indicator right on the Overview row / Kanban card, not just inside the
+        // dedicated "ปัญหาที่ต้องติดตาม" tab, since the whole point of this feature is that people
+        // notice a problem immediately wherever they're already looking.
+        function getOpenIssuesForOrder(moSo) {
+            if (!moSo) return [];
+            return issuesData.filter(iss => iss && iss.moSo === moSo && iss.status !== 'resolved');
+        }
+
+        // Small red pill shown next to the M/O, S/O number whenever it has one or more open issues —
+        // mirrors orderFlagBadgesHtml()'s style/positioning so it lines up visually with the "New" /
+        // "แทรกงาน" badges it usually sits beside.
+        function issueBadgeHtml(moSo) {
+            const openIssues = getOpenIssuesForOrder(moSo);
+            if (openIssues.length === 0) return '';
+            const hasUrgent = openIssues.some(iss => iss.severity === 'urgent');
+            const label = openIssues.length > 1 ? `ปัญหา x${openIssues.length}` : 'ปัญหา';
+            return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${hasUrgent ? 'bg-rose-600 text-white' : 'bg-rose-100 text-rose-700 border border-rose-200'} align-middle mr-1" title="มีปัญหาที่ยังไม่ได้แก้ไข"><i class="fa-solid fa-triangle-exclamation"></i> ${label}</span>`;
         }
 
         // Converts an order coming from localStorage/Google Sheets into the current item-list-based
@@ -3008,7 +3440,7 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
                                 ${salesLineHtml}
                                 ${sqmPiecesLineHtml}
@@ -3311,7 +3743,7 @@
                 <div class="flex justify-between items-start gap-2">
                     ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
