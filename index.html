@@ -2350,6 +2350,24 @@
             renderAtRiskChart('atRiskByDeptChart', 'atRiskByDeptEmpty', computeAtRiskByDepartment());
         }
 
+        // FIX (2026-09-10): flags QC records whose M/O, S/O value was overwritten by a now-fixed Google
+        // Sheet header bug and repaired by the one-time cleanupQcMoso server-side fix (see
+        // AppsScript_QC_and_ProductionOrders.gs — fixLegacyQcHeaderLabels_ / cleanupQcMosoCorruption).
+        // "⚠️ ..." means the original M/O, S/O could not be recovered and needs a person to retype it;
+        // "[ตรวจสอบ] ..." means it was reconstructed automatically from other data on the row and should
+        // be double-checked, not blindly trusted. Both render as a distinct colored badge here instead
+        // of the normal M/O, S/O text/badges so these records are impossible to miss in the list.
+        function buildMoSoWarningBadge(moSo) {
+            const s = String(moSo || '');
+            if (s.indexOf('⚠️') === 0) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-semibold whitespace-normal" title="M/O, S/O เดิมถูกเขียนทับและกู้คืนไม่ได้ กรุณากรอกใหม่จากบันทึกของท่าน">${escapeHtml(s)}</span>`;
+            }
+            if (s.indexOf('[ตรวจสอบ]') === 0) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-semibold whitespace-normal" title="กู้คืนอัตโนมัติจากข้อมูลอื่นในแถวเดียวกัน กรุณาตรวจสอบความถูกต้องอีกครั้ง">${escapeHtml(s)}</span>`;
+            }
+            return null;
+        }
+
         function renderTable(dataToRender) {
             const tbody = document.getElementById('qcTableBody');
             const emptyState = document.getElementById('emptyState');
@@ -2403,11 +2421,12 @@
 
                 const tr = document.createElement('tr');
                 tr.className = 'group hover:bg-slate-50/80 transition border-b border-slate-100';
+                const moSoWarningHtml = buildMoSoWarningBadge(item.moSo);
                 tr.innerHTML = `
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
                     <td class="py-3.5 px-4 font-semibold text-indigo-600 text-xs">${escapeHtml(item.id)}</td>
                     <td class="py-3.5 px-4 font-medium text-xs">${escapeHtml(item.department)}</td>
-                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${orderTypeBadgeHtml(getOrderTypeByMoSo(item.moSo))}${marketBadgeHtml(getMarketByMoSo(item.moSo))}${escapeHtml(item.moSo)}</td>
+                    <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${moSoWarningHtml || `${orderTypeBadgeHtml(getOrderTypeByMoSo(item.moSo))}${marketBadgeHtml(getMarketByMoSo(item.moSo))}${escapeHtml(item.moSo)}`}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate" title="${escapeHtml(summaryText)}">${escapeHtml(summaryText)}</td>
                     <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${escapeHtml(item.status)}</span></td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(item.inspector)}</td>
