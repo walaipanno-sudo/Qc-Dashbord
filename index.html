@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3227,6 +3229,20 @@
                     : computeSizeItemSqm(it.width, it.length, it.qty, it.voidPercent)
             }));
 
+            // Full history of every time this order's delivery due date ("กำหนดส่ง") was postponed —
+            // each entry is one change, so "เลื่อนครั้งที่ N" is just history.length and the badge can
+            // show exactly what it moved from/to and when (see buildDueDatePostponeBadge() and the
+            // tracking hook in updateOrderField() below). May arrive as a real array (localStorage) or
+            // a JSON string (Google Sheet cell) — same pattern as sizeItems above.
+            let dueDateHistory = raw.dueDateHistory;
+            if (typeof dueDateHistory === 'string') {
+                try { dueDateHistory = JSON.parse(dueDateHistory); } catch (e) { dueDateHistory = []; }
+            }
+            if (!Array.isArray(dueDateHistory)) dueDateHistory = [];
+            dueDateHistory = dueDateHistory
+                .filter(h => h && h.from && h.to)
+                .map(h => ({ from: normalizeDateString(h.from) || String(h.from), to: normalizeDateString(h.to) || String(h.to), changedAt: h.changedAt || '' }));
+
             const order = {
                 moSo: raw.moSo || '',
                 orderType: (raw.orderType === 'SO' || raw.orderType === 'MO') ? raw.orderType : detectOrderTypeFromMoSo(raw.moSo),
@@ -3237,6 +3253,7 @@
                 totalPieces: Number(raw.totalPieces) || 0,
                 designImageUrl: raw.designImageUrl || '',
                 dueDate: normalizeDateString(raw.dueDate),
+                dueDateHistory: dueDateHistory,
                 currentStage: ORDER_STAGES.includes(raw.currentStage) ? raw.currentStage : 'planning',
                 planning, dyeing, weaving, finishing,
                 readyToShip: !!raw.readyToShip,
@@ -4026,11 +4043,24 @@
             return html;
         }
 
+        // Red "เลื่อนครั้งที่ N" badge for an order whose delivery due date has been postponed at least
+        // once (order.dueDateHistory populated by the tracking hook in updateOrderField() above).
+        // Returns '' for an order that's never been postponed, so callers can splice this straight into
+        // a template literal without an extra if/else. Hovering shows the full from→to history.
+        function buildDueDatePostponeBadge(order) {
+            const history = Array.isArray(order.dueDateHistory) ? order.dueDateHistory : [];
+            if (history.length === 0) return '';
+            const count = history.length;
+            const last = history[history.length - 1];
+            const title = 'ประวัติการเลื่อนกำหนดส่ง:\n' + history.map((h, i) => `${i + 1}) ${h.from} → ${h.to}${h.changedAt ? ` (แก้เมื่อ ${h.changedAt})` : ''}`).join('\n');
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 text-[10px] font-bold whitespace-nowrap align-middle ml-1.5" title="${escapeHtml(title)}"><i class="fa-solid fa-clock-rotate-left"></i> เลื่อนครั้งที่ ${count} (เดิม ${escapeHtml(last.from)})</span>`;
+        }
+
         function buildOverviewRowHtml(order, orderIndex, runningNo, today) {
             const effectiveStage = getEffectiveStage(order);
             const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
             const dueDateHtml = order.dueDate
-                ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}`
+                ? `${escapeHtml(order.dueDate)}${isOverdue ? '<span class="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-[10px] font-bold">เลยกำหนด</span>' : ''}${buildDueDatePostponeBadge(order)}`
                 : '<span class="text-slate-400">-</span>';
 
             const customerLineHtml = (order.customerName || order.customerPO)
@@ -4572,8 +4602,10 @@
                 const dueDateNorm = normalizeDateString(order.dueDate);
                 if (dueDateNorm) {
                     const dueOffsetPx = daysBetweenUTC(minDate, parseDateOnly(dueDateNorm)) * dayWidth;
-                    const flagColorCls = deadlineWarningHtml ? 'text-rose-500' : 'text-slate-400';
-                    dueFlagHtml = `<div class="absolute top-0 -translate-x-1/2 ${flagColorCls}" style="left:${dueOffsetPx + dayWidth / 2}px;" title="กำหนดส่ง: ${escapeHtml(dueDateNorm)}"><i class="fa-solid fa-flag text-[10px]"></i></div>`;
+                    const postponeCount = Array.isArray(order.dueDateHistory) ? order.dueDateHistory.length : 0;
+                    const flagColorCls = (deadlineWarningHtml || postponeCount > 0) ? 'text-rose-500' : 'text-slate-400';
+                    const flagTitle = `กำหนดส่ง: ${dueDateNorm}` + (postponeCount > 0 ? ` (เลื่อนมาแล้ว ${postponeCount} ครั้ง)` : '');
+                    dueFlagHtml = `<div class="absolute top-0 -translate-x-1/2 ${flagColorCls}" style="left:${dueOffsetPx + dayWidth / 2}px;" title="${escapeHtml(flagTitle)}"><i class="fa-solid fa-flag text-[10px]"></i></div>`;
                 }
 
                 rowsHtml += `
@@ -4582,6 +4614,7 @@
                             <p class="font-bold ${isMo ? 'text-indigo-700' : 'text-amber-700'} text-[11px] font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                             <p class="text-[10px] text-slate-500 truncate">${escapeHtml(order.customerName || '-')}</p>
                             ${deadlineWarningHtml ? `<div class="mt-1">${deadlineWarningHtml}</div>` : ''}
+                            ${buildDueDatePostponeBadge(order) ? `<div class="mt-1">${buildDueDatePostponeBadge(order)}</div>` : ''}
                         </div>
                         <div class="relative shrink-0" style="width:${trackWidthPx}px; height:52px;">
                             ${barsHtml}
@@ -4707,7 +4740,22 @@
             const parts = path.split('.');
             let obj = order;
             for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
-            obj[parts[parts.length - 1]] = value;
+            const fieldKey = parts[parts.length - 1];
+
+            // NEW: track every postponement of the whole-order delivery due date ("กำหนดส่ง") — a real
+            // change from one non-empty date to a different one counts as one postponement. The very
+            // first time a due date is entered (oldValue empty) is not a postponement, just setting it.
+            // See buildDueDatePostponeBadge() for how this history renders as a "เลื่อนครั้งที่ N" badge.
+            if (path === 'dueDate') {
+                const oldValue = normalizeDateString(obj[fieldKey]);
+                const newValue = normalizeDateString(value);
+                if (oldValue && newValue && oldValue !== newValue) {
+                    if (!Array.isArray(order.dueDateHistory)) order.dueDateHistory = [];
+                    order.dueDateHistory.push({ from: oldValue, to: newValue, changedAt: formatDateKeyUTC(new Date()) });
+                }
+            }
+
+            obj[fieldKey] = value;
             if (path === 'planning.specDone' || path === 'planning.planEntered') {
                 recomputePlanningPercent(order.planning);
             }
