@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -71,6 +73,17 @@
         }
         .mascot-bubble { transition: opacity 0.35s ease, transform 0.35s ease; opacity: 0; transform: translateY(6px); }
         .mascot-bubble.show { opacity: 1; transform: translateY(0); }
+
+        /* NEW (2026-09-16): shown instead of the idle bob while updateMascotProblemState() finds
+           something to flag (open issues / overdue-at-risk M/O, S/O) — a slow red glow pulse, distinct
+           from the quick .mascot-excited bounce, since this is a standing "needs attention" state
+           rather than a one-off celebration. */
+        .mascot-alert { animation: mascotAlertPulse 1.6s ease-in-out infinite; cursor: pointer; }
+        @keyframes mascotAlertPulse {
+            0%, 100% { filter: drop-shadow(0 0 0px rgba(225, 29, 72, 0)); }
+            50%      { filter: drop-shadow(0 0 7px rgba(225, 29, 72, 0.8)); }
+        }
+        .mascot-problem-badge-pulse { animation: newOrderPulse 1.6s ease-in-out infinite; }
 
         /* "New" badge on a freshly-created M/O, S/O (see isOrderNew()) — a clearly-highlighted,
            gently pulsing pill so a new job stands out in the Overview table / Kanban card at a glance. */
@@ -154,7 +167,12 @@
             <div id="mascotBubble" class="mascot-bubble mb-1 max-w-[190px] bg-white border border-amber-200 shadow-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] leading-snug text-amber-900 font-medium">
                 <span id="mascotBubbleText">ยินดีต้อนรับค่ะ! น้องไหมคอยดูอยู่นะ 🧶</span>
             </div>
-            <div id="mascotCharacter" class="mascot-idle w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md">
+            <!-- NEW (2026-09-16): clickable + a small alert badge once updateMascotProblemState() finds
+                 something to flag (open issues, overdue/at-risk M/O, S/O) — see openMascotProblemsModal().
+                 mascotWidget's pointer-events-none (above) is what actually gates the click; this onclick
+                 simply does nothing while that's set, so it's always safe to leave here. -->
+            <div id="mascotCharacter" onclick="openMascotProblemsModal()" class="relative mascot-idle w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md">
+                <span id="mascotProblemBadge" class="hidden mascot-problem-badge-pulse absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white z-10">0</span>
                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
                     <!-- ground shadow -->
                     <ellipse cx="50" cy="94" rx="22" ry="3.6" fill="#000" opacity="0.12"/>
@@ -1267,6 +1285,25 @@
         </div>
     </div>
 
+    <!-- NEW (2026-09-16): mascot problem popup — opens when someone clicks "น้องไหม" while it's
+         flagging something (open issues from แจ้งปัญหา + M/O, S/O overdue/at-risk of a deadline — see
+         updateMascotProblemState()). Lets a person leave one quick reply per issue right there
+         (ตอบได้ครั้งเดียว, same "single note" convention as ปิดปัญหา's resolution note, but distinct from
+         it — a quick reply here does NOT close the issue, see submitMascotIssueReply()). Deadline
+         problems have no reply box (nothing sensible to persist a reply against) — just a jump-to-M/O
+         shortcut. -->
+    <div id="mascotProblemsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden p-6 space-y-3 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-800">🧶 น้องไหมแจ้งเตือน</h3>
+                <button onclick="closeMascotProblemsModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="mascotProblemsList" class="overflow-y-auto flex-grow -mr-1 pr-1"></div>
+        </div>
+    </div>
+
     <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all text-center p-6 space-y-4">
@@ -1599,6 +1636,171 @@
                 character.classList.add('mascot-blink');
                 setTimeout(() => character.classList.remove('mascot-blink'), 320);
             }, 4200 + Math.random() * 1800);
+        }
+
+        // =========================================================================================
+        // NEW (2026-09-16): mascot problem alerts — "ถ้ามีปัญหาให้โชว์ปัญหา แล้วถ้ามีคนกด ให้มีคนตอบได้"
+        // น้องไหมนอกจากจะคอยเชียร์ ยังคอยเตือนด้วยสองอย่าง: (1) ปัญหาที่แจ้งไว้ยังไม่ปิด (issuesData) และ
+        // (2) M/O, S/O ที่เลยกำหนด/เสี่ยงไม่ทันของแผนกที่กำลังทำอยู่ (getDeadlineWarning()). Clicking the
+        // mascot while it's flagging something opens a small popup listing them; an open issue gets a
+        // one-time quick-reply box (ตอบได้ครั้งเดียว — separate from the full "ปิดปัญหา" flow, doesn't
+        // close the issue), a deadline problem just gets a "ดู M/O" shortcut since there's nothing
+        // sensible to persist a reply against. updateMascotProblemState() is called from every place
+        // issues or orders can change (see updateIssuesCountBadge()/rerenderOrderViews()/initApp()/
+        // fetchOrdersFromGoogleSheet()) so the alert state never goes stale.
+        // =========================================================================================
+
+        function getOpenIssuesForMascot() {
+            return issuesData.filter(iss => iss.status !== 'resolved');
+        }
+
+        function getDeadlineProblemsForMascot() {
+            const problems = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const warning = getDeadlineWarning(order);
+                if (warning) problems.push({ order, orderIndex, warning });
+            });
+            return problems;
+        }
+
+        // Switches the mascot between its normal decorative state (pointer-events-none, so it never
+        // steals clicks meant for whatever's behind/near it) and an "alert" state (clickable, red glow,
+        // badge count, bubble text) whenever there's at least one open issue or deadline problem.
+        function updateMascotProblemState() {
+            const widget = document.getElementById('mascotWidget');
+            const character = document.getElementById('mascotCharacter');
+            const badge = document.getElementById('mascotProblemBadge');
+            const bubble = document.getElementById('mascotBubble');
+            const bubbleText = document.getElementById('mascotBubbleText');
+            if (!widget || !character) return;
+
+            const totalProblems = getOpenIssuesForMascot().length + getDeadlineProblemsForMascot().length;
+
+            if (totalProblems > 0) {
+                widget.classList.remove('pointer-events-none');
+                widget.classList.add('pointer-events-auto');
+                widget.setAttribute('aria-hidden', 'false');
+                character.classList.add('mascot-alert');
+                if (badge) {
+                    badge.textContent = totalProblems > 99 ? '99+' : String(totalProblems);
+                    badge.classList.remove('hidden');
+                }
+                // Only overwrite the speech bubble with the alert message if it isn't already showing a
+                // fresh mascotCelebrate() message — that timer clears .show on its own after 2.5s, and
+                // an alert re-render every few seconds shouldn't fight it for attention.
+                if (bubbleText && bubble && !bubble.classList.contains('show')) {
+                    bubbleText.textContent = `⚠️ มีเรื่องต้องดู ${totalProblems} รายการ กดที่น้องไหมได้เลย`;
+                    bubble.classList.add('show');
+                }
+            } else {
+                widget.classList.add('pointer-events-none');
+                widget.classList.remove('pointer-events-auto');
+                widget.setAttribute('aria-hidden', 'true');
+                character.classList.remove('mascot-alert');
+                if (badge) badge.classList.add('hidden');
+            }
+        }
+
+        function openMascotProblemsModal() {
+            renderMascotProblemsList();
+            document.getElementById('mascotProblemsModal').classList.remove('hidden');
+        }
+
+        function closeMascotProblemsModal() {
+            document.getElementById('mascotProblemsModal').classList.add('hidden');
+        }
+
+        function renderMascotProblemsList() {
+            const container = document.getElementById('mascotProblemsList');
+            if (!container) return;
+            const openIssues = getOpenIssuesForMascot();
+            const deadlineProblems = getDeadlineProblemsForMascot();
+
+            if (openIssues.length === 0 && deadlineProblems.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 text-center py-8">ไม่มีปัญหาที่ต้องดูตอนนี้ค่ะ 🎉</p>`;
+                return;
+            }
+
+            let html = '';
+            if (openIssues.length > 0) {
+                html += `<p class="text-xs font-bold text-rose-600 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ปัญหาที่แจ้งไว้ (${openIssues.length})</p>`;
+                html += openIssues.map(iss => buildMascotIssueRowHtml(iss)).join('');
+            }
+            if (deadlineProblems.length > 0) {
+                html += `<p class="text-xs font-bold text-amber-600 uppercase mt-4 mb-2"><i class="fa-solid fa-hourglass-half mr-1"></i>งานที่เลยกำหนด/เสี่ยงไม่ทัน (${deadlineProblems.length})</p>`;
+                html += deadlineProblems.map(p => buildMascotDeadlineRowHtml(p)).join('');
+            }
+            container.innerHTML = html;
+        }
+
+        function buildMascotIssueRowHtml(iss) {
+            const hasReply = !!(iss.mascotReply && iss.mascotReply.trim());
+            const replyAreaHtml = hasReply
+                ? `
+                    <div class="mt-2 bg-sky-50 border border-sky-100 rounded-lg px-2.5 py-1.5">
+                        <p class="text-[11px] text-sky-700"><i class="fa-solid fa-reply mr-1"></i>${escapeHtml(iss.mascotReply)}</p>
+                        <p class="text-[10px] text-sky-500 mt-0.5">${escapeHtml(iss.mascotRepliedBy || 'ไม่ระบุชื่อ')}${iss.mascotRepliedAt ? ` • ${escapeHtml(iss.mascotRepliedAt)}` : ''}</p>
+                    </div>
+                `
+                : `
+                    <div class="mt-2 flex flex-col sm:flex-row gap-1.5">
+                        <input type="text" id="mascotReplyName-${iss.id}" placeholder="ชื่อผู้ตอบ (ถ้ามี)" class="sm:w-28 shrink-0 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <input type="text" id="mascotReplyInput-${iss.id}" placeholder="พิมพ์ตอบสั้นๆ..." onkeydown="if(event.key==='Enter'){submitMascotIssueReply('${iss.id}');}" class="flex-grow px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <button onclick="submitMascotIssueReply('${iss.id}')" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">ตอบ</button>
+                    </div>
+                `;
+            return `
+                <div class="bg-white border border-slate-200 rounded-xl p-3 mb-2">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold font-mono text-slate-700">${escapeHtml(iss.moSo || '-')} <span class="font-normal text-slate-500">• ${escapeHtml(iss.issueType || '-')}</span></p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(iss.description || '')}</p>
+                            ${iss.department ? `<p class="text-[10px] text-slate-400 mt-0.5">แผนก: ${escapeHtml(iss.department)}</p>` : ''}
+                        </div>
+                        ${iss.severity === 'urgent' ? '<span class="shrink-0 text-[10px] bg-rose-600 text-white font-bold px-2 py-0.5 rounded-full whitespace-nowrap">🔴 ด่วน</span>' : ''}
+                    </div>
+                    ${replyAreaHtml}
+                </div>
+            `;
+        }
+
+        function buildMascotDeadlineRowHtml({ order, orderIndex, warning }) {
+            const stageLabel = STAGE_LABELS[warning.stage];
+            const levelHtml = warning.level === 'overdue'
+                ? `<span class="text-rose-600 font-semibold">เลยกำหนดแล้ว ${Math.abs(warning.daysRemaining)} วัน</span>`
+                : `<span class="text-amber-600 font-semibold">เหลืออีก ${warning.daysRemaining} วัน</span>`;
+            return `
+                <div class="bg-white border border-slate-200 rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold font-mono text-slate-700">${escapeHtml(order.moSo || '-')}</p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">แผนก${escapeHtml(stageLabel)} — ${levelHtml}</p>
+                    </div>
+                    <button onclick="closeMascotProblemsModal(); openOrderDetailModal(${orderIndex}, '${warning.stage}');" class="shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-lg transition whitespace-nowrap">ดู M/O</button>
+                </div>
+            `;
+        }
+
+        // Saves the one-time quick reply (ตอบได้ครั้งเดียว) — once set it's shown read-only from then on
+        // (see buildMascotIssueRowHtml()'s hasReply branch); it does NOT resolve the issue, which still
+        // needs the full "ปิดปัญหา" flow (openResolveIssueModal()) when someone actually fixes it.
+        function submitMascotIssueReply(id) {
+            const issue = issuesData.find(iss => iss.id === id);
+            if (!issue) return;
+            const inputEl = document.getElementById(`mascotReplyInput-${id}`);
+            const nameEl = document.getElementById(`mascotReplyName-${id}`);
+            const text = inputEl ? inputEl.value.trim() : '';
+            if (!text) {
+                showToast('กรุณาพิมพ์คำตอบก่อน', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            issue.mascotReply = text;
+            issue.mascotRepliedBy = nameEl ? nameEl.value.trim() : '';
+            issue.mascotRepliedAt = new Date().toISOString().split('T')[0];
+            saveIssuesToLocal();
+            syncIssueToSheet(issue);
+            renderMascotProblemsList();
+            renderIssuesTable();
+            showToast('ส่งคำตอบแล้วค่ะ', 'fa-reply', 'text-sky-400');
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -3037,6 +3239,7 @@
                     renderProductionTimeline();
                     renderQcShippedArchive();
                     renderShippingTable(qcData);
+                    updateMascotProblemState(); // NEW (2026-09-16): a fresh sync can change which orders are overdue/at-risk
                     if (isManual) { showToast(`ซิงค์ข้อมูลสายการผลิตสำเร็จ (${productionOrders.length} M/O)`); mascotCelebrate('sync'); }
                 }
             } catch(e) {
@@ -3143,7 +3346,11 @@
                 resolvedBy: '', resolvedDate: '', resolutionNote: '',
                 // NEW (2026-09-11): filled in when the issue is closed via openResolveIssueModal(), if the
                 // fix involved hiring/outsourcing — see submitResolveIssue().
-                outsourced: false, vendorLocation: '', approvedBy: ''
+                outsourced: false, vendorLocation: '', approvedBy: '',
+                // NEW (2026-09-16): one quick reply someone can leave from the mascot's problem popup
+                // (ตอบได้ครั้งเดียว) — separate from resolutionNote: leaving a reply here does NOT close
+                // the issue, it's just a fast acknowledgment. See submitMascotIssueReply().
+                mascotReply: '', mascotRepliedBy: '', mascotRepliedAt: ''
             };
 
             issuesData.push(issue);
@@ -3251,6 +3458,10 @@
                     // approved it right under the resolution note — see submitResolveIssue().
                     const outsourcedNoteHtml = isResolved && iss.outsourced
                         ? `<p class="text-[11px] text-amber-700 mt-1"><i class="fa-solid fa-truck-ramp-box mr-1"></i>จ้าง: ${escapeHtml(iss.vendorLocation || '-')}${iss.approvedBy ? ` • ผู้อนุมัติ: ${escapeHtml(iss.approvedBy)}` : ''}</p>` : '';
+                    // NEW (2026-09-16): quick reply someone left from the mascot's problem popup — shown
+                    // regardless of resolved/open, since it's separate from the formal resolution note.
+                    const mascotReplyHtml = iss.mascotReply
+                        ? `<p class="text-[11px] text-sky-700 mt-1"><i class="fa-solid fa-reply mr-1"></i>${escapeHtml(iss.mascotReply)}${iss.mascotRepliedBy ? ` — ${escapeHtml(iss.mascotRepliedBy)}` : ''}</p>` : '';
                     const actionsHtml = isResolved
                         ? `<button onclick="deleteIssueRow('${iss.id}')" class="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-1.5 rounded-lg transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>`
                         : `<div class="flex items-center justify-center gap-1.5">
@@ -3265,6 +3476,7 @@
                                 <p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(iss.description || '')}</p>
                                 ${resolutionNoteHtml}
                                 ${outsourcedNoteHtml}
+                                ${mascotReplyHtml}
                             </td>
                             <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${escapeHtml(iss.department || '-')}</td>
                             <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(iss.reportedDate || '-')}${iss.reportedBy ? `<br>${escapeHtml(iss.reportedBy)}` : ''}</td>
@@ -3352,14 +3564,18 @@
         // convention as shippingCountBadge (see renderShippingTable()).
         function updateIssuesCountBadge() {
             const tabBadge = document.getElementById('issuesCountBadge');
-            if (!tabBadge) return;
-            const openCount = issuesData.filter(iss => iss.status !== 'resolved').length;
-            if (openCount > 0) {
-                tabBadge.textContent = openCount;
-                tabBadge.classList.remove('hidden');
-            } else {
-                tabBadge.classList.add('hidden');
+            if (tabBadge) {
+                const openCount = issuesData.filter(iss => iss.status !== 'resolved').length;
+                if (openCount > 0) {
+                    tabBadge.textContent = openCount;
+                    tabBadge.classList.remove('hidden');
+                } else {
+                    tabBadge.classList.add('hidden');
+                }
             }
+            // NEW (2026-09-16): reliably called on every issues mutation (reported/resolved/deleted/
+            // synced) — the natural single hook point to also refresh the mascot's alert state.
+            updateMascotProblemState();
         }
 
         // Best-effort guess of M/O vs S/O for orders saved before the explicit orderType field existed —
@@ -4136,6 +4352,9 @@
             if (currentDetailOrderIndex === orderIndex) {
                 renderOrderDetailModalBody(orderIndex);
             }
+            // NEW (2026-09-16): an order edit can change its deadline-warning status (see
+            // getDeadlineWarning()) — refresh the mascot's alert state after every order change.
+            updateMascotProblemState();
         }
 
         // Default shape for a newly-added line item, per department stage. Planning has no item list —
