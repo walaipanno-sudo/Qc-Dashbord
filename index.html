@@ -94,6 +94,23 @@
         /* Mark & Nos print sheet: a bold, stencil-like box for the free-text shipping mark, meant to
            read the way an actual carton/crate marking would. */
         .mark-nos-box { border: 3px solid #1e293b; border-radius: 6px; padding: 18px; font-size: 18px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; text-align: center; letter-spacing: 0.02em; }
+
+        /* NEW (2026-09-XX): "งานมีการเปลี่ยนแปลง" center-screen popup — see queueWorkChangeAlert().
+           Unlike the toast/mascot bubble (which auto-fade and are easy to miss), this one sits center
+           screen and pops in with a bounce so a new issue report / new M/O entering the system is hard
+           to not notice; it only closes when someone actually clicks "รับทราบ" (no backdrop-click or
+           auto-timeout dismiss), matching "ต้องกดปิดเอง". */
+        .work-change-pop { animation: workChangeAlertPop 0.45s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes workChangeAlertPop {
+            0%   { transform: scale(0.7); opacity: 0; }
+            60%  { transform: scale(1.04); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .work-change-icon-pulse { animation: workChangeIconPulse 1.4s ease-in-out infinite; }
+        @keyframes workChangeIconPulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.12); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -1308,6 +1325,28 @@
         </div>
     </div>
 
+    <!-- NEW (2026-09-XX): "งานมีการเปลี่ยนแปลง" popup — a center-screen modal (not the mascot, not a
+         toast) that pops up whenever (1) someone submits a new issue report, or (2) a new M/O, S/O is
+         added to the system, so it's hard for anyone looking at the screen to miss. Requires a manual
+         "รับทราบ" click to close (no backdrop-click, no auto-timeout) — see queueWorkChangeAlert() /
+         closeWorkChangeAlertModal(). If more than one change happens in quick succession, they queue up
+         and show one at a time rather than overwriting each other. -->
+    <div id="workChangeAlertModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 hidden">
+        <div class="work-change-pop bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6 text-center space-y-3">
+            <div class="flex justify-center">
+                <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
+                    <i id="workChangeAlertIcon" class="work-change-icon-pulse fa-solid fa-circle-info text-3xl text-sky-500"></i>
+                </div>
+            </div>
+            <h3 id="workChangeAlertTitle" class="font-bold text-lg text-slate-800">มีการเปลี่ยนแปลงงาน</h3>
+            <p id="workChangeAlertMessage" class="text-sm text-slate-600 whitespace-pre-line"></p>
+            <div id="workChangeAlertQueueNote" class="text-xs text-slate-400 hidden"></div>
+            <button onclick="closeWorkChangeAlertModal()" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-xl shadow transition duration-200 text-sm">
+                รับทราบ
+            </button>
+        </div>
+    </div>
+
     <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all text-center p-6 space-y-4">
@@ -1710,6 +1749,62 @@
                 mascotCelebrate('qcSaved');
             }
         }
+        // =========================================================================================
+        // NEW (2026-09-XX): "งานมีการเปลี่ยนแปลง" popup — deliberately separate from mascotCelebrate()
+        // above: the mascot bubble auto-fades after 2.5s and is easy to miss if you're not looking at
+        // the corner, so for the two events that should be hard to miss — a new issue report coming in,
+        // or a new M/O, S/O entering the system — we instead show a center-screen modal that only
+        // closes when someone clicks "รับทราบ". Queued (not just replaced) so a burst of changes doesn't
+        // silently drop all but the last one.
+        // =========================================================================================
+        let workChangeAlertQueue = [];
+        let workChangeAlertOpen = false;
+
+        function queueWorkChangeAlert(opts) {
+            workChangeAlertQueue.push(opts || {});
+            if (!workChangeAlertOpen) {
+                showNextWorkChangeAlert();
+            } else {
+                updateWorkChangeQueueNote();
+            }
+        }
+
+        function updateWorkChangeQueueNote() {
+            const note = document.getElementById('workChangeAlertQueueNote');
+            if (!note) return;
+            if (workChangeAlertQueue.length > 0) {
+                note.textContent = `ยังมีการแจ้งเตือนอื่นรออยู่อีก ${workChangeAlertQueue.length} รายการ`;
+                note.classList.remove('hidden');
+            } else {
+                note.classList.add('hidden');
+            }
+        }
+
+        function showNextWorkChangeAlert() {
+            if (workChangeAlertQueue.length === 0) {
+                workChangeAlertOpen = false;
+                return;
+            }
+            const opts = workChangeAlertQueue.shift();
+            workChangeAlertOpen = true;
+            const icon = document.getElementById('workChangeAlertIcon');
+            icon.className = 'work-change-icon-pulse fa-solid ' + (opts.icon || 'fa-circle-info') + ' text-3xl ' + (opts.iconColor || 'text-sky-500');
+            document.getElementById('workChangeAlertTitle').textContent = opts.title || 'มีการเปลี่ยนแปลงงาน';
+            document.getElementById('workChangeAlertMessage').textContent = opts.message || '';
+            updateWorkChangeQueueNote();
+            const modal = document.getElementById('workChangeAlertModal');
+            modal.classList.remove('hidden');
+            // restart the pop-in animation even if the modal was already visible a moment ago
+            const card = modal.querySelector('.work-change-pop');
+            if (card) { card.classList.remove('work-change-pop'); void card.offsetWidth; card.classList.add('work-change-pop'); }
+        }
+
+        function closeWorkChangeAlertModal() {
+            document.getElementById('workChangeAlertModal').classList.add('hidden');
+            // brief pause before the next one so it visibly reappears rather than looking like nothing happened
+            setTimeout(showNextWorkChangeAlert, 250);
+        }
+
         function startMascotBlinkLoop() {
             setInterval(() => {
                 const character = document.getElementById('mascotCharacter');
@@ -3498,6 +3593,14 @@
             renderProductionBoard();
             renderProductionTimeline();
             showToast('แจ้งปัญหาสำเร็จ กำลังแจ้งเตือนผ่าน LINE...', 'fa-triangle-exclamation', 'text-rose-400');
+            queueWorkChangeAlert({
+                icon: 'fa-triangle-exclamation',
+                iconColor: 'text-rose-500',
+                title: urgent ? '🚨 แจ้งปัญหาด่วนเข้ามาใหม่!' : 'มีการแจ้งปัญหาใหม่เข้ามา',
+                message: `M/O, S/O: ${moSo}\nประเภทปัญหา: ${issueType}` +
+                    (department ? `\nแผนก: ${department}` : '') +
+                    `\nรายละเอียด: ${description}`
+            });
 
             syncIssueToSheet(issue);
             notifyLineIssueReported(issue);
@@ -6195,6 +6298,12 @@
                 : `เพิ่ม M/O "${moSo}" เข้าสายการผลิตแล้ว`,
                 isInserted ? 'fa-bolt' : undefined, isInserted ? 'text-amber-400' : undefined);
             mascotCelebrate('newOrder');
+            queueWorkChangeAlert({
+                icon: isInserted ? 'fa-bolt' : 'fa-circle-plus',
+                iconColor: isInserted ? 'text-amber-500' : 'text-emerald-500',
+                title: 'มีการเพิ่ม M/O, S/O ใหม่เข้าระบบ',
+                message: `M/O, S/O: ${moSo}` + (isInserted ? '\n⚡ งานแทรก — แซงคิวก่อนรายการอื่นที่กำหนดส่งช้ากว่า' : '')
+            });
         }
 
         // =========================================================================================
