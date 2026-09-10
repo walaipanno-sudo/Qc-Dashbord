@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -4652,7 +4650,11 @@
             productionOrders.forEach(o => {
                 const stage = getEffectiveStage(o);
                 if (stageCounts.hasOwnProperty(stage)) stageCounts[stage]++;
-                totalSqmReceived += Number(o.totalSqm) || 0;
+                // FIXED (2026-09-10): only count ตร.ม. still in the production line — an order that's
+                // ส่งแล้ว (shipped) has left the line, so it should no longer add to this total. Was
+                // previously summing every order ever entered (shipped or not), which kept growing
+                // forever instead of reflecting what's currently in production.
+                if (stage !== 'shipped') totalSqmReceived += Number(o.totalSqm) || 0;
                 if (stage !== 'shipped' && !(o.design && o.design.done)) designNotDoneCount++;
             });
             return {
@@ -4869,7 +4871,7 @@
                     <span class="text-[11px] text-slate-400">อัปเดตอัตโนมัติตามข้อมูลปัจจุบัน</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
-                    ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. รับเข้าทั้งหมด', `${s.totalSqmReceived.toLocaleString('th-TH')} ตร.ม.`)}
+                    ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. อยู่ในไลน์ผลิต (ยังไม่ส่ง)', `${s.totalSqmReceived.toLocaleString('th-TH')} ตร.ม.`)}
                     ${overviewStatTileHtml('fa-droplet', 'text-violet-500', 'ย้อมได้/วัน (ที่กำลังย้อม)', `${s.dyeingColorsPerDay.toLocaleString('th-TH')} สี/วัน`)}
                     ${overviewStatTileHtml('fa-hand-holding-heart', 'text-teal-500', 'ทอได้/วัน (ที่กำลังทอ)', `${s.weavingSqmPerDay.toLocaleString('th-TH')} ตร.ม./วัน`)}
                     ${overviewStatTileHtml('fa-box-archive', 'text-fuchsia-500', 'แต่งได้/วัน (ตั้งค่ากำลังผลิต)', `
