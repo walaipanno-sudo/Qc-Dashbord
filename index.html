@@ -10,6 +10,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts: Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- NEW: SheetJS — reads the weaving department's daily .xlsx report client-side (no server upload
+         needed) for "นำเข้าข้อมูลทอ" — see handleWeavingExcelFile()/aggregateWeavingImport(). -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- NEW (2026-09-11): Supabase JS client — used for Login + สิทธิ์แต่ละแผนก (see the "Supabase /
+         Login + สิทธิ์" block in the script below). Loaded unconditionally but harmless if unused —
+         the app only calls it once a Supabase URL/anon key has actually been saved via "ตั้งค่า
+         เชื่อมต่อ" (see initSupabase()); until then the whole login/permission system stays inactive
+         and the app behaves exactly like before (Google Sheets only). -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; }
 
@@ -128,6 +137,9 @@
                         <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อ...</span>
                     </p>
                 </div>
+                <!-- NEW (2026-09-11): shows "ชื่อ (แผนก) [ออกจากระบบ]" once signed in via Supabase — see
+                     renderCurrentUserBadge(). Empty/invisible until Supabase login is configured. -->
+                <span id="currentUserBadgeHolder"></span>
             </div>
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
                 <button onclick="forceSyncData()" class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-3.5 py-2 rounded-xl shadow transition duration-200 text-sm flex items-center gap-1.5" title="ดึงข้อมูลล่าสุดจาก Google Sheets">
@@ -147,6 +159,12 @@
                      จึงวางไว้ที่ toolbar บนสุดเหมือน "ตั้งค่าลิงก์" — see openProductionSettingsModal(). -->
                 <button onclick="openProductionSettingsModal()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-gears"></i> ตั้งค่าเวลาผลิต
+                </button>
+                <!-- NEW: อ่านไฟล์ Excel รายงานการผลิตประจำวันพรมทอมือ (มี sheet แยกตามวันที่) ที่แผนกทอ
+                     กรอกอยู่แล้วบนเครื่อง/แชร์ทางอีเมล แล้วรวมยอด ตร.ม. ที่ทอได้เข้า weaving.sqmWoven ต่อ
+                     M/O โดยอัตโนมัติ — ดู openImportWeavingModal()/handleWeavingExcelFile(). -->
+                <button onclick="openImportWeavingModal()" class="bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-xl backdrop-blur-sm transition duration-200 text-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-excel"></i> นำเข้าข้อมูลทอ
                 </button>
                 <!-- NEW (2026-09e): global "แจ้งปัญหา" entry point, reachable from every tab (not just
                      the order detail modal) — reporting a problem (e.g. ไหมด่าง) shouldn't require
@@ -340,6 +358,12 @@
                 <button onclick="switchView('analytics')" id="tabAnalyticsBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
                     <i class="fa-solid fa-chart-column mr-1.5"></i> วิเคราะห์ข้อมูล
                 </button>
+                <!-- NEW (2026-09-11): "Dashboard กลาง" — ภาพรวมกำลังการผลิต/คิวงานข้ามแผนกสำหรับผู้บริหาร,
+                     แยกจาก "วิเคราะห์ข้อมูล" (ซึ่งเน้น QC/ปัญหา) — เน้นภาระงานเทียบกำลังการผลิตจริงของแต่ละ
+                     แผนก (จำนวนจอทอ/พนักงาน) และงานเสี่ยงเลยกำหนดแยกตามแผนก ต่อยอดจาก recomputeAllSchedules(). -->
+                <button onclick="switchView('central')" id="tabCentralBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">
+                    <i class="fa-solid fa-gauge-high mr-1.5"></i> Dashboard กลาง
+                </button>
             </div>
 
             <div id="globalSearchFilterWrapper" class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
@@ -503,6 +527,13 @@
                         <i class="fa-solid fa-table-columns"></i> ทั้งหมด
                         <span id="boardTabCountAll" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white/20 text-white text-[10px] font-bold">0</span>
                     </button>
+                    <!-- NEW (2026-09-11): "แผนกขาย" — not a data filter like the other pills (no
+                         boardColWrap-sales column). Selecting it swaps the whole boardColumnsGrid/search
+                         area out for salesFormContainer, the "เพิ่ม M/O, S/O ใหม่" form moved here inline
+                         from its old popup — see updateBoardColumnVisibility() and openNewOrderModal(). -->
+                    <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-cart-shopping"></i> แผนกขาย
+                    </button>
                     <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
                         <i class="fa-solid fa-calendar-days"></i> วางแผน
                         <span id="boardTabCount-planning" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
@@ -532,10 +563,129 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
+            <div id="boardSearchCard" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
                 <div class="relative w-full sm:w-80">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
                     <input type="text" id="boardSearchInput" oninput="renderProductionBoard()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทุกคอลัมน์)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- "แผนกขาย" tab content — the "เพิ่ม M/O, S/O ใหม่" form, moved here inline from its old
+                 popup (id="newOrderModal") so the Sales department has a dedicated home for it instead
+                 of a modal. Same ids/functions as before (openNewOrderModal(), submitNewOrder(), the
+                 size-row helpers) — only the wrapper changed from a fixed-overlay modal to inline content
+                 shown/hidden by updateBoardColumnVisibility(). -->
+            <div id="salesFormContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 max-w-lg mx-auto overflow-hidden p-6 space-y-4 mb-4">
+                <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O, S/O ใหม่เข้าสายการผลิต</h3>
+                <p class="text-[11px] text-slate-400 -mt-3"><i class="fa-solid fa-circle-info mr-1"></i>สำหรับแผนกขายเป็นผู้กรอกข้อมูล — ทุกแผนกยังแก้ไข/ลบรายการนี้ได้ตามปกติ</p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ประเภทรายการ</label>
+                    <div class="flex gap-2">
+                        <label id="newOrderTypeMoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-indigo-600 border-indigo-600 text-white">
+                            <input type="radio" name="newOrderType" id="newOrderTypeMo" value="MO" checked class="hidden" onchange="updateNewOrderTypeStyle()"> M/O
+                        </label>
+                        <label id="newOrderTypeSoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-amber-50 border-amber-300 text-amber-700">
+                            <input type="radio" name="newOrderType" id="newOrderTypeSo" value="SO" class="hidden" onchange="updateNewOrderTypeStyle()"> S/O
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ตลาด</label>
+                    <div class="flex gap-2">
+                        <label id="newOrderMarketExportLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
+                            <input type="radio" name="newOrderMarket" id="newOrderMarketExport" value="export" class="hidden" onchange="updateNewOrderMarketStyle()"> ต่างประเทศ
+                        </label>
+                        <label id="newOrderMarketDomesticLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
+                            <input type="radio" name="newOrderMarket" id="newOrderMarketDomestic" value="domestic" class="hidden" onchange="updateNewOrderMarketStyle()"> ในประเทศ
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อเซล (Sale)</label>
+                    <input type="text" id="newOrderSalesName" placeholder="ชื่อพนักงานขายที่ดูแล M/O, S/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
+                    <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อลูกค้า</label>
+                    <input type="text" id="newOrderCustomerName" placeholder="เช่น บริษัท เอบีซี จำกัด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า / ชื่อโปรเจกต์</label>
+                    <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO และชื่อโปรเจกต์ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่เปิด M/O</label>
+                    <input type="date" id="newOrderOpenDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่/ชื่อสถานที่ติดตั้ง</label>
+                    <input type="text" id="newOrderLocationName" placeholder="เช่น GROUND FLOOR - MAJLIS" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">คุณภาพ (เส้นด้าย/ลาย)</label>
+                        <input type="text" id="newOrderQuality" placeholder="เช่น HWO-450 CUT (9 MM.)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">บรรจุภัณฑ์</label>
+                        <input type="text" id="newOrderPackaging" placeholder="เช่น กล่อง / ม้วนพลาสติก" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">จำนวนสี</label>
+                        <input type="number" min="0" id="newOrderColorsCount" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รหัสดีไซน์ (Design Ref.)</label>
+                        <input type="text" id="newOrderDesignRef" placeholder="เช่น RLS-26-002-02" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase">รายการขนาด (Size)</label>
+                        <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น × (100% − % พื้นที่ว่าง) = ตร.ม. (แก้ไขผลรวมเองได้)</span>
+                    </div>
+                    <div id="newOrderSizeItemsBody" class="space-y-2"></div>
+                    <button type="button" onclick="addNewOrderSizeRow()" class="mt-2 w-full py-2 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> เพิ่มขนาด (ถ้ามีมากกว่า 1 ไซส์)
+                    </button>
+                    <div class="mt-2 flex justify-end">
+                        <span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5">รวม: <span id="newOrderSizeSummary">0.00 ตร.ม. • 0 ชิ้น</span></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รายละเอียดขนาด (ข้อความอิสระ ถ้ามีหลายไซส์ในใบเดียว)</label>
+                    <textarea id="newOrderCarpetSizeNote" rows="2" placeholder='เช่น No.1-2: 1.828 x 3.048 M. (6&apos;-0" x 10&apos;-0") – 2 PCS' class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันกำหนดส่ง (Dispatch Date)</label>
+                        <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันเลื่อนส่ง (ถ้ามี)</label>
+                        <input type="date" id="newOrderPostponeDispatchDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">INCOTERMS</label>
+                    <input type="text" id="newOrderIncoterms" placeholder="เช่น C&amp;F BAHRAIN, VIA A/F" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">อ้างอิง (REF.)</label>
+                    <textarea id="newOrderRefNote" rows="2" placeholder="เช่น อ้าง: S/O 0388/24 สีและคุณภาพ (+เพิ่มแกะลายขอบ BORDER)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">หมายเหตุ (Remarks)</label>
+                    <textarea id="newOrderRemark" rows="2" placeholder="หมายเหตุเพิ่มเติมสำหรับ M/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
+                    <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่มรายการ</button>
                 </div>
             </div>
             <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -899,6 +1049,73 @@
             </div>
         </div>
 
+        <!-- NEW (2026-09-11): "Dashboard กลาง" — ภาพรวมกำลังการผลิต/คิวงานข้ามแผนกสำหรับผู้บริหาร ต่างจาก
+             "วิเคราะห์ข้อมูล" (เน้น QC/ปัญหา) ตรงที่เน้น "ภาระงานเทียบกำลังการผลิตจริง" ของแต่ละแผนก
+             (จำนวนจอทอ/พนักงานจาก productionSettings) และงานเสี่ยงเลยกำหนดแยกตามแผนก — ดึงข้อมูลจาก
+             productionOrders ที่มีอยู่ในเครื่องอยู่แล้ว ไม่ต้องรอ Supabase — ดู renderCentralDashboard(). -->
+        <div id="centralViewContainer" class="hidden space-y-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">งานที่กำลังดำเนินการ</p>
+                    <p id="centralKpiActiveOrders" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                    <p id="centralKpiActiveOrdersNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">เลยกำหนดส่งแล้ว</p>
+                    <p id="centralKpiOverdue" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+                    <p id="centralKpiOverdueNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">ใกล้ถึงกำหนดส่ง (7 วัน)</p>
+                    <p id="centralKpiAtRisk" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+                    <p id="centralKpiAtRiskNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">ส่งมอบแล้ว (30 วันล่าสุด)</p>
+                    <p id="centralKpiShipped30d" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+                    <p id="centralKpiShipped30dNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-gauge-high mr-2 text-indigo-600"></i> ภาระงานเทียบกำลังการผลิตแต่ละแผนก</h3>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> งานพอดีกำลังผลิต</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> งานล้นกำลังผลิต</span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mb-3">เทียบ "จำนวนงานที่กำลังอยู่ในคิวของแผนกนี้ตอนนี้" กับ "กำลังการผลิตจริง" (จำนวนจอทอ/จำนวนพนักงานจากหน้า "ตั้งค่าเวลาผลิต") — ดูเพื่อวางแผนว่าแผนกไหนกำลังจะคอขวด</p>
+                <div id="centralCapacityChart" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-industry mr-2 text-teal-600"></i> จำนวนงานที่ยังไม่ส่งมอบ แยกตามแผนกปัจจุบัน</h3>
+                <p class="text-[11px] text-slate-400 mb-3">นับจาก currentStage ของทุก M/O, S/O ที่ยังไม่ส่งมอบ</p>
+                <div id="centralByStageChart" class="space-y-2.5"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-hourglass-half mr-2 text-rose-600"></i> M/O, S/O ที่ใกล้/เลยกำหนดส่งมากที่สุด</h3>
+                <p class="text-[11px] text-slate-400 mb-3">เรียงจากกำหนดส่งเร็วที่สุดก่อน แสดงสูงสุด 10 รายการ</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr class="text-left text-slate-400 uppercase text-[10px] tracking-wide border-b border-slate-100">
+                                <th class="py-2 pr-3">M/O, S/O</th>
+                                <th class="py-2 pr-3">ลูกค้า</th>
+                                <th class="py-2 pr-3">แผนกปัจจุบัน</th>
+                                <th class="py-2 pr-3">กำหนดส่ง</th>
+                                <th class="py-2 pr-3">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="centralUrgentTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+                <p id="centralUrgentEmpty" class="hidden text-xs text-slate-400 text-center py-6">ไม่มี M/O, S/O ที่ใกล้หรือเลยกำหนดส่งในขณะนี้ 🎉</p>
+            </div>
+        </div>
+
         <!-- Ready-to-Ship View: M/O, S/O whose packaging department (แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์) has PASSed and not yet marked shipped -->
         <div id="shippingViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hidden">
             <!-- Sub-tabs: "รายการรอส่ง" (the existing ready-to-ship table) and "ใบส่งของ Mark & Nos"
@@ -1019,132 +1236,6 @@
         </div>
     </div>
 
-    <!-- New Production Order Modal -->
-    <div id="newOrderModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O, S/O ใหม่เข้าสายการผลิต</h3>
-            <p class="text-[11px] text-slate-400 -mt-3"><i class="fa-solid fa-circle-info mr-1"></i>สำหรับแผนกขายเป็นผู้กรอกข้อมูล — ทุกแผนกยังแก้ไข/ลบรายการนี้ได้ตามปกติ</p>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ประเภทรายการ</label>
-                <div class="flex gap-2">
-                    <label id="newOrderTypeMoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-indigo-600 border-indigo-600 text-white">
-                        <input type="radio" name="newOrderType" id="newOrderTypeMo" value="MO" checked class="hidden" onchange="updateNewOrderTypeStyle()"> M/O
-                    </label>
-                    <label id="newOrderTypeSoLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-amber-50 border-amber-300 text-amber-700">
-                        <input type="radio" name="newOrderType" id="newOrderTypeSo" value="SO" class="hidden" onchange="updateNewOrderTypeStyle()"> S/O
-                    </label>
-                </div>
-            </div>
-            <!-- NEW (2026-09c): market (ตลาด) — a separate classification from M/O vs S/O above, so an
-                 order can be e.g. an export M/O or a domestic S/O. Required (no default selected) so a
-                 new order is always explicitly tagged; see marketFilter/matchesMarketFilter for how
-                 this drives the global "แสดงเฉพาะตลาด" filter switch. -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ตลาด</label>
-                <div class="flex gap-2">
-                    <label id="newOrderMarketExportLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
-                        <input type="radio" name="newOrderMarket" id="newOrderMarketExport" value="export" class="hidden" onchange="updateNewOrderMarketStyle()"> ต่างประเทศ
-                    </label>
-                    <label id="newOrderMarketDomesticLabel" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition bg-slate-50 border-slate-200 text-slate-600">
-                        <input type="radio" name="newOrderMarket" id="newOrderMarketDomestic" value="domestic" class="hidden" onchange="updateNewOrderMarketStyle()"> ในประเทศ
-                    </label>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อเซล (Sale)</label>
-                <input type="text" id="newOrderSalesName" placeholder="ชื่อพนักงานขายที่ดูแล M/O, S/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
-                <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อลูกค้า</label>
-                <input type="text" id="newOrderCustomerName" placeholder="เช่น บริษัท เอบีซี จำกัด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">PO ลูกค้า / ชื่อโปรเจกต์</label>
-                <input type="text" id="newOrderCustomerPO" placeholder="เลขที่ PO และชื่อโปรเจกต์ของลูกค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่เปิด M/O</label>
-                <input type="date" id="newOrderOpenDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <!-- NEW (2026-09): the fields below mirror the sales team's "เปิด M/O" Excel worksheet columns
-                 (LOCATION / QUALITY / PACKAGING / COLORS / CARPET SIZE / INCO-TERMS / DISPATCH /
-                 POSTPONE DISPATCH / DESIGN / REF. / REMARKS) so opening an order here captures the same
-                 information that used to live only in that spreadsheet — everything EXCEPT the price
-                 columns (Unit Price, Amount, Grand Total), which this dashboard has no use for. All
-                 optional: leave blank if not known yet, editable later from the order detail screen. -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่/ชื่อสถานที่ติดตั้ง</label>
-                <input type="text" id="newOrderLocationName" placeholder="เช่น GROUND FLOOR - MAJLIS" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">คุณภาพ (เส้นด้าย/ลาย)</label>
-                    <input type="text" id="newOrderQuality" placeholder="เช่น HWO-450 CUT (9 MM.)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">บรรจุภัณฑ์</label>
-                    <input type="text" id="newOrderPackaging" placeholder="เช่น กล่อง / ม้วนพลาสติก" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">จำนวนสี</label>
-                    <input type="number" min="0" id="newOrderColorsCount" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รหัสดีไซน์ (Design Ref.)</label>
-                    <input type="text" id="newOrderDesignRef" placeholder="เช่น RLS-26-002-02" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
-            <div>
-                <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs font-semibold text-slate-600 uppercase">รายการขนาด (Size)</label>
-                    <span class="text-[10px] text-slate-400">กว้าง × ยาว × จำนวนชิ้น × (100% − % พื้นที่ว่าง) = ตร.ม. (แก้ไขผลรวมเองได้)</span>
-                </div>
-                <div id="newOrderSizeItemsBody" class="space-y-2"></div>
-                <button type="button" onclick="addNewOrderSizeRow()" class="mt-2 w-full py-2 border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-plus"></i> เพิ่มขนาด (ถ้ามีมากกว่า 1 ไซส์)
-                </button>
-                <div class="mt-2 flex justify-end">
-                    <span class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5">รวม: <span id="newOrderSizeSummary">0.00 ตร.ม. • 0 ชิ้น</span></span>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รายละเอียดขนาด (ข้อความอิสระ ถ้ามีหลายไซส์ในใบเดียว)</label>
-                <textarea id="newOrderCarpetSizeNote" rows="2" placeholder='เช่น No.1-2: 1.828 x 3.048 M. (6&apos;-0" x 10&apos;-0") – 2 PCS' class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันกำหนดส่ง (Dispatch Date)</label>
-                    <input type="date" id="newOrderDueDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันเลื่อนส่ง (ถ้ามี)</label>
-                    <input type="date" id="newOrderPostponeDispatchDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">INCOTERMS</label>
-                <input type="text" id="newOrderIncoterms" placeholder="เช่น C&amp;F BAHRAIN, VIA A/F" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">อ้างอิง (REF.)</label>
-                <textarea id="newOrderRefNote" rows="2" placeholder="เช่น อ้าง: S/O 0388/24 สีและคุณภาพ (+เพิ่มแกะลายขอบ BORDER)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">หมายเหตุ (Remarks)</label>
-                <textarea id="newOrderRemark" rows="2" placeholder="หมายเหตุเพิ่มเติมสำหรับ M/O นี้" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
-                <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่มรายการ</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Order Detail / Edit-Any-Department Modal: lets staff view & correct data for ANY department
          stage of an M/O at any time, even after work has already moved on to a later stage. -->
@@ -1347,6 +1438,31 @@
         </div>
     </div>
 
+    <!-- NEW: "นำเข้าข้อมูลทอ" — reads the weaving department's existing daily-report .xlsx (one sheet
+         per date, e.g. "1-9-26") entirely in the browser via SheetJS, matches each M/O against
+         productionOrders, and merges the ตร.ม.-per-day figures into weaving.dailyLog (upsert by
+         date+loom so re-importing the same file never double-counts) — see handleWeavingExcelFile() /
+         aggregateWeavingImport() / applyWeavingImport(). -->
+    <div id="importWeavingModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden p-6 space-y-3 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>นำเข้าข้อมูลทอจากไฟล์ Excel รายวัน</h3>
+                <button onclick="closeImportWeavingModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500">เลือกไฟล์ Excel "รายงานการผลิตประจำวันพรมทอมือ" ไฟล์เดียวกับที่แผนกทอกรอกอยู่ทุกวัน (มี sheet แยกตามวันที่ เช่น 1-9-26) ระบบจะอ่านทุก sheet ที่ชื่อเป็นวันที่ให้อัตโนมัติ รวมยอด ตร.ม. ที่ทอได้ต่อ M/O เข้าในระบบ และเก็บรายละเอียดรายจอ/รายพนักงานแต่ละวันไว้เป็นประวัติ — นำเข้าไฟล์เดิมซ้ำได้โดยไม่นับซ้ำ</p>
+            <input type="file" id="importWeavingFileInput" accept=".xlsx,.xls" onchange="handleWeavingExcelFile(this)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:text-xs file:font-medium hover:file:bg-indigo-100 cursor-pointer">
+            <div id="importWeavingStatus" class="text-xs text-slate-500 hidden"></div>
+            <div id="importWeavingPreview" class="overflow-y-auto flex-grow -mr-1 pr-1 space-y-1.5 hidden"></div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button id="importWeavingConfirmBtn" onclick="confirmWeavingImport()" class="hidden flex bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl shadow transition duration-200 text-sm items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> ยืนยันนำเข้า
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all text-center p-6 space-y-4">
@@ -1467,11 +1583,49 @@
                     <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <p class="text-xs text-slate-400 mt-1">วางลิงก์ Web App จาก Google Apps Script เพื่อให้ทุกเครื่องที่เปิดผ่าน GitHub ดึงและบันทึกข้อมูลลง Google Sheet เดียวกัน</p>
                 </div>
+                <!-- NEW (2026-09-11): Supabase — เปิดใช้ระบบ Login + สิทธิ์แต่ละแผนกได้ก็ต่อเมื่อกรอก 2
+                     ช่องนี้ครบเท่านั้น (ว่างไว้ = ระบบทำงานแบบเดิมทุกประการ ไม่มีหน้า login) ดูขั้นตอน
+                     สร้าง Supabase project ทั้งหมดได้ในไฟล์ setup_guide.md ที่แนบมาด้วยกัน -->
+                <div class="pt-3 border-t border-slate-100">
+                    <label class="block font-semibold text-slate-700 mb-1">Supabase Project URL: <span class="font-normal text-slate-400">(สำหรับ Login + สิทธิ์แต่ละแผนก — ไม่บังคับ)</span></label>
+                    <input type="text" id="supabaseUrlInput" placeholder="https://xxxxx.supabase.co" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Supabase anon public key:</label>
+                    <input type="text" id="supabaseAnonKeyInput" placeholder="eyJhbGciOi..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <p class="text-xs text-slate-400 mt-1">คัดลอกจาก Supabase -> Project Settings -> API -> "anon public" เท่านั้น (ห้ามใช้ "service_role" ที่นี่เด็ดขาด)</p>
+                </div>
             </div>
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
                 <button type="button" onclick="closeConfigModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium text-sm rounded-xl transition">ปิด</button>
                 <button type="button" onclick="saveGasConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึก</button>
             </div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09-11): Login overlay — shown only once a Supabase URL/anon key is configured (see
+         initSupabase()/refreshAuthUi()). Full-screen, blocks the app until signed in, same pattern as
+         the "no mascot, dedicated modal" popups elsewhere in this dashboard: no backdrop-click-to-close,
+         must submit the form or already have a session. -->
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div class="bg-indigo-700 text-white px-6 py-4">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ</h3>
+                <p class="text-xs text-indigo-100 mt-0.5">QC & Production Dashboard — พรมสยาม</p>
+            </div>
+            <form onsubmit="event.preventDefault(); doLogin();" class="p-6 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">อีเมล</label>
+                    <input type="email" id="loginEmailInput" required autocomplete="username" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่าน</label>
+                    <input type="password" id="loginPasswordInput" required autocomplete="current-password" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <p id="loginErrorMsg" class="text-xs text-rose-600 hidden"></p>
+                <button type="submit" id="loginSubmitBtn" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow transition">เข้าสู่ระบบ</button>
+                <p class="text-[11px] text-slate-400 text-center">ยังไม่มีบัญชี? ติดต่อ Admin ให้สร้างบัญชีให้ (Supabase -> Authentication -> Add user)</p>
+            </form>
         </div>
     </div>
 
@@ -1490,6 +1644,7 @@
             </div>
             <div class="p-6 space-y-4 text-sm text-slate-600 overflow-y-auto">
                 <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">ค่าตรงนี้เป็นค่ากลาง ใช้ร่วมกันทุก M/O, S/O — เปลี่ยนที่นี่ที่เดียว มีผลกับการคำนวณ "จำนวนวันที่แนะนำ" ของทุกใบงานทันที (M/O ที่เปิดอยู่ต้องกดรีเฟรช/ซิงค์ข้อมูลถึงจะเห็นค่าล่าสุดจากเครื่องอื่น)</p>
+                <p class="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2"><i class="fa-solid fa-calendar-check mr-1"></i>ระบบจะจัดคิว "วันที่ทำงานจริง" ของแผนกทอ/ดีไซน์/ตกแต่งให้อัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง โดยยึดกำหนดส่งเร็วกว่า = คิวก่อน — ถ้าคิวเต็มจนช้ากว่ากำหนดส่ง ระบบจะขึ้นเตือนให้ (ไม่ได้เลื่อนกำหนดส่งลูกค้าให้อัตโนมัติ ต้องเลื่อนเองถ้าจำเป็น) ดู recomputeAllSchedules()</p>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">ชั่วโมงทำงานปกติ/วัน (regular_hours_per_day)</label>
                     <input type="number" min="0" step="0.5" id="prodSettingRegularHours" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -1503,6 +1658,10 @@
                     <div class="sm:col-span-2">
                         <label class="block text-[11px] text-slate-500 mb-0.5">ชม. OT/วัน</label>
                         <input type="number" min="0" step="0.5" id="prodSettingTuftingOt" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-[11px] text-slate-500 mb-0.5">จำนวนจอทอทั้งหมด (loom) — ใช้จำกัดว่าทอพร้อมกันได้กี่ M/O</label>
+                        <input type="number" min="1" step="1" id="prodSettingTuftingLoomCount" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
@@ -1531,7 +1690,7 @@
             </div>
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
                 <button type="button" onclick="closeProductionSettingsModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium text-sm rounded-xl transition">ปิด</button>
-                <button type="button" onclick="saveProductionSettings()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึก</button>
+                <button type="button" id="prodSettingsSaveBtn" onclick="saveProductionSettings()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition">บันทึก</button>
             </div>
         </div>
     </div>
@@ -1618,18 +1777,205 @@
         // convention as qcData/productionOrders above (own localStorage key, own Google Sheet tab).
         let issuesData = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
+
+        // =========================================================================================
+        // NEW (2026-09-11): Supabase — Login + สิทธิ์แต่ละแผนก. Entirely opt-in: until a Supabase URL +
+        // anon key have been saved (via "ตั้งค่าเชื่อมต่อ" — see saveGasConfig()/initSupabase()), every
+        // variable below stays null/empty and the app behaves EXACTLY as before (no login wall, no
+        // permission gating, Google Sheets only) — this lets this update ship immediately without
+        // risking the live factory system before Supabase is actually set up (see supabase/schema.sql
+        // and setup_guide.md delivered alongside this file for how to set it up).
+        //
+        // currentUser shape once signed in: { id, email, department, role, displayName }
+        //   department: 'planning' | 'design' | 'dyeing' | 'weaving' | 'finishing' | 'qc' | 'management'
+        //   role: 'staff' | 'admin' — admin can edit every department; everyone else can only edit
+        //   their OWN department's data and views everything else read-only (real enforcement is in
+        //   Postgres Row Level Security — see check_department_edit() in schema.sql; the UI gating
+        //   below is just so people don't waste time filling in a form that the database will reject).
+        // =========================================================================================
+        let supabaseUrl = localStorage.getItem('qc_supabase_url') || '';
+        let supabaseAnonKey = localStorage.getItem('qc_supabase_anon_key') || '';
+        let supabaseClient = null;
+        let currentUser = null;
+
+        function initSupabase() {
+            if (supabaseUrl && supabaseAnonKey && window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+                supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    if (session && session.user) {
+                        loadCurrentUserProfile(session.user);
+                    } else {
+                        currentUser = null;
+                        showLoginOverlay();
+                        renderCurrentUserBadge();
+                    }
+                });
+                // Check for an already-active session (e.g. page refresh) right away.
+                supabaseClient.auth.getSession().then(({ data }) => {
+                    if (data && data.session && data.session.user) {
+                        loadCurrentUserProfile(data.session.user);
+                    } else {
+                        showLoginOverlay();
+                    }
+                });
+            } else {
+                supabaseClient = null;
+                currentUser = null;
+                hideLoginOverlay();
+            }
+        }
+
+        async function loadCurrentUserProfile(user) {
+            try {
+                const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+                if (error || !data) {
+                    currentUser = { id: user.id, email: user.email, department: 'planning', role: 'staff', displayName: user.email };
+                } else {
+                    currentUser = { id: user.id, email: user.email, department: data.department || 'planning', role: data.role || 'staff', displayName: data.display_name || user.email };
+                }
+            } catch (e) {
+                currentUser = { id: user.id, email: user.email, department: 'planning', role: 'staff', displayName: user.email };
+            }
+            hideLoginOverlay();
+            renderCurrentUserBadge();
+            // Refresh whichever views are open so permission gating (see applyDeptPermissionGating)
+            // and any department-only content take effect immediately after logging in.
+            if (currentDetailOrderIndex !== null && currentDetailOrderIndex !== undefined) {
+                renderOrderDetailModalBody(currentDetailOrderIndex);
+            }
+        }
+
+        function showLoginOverlay() {
+            if (!supabaseClient) return; // Supabase not configured — never show the login wall
+            const el = document.getElementById('loginOverlay');
+            if (el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+        }
+        function hideLoginOverlay() {
+            const el = document.getElementById('loginOverlay');
+            if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+        }
+
+        async function doLogin() {
+            const email = document.getElementById('loginEmailInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value;
+            const errEl = document.getElementById('loginErrorMsg');
+            const btn = document.getElementById('loginSubmitBtn');
+            errEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'กำลังเข้าสู่ระบบ...';
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) {
+                    errEl.textContent = 'เข้าสู่ระบบไม่สำเร็จ: อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                    errEl.classList.remove('hidden');
+                } else if (data && data.user) {
+                    await loadCurrentUserProfile(data.user);
+                }
+            } catch (e) {
+                errEl.textContent = 'เชื่อมต่อ Supabase ไม่สำเร็จ ลองใหม่อีกครั้ง';
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'เข้าสู่ระบบ';
+            }
+        }
+
+        async function doLogout() {
+            if (!supabaseClient) return;
+            await supabaseClient.auth.signOut();
+            currentUser = null;
+            renderCurrentUserBadge();
+            showLoginOverlay();
+        }
+
+        // Small "ชื่อผู้ใช้ (แผนก) [ออกจากระบบ]" badge shown in the header once logged in — inserted
+        // next to the sync-status indicator (see updateSyncStatus()) rather than a whole new toolbar
+        // row, to avoid disturbing the existing header layout for anyone who hasn't set up Supabase.
+        function renderCurrentUserBadge() {
+            const holder = document.getElementById('currentUserBadgeHolder');
+            if (!holder) return;
+            if (!supabaseClient || !currentUser) { holder.innerHTML = ''; return; }
+            const deptLabel = STAGE_LABELS[currentUser.department] || (currentUser.department === 'qc' ? 'QC' : (currentUser.department === 'management' ? 'ผู้บริหาร' : currentUser.department));
+            const roleBadge = currentUser.role === 'admin' ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-400 text-amber-900 text-[9px] font-bold">ADMIN</span>' : '';
+            holder.innerHTML = `<span class="hidden sm:inline-flex items-center gap-1 text-[11px] text-indigo-100 bg-indigo-800/40 px-2.5 py-1 rounded-full">
+                <i class="fa-solid fa-user"></i> ${escapeHtml(currentUser.displayName)} · ${escapeHtml(deptLabel)}${roleBadge}
+                <button onclick="doLogout()" class="ml-1 underline hover:text-white">ออกจากระบบ</button>
+            </span>`;
+        }
+
+        // ---- Permission helpers (real enforcement is server-side — see check_department_edit() in
+        // supabase/schema.sql; these just drive the UI so people aren't confused by an edit that would
+        // get silently rejected by the database) ----
+        function canEditDept(dept) {
+            if (!supabaseClient) return true; // Supabase/login not set up yet — behave exactly like before
+            if (!currentUser) return false; // logged out — shouldn't normally reach here (login overlay blocks it)
+            if (currentUser.role === 'admin') return true;
+            return currentUser.department === dept;
+        }
+        function canEditMaster() {
+            if (!supabaseClient) return true;
+            if (!currentUser) return false;
+            return currentUser.role === 'admin' || currentUser.department === 'planning';
+        }
+
+        function lockElementsReadOnly(container, label) {
+            if (!container) return;
+            container.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = true; });
+            container.querySelectorAll('button').forEach(el => { el.disabled = true; el.classList.add('opacity-40', 'cursor-not-allowed'); });
+            container.classList.add('opacity-70');
+            if (!container.querySelector('.dept-readonly-badge')) {
+                const badge = document.createElement('div');
+                badge.className = 'dept-readonly-badge text-[10px] text-slate-400 bg-slate-50 px-3 py-1.5 border-t border-slate-200 flex items-center gap-1.5';
+                badge.innerHTML = `<i class="fa-solid fa-lock"></i> ดูได้อย่างเดียว — ${escapeHtml(label || 'สิทธิ์ของแผนกอื่น')}`;
+                container.appendChild(badge);
+            }
+        }
+
+        // Called at the end of renderOrderDetailModalBody() below — locks each department's section
+        // (and the M/O master-info fields at the top) to read-only if the signed-in user isn't allowed
+        // to edit it. A no-op entirely when Supabase/login isn't configured (canEditDept/canEditMaster
+        // both return true in that case, matching the app's pre-Supabase behaviour exactly).
+        function applyDeptPermissionGating() {
+            if (!supabaseClient) return;
+            ['planning', 'dyeing', 'weaving', 'finishing'].forEach(stage => {
+                const el = document.getElementById(`orderDetailSection-${stage}`);
+                if (el && !canEditDept(stage)) lockElementsReadOnly(el, `สิทธิ์แผนก${STAGE_LABELS[stage] || stage}`);
+            });
+            const designEl = document.getElementById('orderDetailSection-design');
+            if (designEl && !canEditDept('design')) lockElementsReadOnly(designEl, 'สิทธิ์แผนกดีไซน์/ขยายลาย');
+
+            if (!canEditMaster()) {
+                ['orderDetailOrderType', 'orderDetailMarket', 'orderDetailSalesName', 'orderDetailCustomerName',
+                 'orderDetailCustomerPO', 'orderDetailTotalSqm', 'orderDetailTotalPieces', 'orderDetailDueDate'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.disabled = true;
+                });
+                const masterBlock = document.getElementById('orderDetailMasterFieldsBlock');
+                if (masterBlock) lockElementsReadOnly(masterBlock, 'ข้อมูลหลักของ M/O แก้ได้เฉพาะแผนกวางแผน/Admin');
+            }
+        }
         // NEW (2026-09-10): Carpet Production Planning calc engine's shared settings (เอกสารอ้างอิง
         // TH098/26-แก้แบบ, Section 1.2) — regular_hours_per_day + per-department staff_count/ot_hours,
         // used by every M/O's grade/hours/production-days suggestions (see computeProductionDays()).
         // Loaded from localStorage immediately (so the calculator works offline / before the first
         // sync) and refreshed from the shared Google Sheet on every fetchProductionSettingsFromSheet()
         // call, same "local cache + Sheet is the shared source of truth" pattern as gasWebAppUrl/orders.
-        let productionSettings = Object.assign({
-            regularHoursPerDay: 8,
-            tufting: { staffCount: 1, otHours: 0 },
-            design: { staffCount: 1, otHours: 0 },
-            finishing: { staffCount: 1, otHours: 0 }
-        }, JSON.parse(localStorage.getItem('qc_production_settings') || '{}'));
+        let productionSettings = (function() {
+            const defaults = {
+                regularHoursPerDay: 8,
+                tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
+                design: { staffCount: 1, otHours: 0 },
+                finishing: { staffCount: 1, otHours: 0 }
+            };
+            let saved = {};
+            try { saved = JSON.parse(localStorage.getItem('qc_production_settings') || '{}'); } catch(e) { saved = {}; }
+            return {
+                regularHoursPerDay: (saved.regularHoursPerDay !== undefined) ? saved.regularHoursPerDay : defaults.regularHoursPerDay,
+                tufting: Object.assign({}, defaults.tufting, saved.tufting || {}),
+                design: Object.assign({}, defaults.design, saved.design || {}),
+                finishing: Object.assign({}, defaults.finishing, saved.finishing || {})
+            };
+        })();
         let isDisplayMode = false;
         let currentView = 'overview'; // 'overview' | 'board' | 'records' | 'summary' | 'shipping'
         // Global M/O / S/O switch — applies across every tab in the whole system at once (not just
@@ -1998,6 +2344,7 @@
             initApp();
             switchView('overview');
             startMascotBlinkLoop();
+            initSupabase(); // NEW (2026-09-11): no-op until a Supabase URL/anon key has been saved
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
                 fetchOrdersFromGoogleSheet(false);
@@ -2044,7 +2391,8 @@
                 shipping: { btn: 'tabShippingBtn', container: 'shippingViewContainer' },
                 shipped: { btn: 'tabShippedBtn', container: 'shippedViewContainer' },
                 issues: { btn: 'tabIssuesBtn', container: 'issuesViewContainer' },
-                analytics: { btn: 'tabAnalyticsBtn', container: 'analyticsViewContainer' }
+                analytics: { btn: 'tabAnalyticsBtn', container: 'analyticsViewContainer' },
+                central: { btn: 'tabCentralBtn', container: 'centralViewContainer' }
             };
             const activeTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition";
             const inactiveTabCls = "flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition";
@@ -2067,6 +2415,7 @@
             if (view === 'shipped') renderQcShippedArchive();
             if (view === 'issues') renderIssuesTable();
             if (view === 'analytics') renderAnalyticsDashboard();
+            if (view === 'central') renderCentralDashboard();
         }
 
         // Global M/O, S/O switch (see the `orderTypeFilter` declaration above) — one switch that
@@ -2691,6 +3040,112 @@
                         </div>
                         <div class="w-16 shrink-0 text-xs font-bold text-slate-700 text-right">${it.total} ใบ</div>
                     </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================================
+        // NEW (2026-09-11): "Dashboard กลาง" — ภาพรวมกำลังการผลิต/คิวงานข้ามแผนกสำหรับผู้บริหาร/Admin.
+        // ใช้ productionOrders ที่มีอยู่ในเครื่องอยู่แล้ว (localStorage + ซิงค์ Google Sheets ปกติ) จึงใช้
+        // งานได้ทันทีไม่ต้องรอตั้งค่า Supabase — ดู getStageConcurrency()/recomputeAllSchedules() (ระบบ
+        // จัดคิวอัตโนมัติ) ที่ metric "กำลังการผลิต" ในหน้านี้อ้างอิงตัวเลขเดียวกัน.
+        // =========================================================================================
+        function renderCentralDashboard() {
+            const activeOrders = productionOrders.filter(o => getEffectiveStage(o) !== 'shipped');
+
+            document.getElementById('centralKpiActiveOrders').textContent = String(activeOrders.length);
+            const moCount = activeOrders.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === 'MO').length;
+            document.getElementById('centralKpiActiveOrdersNote').textContent = `${moCount} M/O • ${activeOrders.length - moCount} S/O`;
+
+            let overdueCount = 0, atRiskCount = 0;
+            activeOrders.forEach(o => {
+                const w = getDeadlineWarning(o);
+                if (!w) return;
+                if (w.level === 'overdue') overdueCount++; else atRiskCount++;
+            });
+            document.getElementById('centralKpiOverdue').textContent = String(overdueCount);
+            document.getElementById('centralKpiOverdueNote').textContent = overdueCount > 0 ? 'ต้องเร่งติดตามด่วน' : 'ไม่มีงานเลยกำหนด';
+            document.getElementById('centralKpiAtRisk').textContent = String(atRiskCount);
+            document.getElementById('centralKpiAtRiskNote').textContent = `ภายใน ${DEADLINE_WARNING_DAYS} วันข้างหน้า`;
+
+            const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
+            const THIRTY_DAYS_MS = 30 * 86400000;
+            const shipped30 = productionOrders.filter(o => {
+                if (!o.shippedDate) return false;
+                const d = parseDateOnly(normalizeDateString(o.shippedDate));
+                if (!d) return false;
+                const diff = todayMs - d.getTime();
+                return diff >= 0 && diff <= THIRTY_DAYS_MS;
+            });
+            const shippedSqm = shipped30.reduce((sum, o) => sum + (Number(o.totalSqm) || 0), 0);
+            document.getElementById('centralKpiShipped30d').textContent = String(shipped30.length);
+            document.getElementById('centralKpiShipped30dNote').textContent = `รวม ${shippedSqm.toLocaleString('th-TH')} ตร.ม.`;
+
+            renderCentralCapacityChart(activeOrders);
+            renderHorizontalBarList('centralByStageChart', null, ORDER_STAGES.map(stage => ({
+                label: STAGE_LABELS[stage], value: activeOrders.filter(o => o.currentStage === stage).length
+            })).filter(it => it.value > 0 || true), 'bg-indigo-500');
+            renderCentralUrgentTable(activeOrders);
+        }
+
+        // เทียบ "จำนวนงานที่กำลังอยู่ในคิวของแผนกนี้ตอนนี้" (นับจาก currentStage) กับ "กำลังการผลิตจริง"
+        // (getStageConcurrency() — จำนวนจอทอ/จำนวนพนักงาน จากหน้า "ตั้งค่าเวลาผลิต", ตัวเดียวกับที่
+        // recomputeAllSchedules() ใช้จัดคิวอัตโนมัติ) — ย้อม (dyeing) ไม่มีค่ากำลังการผลิตให้ตั้ง จึงไม่แสดง
+        // ในกราฟนี้ (จุดเดียวกับข้อจำกัดที่ recomputeAllSchedules() มี — ดูคอมเมนต์ตรงนั้น).
+        function renderCentralCapacityChart(activeOrders) {
+            const container = document.getElementById('centralCapacityChart');
+            if (!container) return;
+            const stages = [
+                { key: 'design', unit: 'คน' },
+                { key: 'weaving', unit: 'จอทอ' },
+                { key: 'finishing', unit: 'คน' }
+            ];
+            container.innerHTML = stages.map(s => {
+                const queueCount = activeOrders.filter(o => o.currentStage === s.key).length;
+                const capacity = getStageConcurrency(s.key) || 1;
+                const ratio = queueCount / capacity;
+                const overloaded = ratio > 1;
+                const pct = Math.max(Math.min(ratio, 1) * 100, queueCount > 0 ? 4 : 0);
+                const label = STAGE_LABELS[s.key];
+                return `
+                    <div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-600 mb-1">
+                            <span class="font-semibold">${escapeHtml(label)}</span>
+                            <span>${queueCount} งาน / กำลังผลิต ${capacity} ${s.unit}${overloaded ? ' <span class="text-rose-600 font-bold">(งานล้นกำลังผลิต!)</span>' : ''}</span>
+                        </div>
+                        <div class="bg-slate-100 rounded-md h-5 overflow-hidden">
+                            <div class="h-5 rounded-r-md ${overloaded ? 'bg-rose-500' : 'bg-emerald-500'}" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCentralUrgentTable(activeOrders) {
+            const tbody = document.getElementById('centralUrgentTableBody');
+            const emptyEl = document.getElementById('centralUrgentEmpty');
+            if (!tbody) return;
+            const withDueDate = activeOrders.filter(o => o.dueDate).sort((a, b) => a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0));
+            const top10 = withDueDate.slice(0, 10);
+            if (!top10.length) {
+                tbody.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+            tbody.innerHTML = top10.map(o => {
+                const w = getDeadlineWarning(o);
+                let statusHtml = '<span class="text-emerald-600 text-[11px] font-semibold">ปกติ</span>';
+                if (w && w.level === 'overdue') statusHtml = `<span class="text-rose-600 text-[11px] font-semibold">เลยกำหนด ${Math.abs(w.daysRemaining)} วัน</span>`;
+                else if (w && w.level === 'at_risk') statusHtml = `<span class="text-amber-600 text-[11px] font-semibold">เหลือ ${w.daysRemaining} วัน</span>`;
+                return `
+                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="openOrderDetailModal(${productionOrders.indexOf(o)})">
+                        <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(o.moSo)}</td>
+                        <td class="py-2 pr-3">${escapeHtml(o.customerName || '-')}</td>
+                        <td class="py-2 pr-3">${escapeHtml(STAGE_LABELS[o.currentStage] || o.currentStage)}</td>
+                        <td class="py-2 pr-3">${escapeHtml(o.dueDate || '-')}</td>
+                        <td class="py-2 pr-3">${statusHtml}</td>
+                    </tr>
                 `;
             }).join('');
         }
@@ -3471,18 +3926,26 @@
                 let result;
                 try { result = JSON.parse(text); } catch(e) { return; }
                 if (result && typeof result === 'object' && !Array.isArray(result)) {
-                    productionSettings = Object.assign({
+                    const defaults = {
                         regularHoursPerDay: 8,
-                        tufting: { staffCount: 1, otHours: 0 },
+                        tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
                         design: { staffCount: 1, otHours: 0 },
                         finishing: { staffCount: 1, otHours: 0 }
-                    }, result);
+                    };
+                    productionSettings = {
+                        regularHoursPerDay: (result.regularHoursPerDay !== undefined) ? result.regularHoursPerDay : defaults.regularHoursPerDay,
+                        tufting: Object.assign({}, defaults.tufting, result.tufting || {}),
+                        design: Object.assign({}, defaults.design, result.design || {}),
+                        finishing: Object.assign({}, defaults.finishing, result.finishing || {})
+                    };
                     saveProductionSettingsToLocal();
                     // Every open M/O's suggested grade/hours/days depends on these settings — refresh
-                    // whichever detail modal is currently open so the numbers don't look stale.
+                    // whichever detail modal is currently open so the numbers don't look stale, and
+                    // re-run the capacity-aware scheduler since loom/staff counts changed on this device.
                     if (currentDetailOrderIndex !== null && currentDetailOrderIndex !== undefined) {
                         renderOrderDetailModalBody(currentDetailOrderIndex);
                     }
+                    recomputeAllSchedules();
                 }
             } catch(e) {
                 console.error("Fetch production settings error (backend may not support this endpoint yet):", e);
@@ -3959,8 +4422,10 @@
             // mode: 'internal' (ทอในบริษัท, default) or 'external' (จ้างภายนอกทอ — ส่งผ้าพร้อมไหมออกไป
             // ให้โรงงานภายนอกทอแล้วรอรับพรมคืน). External mode replaces the internal checklist/items
             // with a single outsourced-job record (see the `external` object below).
-            const weaving = Object.assign({ mode: 'internal', receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0 }, parseField(raw.weaving, {}));
+            const weaving = Object.assign({ mode: 'internal', receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0, dailyLog: [] }, parseField(raw.weaving, {}));
             if (weaving.mode !== 'external') weaving.mode = 'internal';
+            // NEW: per-date, per-loom weaving history from "นำเข้าข้อมูลทอ" — see applyWeavingImport().
+            if (!Array.isArray(weaving.dailyLog)) weaving.dailyLog = [];
             if (!Array.isArray(weaving.items)) weaving.items = [];
             weaving.external = Object.assign(
                 { sentDate: '', vendorDueDate: '', qcResult: 'pending', failResolution: '', receivedDate: '' },
@@ -4205,6 +4670,300 @@
                 const doneCount = items.filter(it => it.status === 'done').length;
                 s.percent = Math.round((doneCount / items.length) * 100);
             }
+        }
+
+        // =========================================================================================
+        // NEW: "นำเข้าข้อมูลทอ" — the weaving department already fills in a daily-report .xlsx by hand
+        // (one sheet per date, e.g. "1-9-26", template: "รายงานการผลิตประจำวันพรมทอมือ") and keeps it
+        // on a computer / shares it by email — it is NOT a Google Sheet, so this reads the .xlsx
+        // entirely client-side with SheetJS (no backend change needed: order.weaving is already stored
+        // as one JSON blob per M/O — see upsertOrderIntoSheets_() in the .gs file — so the new
+        // dailyLog[] field rides along automatically).
+        //
+        // Column layout assumed (fixed by the template, data rows starting at row 6 of each date
+        // sheet): B=จอที่, C=M/O, D=คุณภาพ, E=เกรด, ... R=พนักงาน(กะปกติ), ... AB=พนักงาน(โอที),
+        // AC=รวมพื้นที่ทำได้วันนั้น, AD=รวมชั่วโมง, AE=ประสิทธิภาพรวม. A loom/M-O can have more than one
+        // employee row directly under it (name-only, every other column blank) — parseDailySheetRows()
+        // groups rows into blocks separated by a fully-blank row so every employee name in a block gets
+        // attached to that block's one data row.
+        //
+        // Idempotency: each entry is upserted into weaving.dailyLog keyed by (date, loom), so importing
+        // the same file (or a later file that repeats earlier dates) twice never double-counts —
+        // sqmWoven is always re-derived as the sum of the merged log, not incremented.
+        // =========================================================================================
+
+        // Renders the "นำเข้าข้อมูลทอ" history (ประวัติรายวัน/รายจอ/รายพนักงาน) inside the order detail
+        // modal's weaving section — collapsed by default via <details> so it doesn't clutter orders
+        // that haven't imported anything yet. Read-only: edits still happen through "นำเข้าข้อมูลทอ".
+        function renderWeavingDailyLogHtml(order) {
+            const log = Array.isArray(order.weaving.dailyLog) ? order.weaving.dailyLog : [];
+            if (log.length === 0) return '';
+            const sorted = [...log].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+            const rowsHtml = sorted.map(l => `
+                <tr class="border-t border-slate-100">
+                    <td class="py-1 pr-2 whitespace-nowrap">${escapeHtml(l.date || '-')}</td>
+                    <td class="py-1 pr-2 text-center">${escapeHtml(String(l.loom || '-'))}</td>
+                    <td class="py-1 pr-2 text-right font-medium">${(Number(l.sqm) || 0).toFixed(2)}</td>
+                    <td class="py-1 pr-2 text-right">${l.hours ? (Number(l.hours) || 0).toFixed(1) : '-'}</td>
+                    <td class="py-1 text-slate-500">${(l.employees || []).map(escapeHtml).join(', ') || '-'}</td>
+                </tr>
+            `).join('');
+            return `
+                <details class="mb-2 bg-white rounded-xl border border-slate-200 p-2.5">
+                    <summary class="text-[10px] font-semibold text-slate-500 cursor-pointer select-none">
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i>ประวัติการทอรายวัน (จากนำเข้าข้อมูลทอ) — ${sorted.length} รายการ
+                    </summary>
+                    <div class="overflow-x-auto mt-2">
+                        <table class="w-full text-[11px]">
+                            <thead><tr class="text-slate-400 text-left">
+                                <th class="font-medium pb-1 pr-2">วันที่</th>
+                                <th class="font-medium pb-1 pr-2 text-center">จอ</th>
+                                <th class="font-medium pb-1 pr-2 text-right">ตร.ม.</th>
+                                <th class="font-medium pb-1 pr-2 text-right">ชม.</th>
+                                <th class="font-medium pb-1">พนักงาน</th>
+                            </tr></thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </details>
+            `;
+        }
+
+        let pendingWeavingImport = null; // { byMoSo, sheetsRead } — set by handleWeavingExcelFile(), consumed by confirmWeavingImport()
+
+        function openImportWeavingModal() {
+            pendingWeavingImport = null;
+            const fileInput = document.getElementById('importWeavingFileInput');
+            if (fileInput) fileInput.value = '';
+            const status = document.getElementById('importWeavingStatus');
+            const preview = document.getElementById('importWeavingPreview');
+            const confirmBtn = document.getElementById('importWeavingConfirmBtn');
+            status.classList.add('hidden'); status.textContent = '';
+            preview.classList.add('hidden'); preview.innerHTML = '';
+            confirmBtn.classList.add('hidden');
+            document.getElementById('importWeavingModal').classList.remove('hidden');
+        }
+
+        function closeImportWeavingModal() {
+            document.getElementById('importWeavingModal').classList.add('hidden');
+        }
+
+        function normalizeMoSoKey(v) {
+            return String(v || '').trim().toUpperCase().replace(/\s+/g, '');
+        }
+
+        // Splits one date-sheet's raw rows (from XLSX.utils.sheet_to_json(ws, {header:1})) into
+        // per-loom entries. Data starts at row index 5 (0-based) — rows 0-4 are the fixed title/date/
+        // header rows of the "รายงานการผลิตประจำวันพรมทอมือ" template.
+        function parseDailySheetRows(aoa) {
+            const entries = [];
+            let block = [];
+            const flush = () => {
+                if (block.length === 0) return;
+                const first = block.find(r => r[2] !== null && r[2] !== undefined && String(r[2]).trim() !== '');
+                if (first) {
+                    const morningEmployees = [];
+                    const otEmployees = [];
+                    block.forEach(r => {
+                        const me = r[17], oe = r[27];
+                        if (me !== null && me !== undefined && String(me).trim() !== '') morningEmployees.push(String(me).trim());
+                        if (oe !== null && oe !== undefined && String(oe).trim() !== '') otEmployees.push(String(oe).trim());
+                    });
+                    const totalAreaDay = Number(first[28]);
+                    entries.push({
+                        loom: first[1] !== null && first[1] !== undefined ? String(first[1]).trim() : '',
+                        moSo: String(first[2]).trim(),
+                        quality: first[3] || '',
+                        // Fallback if "รวมพื้นที่" (col AC / idx28) wasn't filled in: morning + OT area-done
+                        // (col J / idx9 + col T / idx19), same as the sheet's own formula for that column.
+                        totalAreaDay: !isNaN(totalAreaDay) && first[28] !== null ? totalAreaDay : ((Number(first[9]) || 0) + (Number(first[19]) || 0)),
+                        totalHoursDay: Number(first[29]) || 0,
+                        efficiency: (typeof first[30] === 'number') ? first[30] : null,
+                        employees: Array.from(new Set([...morningEmployees, ...otEmployees]))
+                    });
+                }
+                block = [];
+            };
+            for (let i = 5; i < aoa.length; i++) {
+                const r = aoa[i] || [];
+                const isBlank = r.every(c => c === null || c === undefined || String(c).trim() === '');
+                if (isBlank) { flush(); continue; }
+                block.push(r);
+            }
+            flush();
+            return entries;
+        }
+
+        // Reads every "date-named" sheet in the workbook (e.g. "1-9-26" — anything else, like the "SEP"
+        // monthly rollup or the "รายชื่อพนักงานทอมือ" employee list, is skipped automatically since its
+        // name won't match) and groups the resulting per-loom entries by M/O.
+        function aggregateWeavingImport(workbook) {
+            const dateSheetNames = workbook.SheetNames.filter(n => /^\d{1,2}-\d{1,2}-\d{2,4}$/.test(n.trim()));
+            const byMoSo = {};
+            let sheetsRead = 0;
+            dateSheetNames.forEach(sheetName => {
+                const ws = workbook.Sheets[sheetName];
+                const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+                const dateCell = aoa[1] ? aoa[1][2] : null;
+                let dateKey = null;
+                if (dateCell instanceof Date && !isNaN(dateCell)) {
+                    dateKey = formatDateKeyUTC(dateCell);
+                } else {
+                    // Fallback if the "วันที่ :" cell wasn't a real date — parse straight from the sheet
+                    // name instead (best-effort; the sheet name is sometimes typo'd, e.g. "-29" instead
+                    // of "-26", so the in-sheet date cell is preferred whenever it's present).
+                    const m = sheetName.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+                    if (m) {
+                        const d = m[1], mo = m[2];
+                        let y = m[3];
+                        if (y.length === 2) y = '20' + y;
+                        dateKey = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    }
+                }
+                if (!dateKey) return; // can't tell what date this sheet is — skip rather than guess wrong
+                sheetsRead++;
+                parseDailySheetRows(aoa).forEach(en => {
+                    const key = normalizeMoSoKey(en.moSo);
+                    if (!key) return;
+                    if (!byMoSo[key]) byMoSo[key] = { moSoDisplay: en.moSo, days: [] };
+                    byMoSo[key].days.push({
+                        dateKey, sheetName, loom: en.loom,
+                        sqm: en.totalAreaDay, hours: en.totalHoursDay, efficiency: en.efficiency,
+                        employees: en.employees
+                    });
+                });
+            });
+            return { byMoSo, sheetsRead };
+        }
+
+        function handleWeavingExcelFile(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const status = document.getElementById('importWeavingStatus');
+            const preview = document.getElementById('importWeavingPreview');
+            const confirmBtn = document.getElementById('importWeavingConfirmBtn');
+            status.classList.remove('hidden');
+            status.textContent = 'กำลังอ่านไฟล์...';
+            preview.classList.add('hidden'); preview.innerHTML = '';
+            confirmBtn.classList.add('hidden');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const { byMoSo, sheetsRead } = aggregateWeavingImport(workbook);
+                    const moSoKeys = Object.keys(byMoSo);
+                    if (sheetsRead === 0) {
+                        status.textContent = 'ไม่พบ sheet ที่ชื่อเป็นวันที่ (เช่น 1-9-26) ในไฟล์นี้ — ตรวจสอบว่าเป็นไฟล์รายงานการผลิตประจำวันพรมทอมือที่ถูกต้อง';
+                        return;
+                    }
+                    if (moSoKeys.length === 0) {
+                        status.textContent = `อ่าน ${sheetsRead} วันจากไฟล์แล้ว แต่ไม่พบแถวข้อมูล M/O เลย — ตรวจสอบรูปแบบไฟล์`;
+                        return;
+                    }
+                    // Match against the current productionOrders so the preview can flag M/O's that
+                    // don't exist in the system yet (need adding manually first) before anything is saved.
+                    const rows = moSoKeys.map(key => {
+                        const group = byMoSo[key];
+                        const orderIndex = productionOrders.findIndex(o => normalizeMoSoKey(o.moSo) === key);
+                        const totalSqmInFile = group.days.reduce((s, d) => s + (Number(d.sqm) || 0), 0);
+                        const distinctDays = new Set(group.days.map(d => d.dateKey)).size;
+                        return { key, moSoDisplay: group.moSoDisplay, orderIndex, totalSqmInFile, distinctDays };
+                    }).sort((a, b) => a.moSoDisplay.localeCompare(b.moSoDisplay));
+
+                    const matchedCount = rows.filter(r => r.orderIndex !== -1).length;
+                    const unmatchedRows = rows.filter(r => r.orderIndex === -1);
+
+                    status.textContent = `อ่านข้อมูลจาก ${sheetsRead} วัน พบ ${rows.length} M/O — ตรงกับระบบ ${matchedCount} รายการ${unmatchedRows.length > 0 ? `, ไม่พบในระบบ ${unmatchedRows.length} รายการ (จะข้ามให้อัตโนมัติ)` : ''}`;
+
+                    preview.classList.remove('hidden');
+                    preview.innerHTML = rows.map(r => {
+                        const foundBadge = r.orderIndex !== -1
+                            ? `<span class="text-emerald-600"><i class="fa-solid fa-circle-check"></i> พบในระบบ</span>`
+                            : `<span class="text-rose-500"><i class="fa-solid fa-circle-exclamation"></i> ไม่พบ M/O นี้ในระบบ</span>`;
+                        return `<div class="flex items-center justify-between text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                            <div><span class="font-semibold text-slate-700">${escapeHtml(r.moSoDisplay)}</span>
+                                <span class="text-slate-400 ml-1">${r.distinctDays} วัน, รวม ${r.totalSqmInFile.toFixed(2)} ตร.ม.</span></div>
+                            ${foundBadge}
+                        </div>`;
+                    }).join('');
+
+                    if (matchedCount > 0) {
+                        pendingWeavingImport = { byMoSo };
+                        confirmBtn.classList.remove('hidden');
+                    } else {
+                        pendingWeavingImport = null;
+                    }
+                } catch (err) {
+                    console.error('Error reading weaving Excel file:', err);
+                    status.textContent = 'อ่านไฟล์ไม่สำเร็จ — ตรวจสอบว่าเป็นไฟล์ .xlsx ที่ไม่เสียหาย';
+                }
+            };
+            reader.onerror = () => { status.textContent = 'อ่านไฟล์ไม่สำเร็จ'; };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function confirmWeavingImport() {
+            if (!pendingWeavingImport) return;
+            const { byMoSo } = pendingWeavingImport;
+            const matched = [];
+            const skippedExternal = [];
+
+            Object.keys(byMoSo).forEach(key => {
+                const group = byMoSo[key];
+                const orderIndex = productionOrders.findIndex(o => normalizeMoSoKey(o.moSo) === key);
+                if (orderIndex === -1) return; // unmatched — already flagged in the preview, nothing to do
+                const order = productionOrders[orderIndex];
+                if (order.weaving.mode === 'external') {
+                    skippedExternal.push(order.moSo);
+                    return; // จ้างภายนอกทอ ไม่มี sqm รายวันแบบนี้ให้ merge
+                }
+                if (!Array.isArray(order.weaving.dailyLog)) order.weaving.dailyLog = [];
+
+                group.days.forEach(d => {
+                    const entry = { date: d.dateKey, loom: d.loom, sqm: Number(d.sqm) || 0, hours: Number(d.hours) || 0, efficiency: d.efficiency, employees: d.employees || [] };
+                    const existingIdx = order.weaving.dailyLog.findIndex(l => l.date === d.dateKey && String(l.loom || '') === String(d.loom || ''));
+                    if (existingIdx === -1) order.weaving.dailyLog.push(entry);
+                    else order.weaving.dailyLog[existingIdx] = entry; // upsert — re-importing the same date never double-counts
+                });
+
+                // Cumulative sqm woven is always re-derived from the merged log (never incremented), so
+                // importing the same file twice, or a later file that re-includes earlier dates, is safe.
+                order.weaving.sqmWoven = Math.round(order.weaving.dailyLog.reduce((s, l) => s + (Number(l.sqm) || 0), 0) * 100) / 100;
+                // "ทอได้กี่ตารางเมตร/วัน" — mean sqm per distinct active day across the whole log, used
+                // elsewhere (see sumOfSqmPerDay around line ~4740) as this M/O's current weaving pace.
+                const sqmByDate = {};
+                order.weaving.dailyLog.forEach(l => { sqmByDate[l.date] = (sqmByDate[l.date] || 0) + (Number(l.sqm) || 0); });
+                const distinctDates = Object.keys(sqmByDate);
+                const totalAcrossDays = Object.values(sqmByDate).reduce((a, b) => a + b, 0);
+                order.weaving.sqmPerDay = distinctDates.length > 0 ? Math.round((totalAcrossDays / distinctDates.length) * 100) / 100 : 0;
+
+                recomputeStagePercent(order, 'weaving');
+                persistOrderChange(order);
+                matched.push({ moSo: order.moSo, sqmWoven: order.weaving.sqmWoven, percent: order.weaving.percent });
+            });
+
+            renderProductionBoard();
+            renderProductionTimeline();
+            renderProductionOverview();
+
+            const status = document.getElementById('importWeavingStatus');
+            const preview = document.getElementById('importWeavingPreview');
+            const confirmBtn = document.getElementById('importWeavingConfirmBtn');
+            confirmBtn.classList.add('hidden');
+            preview.classList.add('hidden');
+            status.classList.remove('hidden');
+            if (matched.length > 0) {
+                status.innerHTML = `<span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle-check"></i> นำเข้าสำเร็จ ${matched.length} M/O</span><br>` +
+                    matched.map(m => `${escapeHtml(m.moSo)}: ทอแล้ว ${m.sqmWoven.toFixed(2)} ตร.ม. (${m.percent}%)`).join('<br>') +
+                    (skippedExternal.length > 0 ? `<br><span class="text-amber-500">ข้าม ${skippedExternal.length} M/O ที่เป็นโหมดจ้างภายนอกทอ: ${skippedExternal.map(escapeHtml).join(', ')}</span>` : '');
+                showToast(`นำเข้าข้อมูลทอสำเร็จ ${matched.length} M/O`, 'fa-file-excel', 'text-emerald-400');
+            } else {
+                status.textContent = 'ไม่มี M/O ที่นำเข้าได้ (ทั้งหมดเป็นโหมดจ้างภายนอกทอ หรือไม่พบในระบบ)';
+            }
+            pendingWeavingImport = null;
+            document.getElementById('importWeavingFileInput').value = '';
         }
 
         async function syncOrderToSheet(order) {
@@ -5256,7 +6015,9 @@
         let boardDepartmentFilter = ''; // '' = ทั้งหมด (all columns visible); otherwise one of BOARD_TABS
 
         function setBoardDepartmentTab(stage) {
-            boardDepartmentFilter = BOARD_TABS.includes(stage) ? stage : '';
+            // NEW (2026-09-11): 'sales' isn't in BOARD_TABS — it has no boardColWrap-sales column, it
+            // swaps the whole grid out for salesFormContainer instead (see updateBoardColumnVisibility()).
+            boardDepartmentFilter = (stage === 'sales' || BOARD_TABS.includes(stage)) ? stage : '';
             updateBoardDepartmentTabStyles();
             updateBoardColumnVisibility();
         }
@@ -5265,8 +6026,10 @@
             const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
             const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
             const allBtn = document.getElementById('boardTabAllBtn');
-            const buttons = [{ el: allBtn, isActive: boardDepartmentFilter === '' }]
-                .concat(BOARD_TABS.map(stage => ({
+            const buttons = [
+                { el: allBtn, isActive: boardDepartmentFilter === '' },
+                { el: document.getElementById('boardTabBtn-sales'), isActive: boardDepartmentFilter === 'sales' }
+            ].concat(BOARD_TABS.map(stage => ({
                     el: document.getElementById(`boardTabBtn-${stage}`),
                     isActive: boardDepartmentFilter === stage
                 })));
@@ -5283,8 +6046,15 @@
         }
 
         function updateBoardColumnVisibility() {
+            const isSales = boardDepartmentFilter === 'sales';
+            const salesContainer = document.getElementById('salesFormContainer');
+            const searchCard = document.getElementById('boardSearchCard');
+            if (salesContainer) salesContainer.classList.toggle('hidden', !isSales);
+            if (searchCard) searchCard.classList.toggle('hidden', isSales);
+
             const grid = document.getElementById('boardColumnsGrid');
             if (grid) {
+                grid.classList.toggle('hidden', isSales);
                 if (boardDepartmentFilter === '') {
                     grid.classList.remove('md:grid-cols-1');
                     grid.classList.add('md:grid-cols-5');
@@ -5296,7 +6066,7 @@
             BOARD_TABS.forEach(stage => {
                 const wrap = document.getElementById(`boardColWrap-${stage}`);
                 if (!wrap) return;
-                const shouldShow = boardDepartmentFilter === '' || boardDepartmentFilter === stage;
+                const shouldShow = !isSales && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
                 wrap.classList.toggle('hidden', !shouldShow);
             });
         }
@@ -5853,9 +6623,166 @@
             const order = productionOrders[orderIndex];
             if (!order) return;
             order.planningDeadlineAuto = true;
-            recomputePlanDatesFromDurations(order);
+            recomputeAllSchedules();
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
+        }
+
+        // =========================================================================================
+        // Capacity-aware auto-scheduler ("จัดคิวข้ามแผนก" — replaces the old per-order-only
+        // recomputePlanDatesFromDurations() above, which computed each M/O's plan dates as if it had
+        // the entire department to itself). See getStageConcurrency()/scheduleStageEDD()/
+        // recomputeAllSchedules() below and the call sites further down for when this runs.
+        // =========================================================================================
+
+        // How many M/O, S/O's a department can actually work on AT THE SAME TIME:
+        //   - ทอ (weaving): limited by the number of physical looms (จำนวนจอทอ), not just headcount —
+        //     confirmed with the user this is a hard physical constraint separate from staff count.
+        //   - ดีไซน์/ตกแต่ง (design/finishing): one job per staff member, consistent with how
+        //     computeProductionDays() already assumes the whole department's staff work one job at a
+        //     time to produce that job's day count.
+        //   - ย้อม (dyeing): no capacity/staffing setting exists for this department yet, so it is left
+        //     unconstrained (returns null) — every order's dyeing dates simply chain right after its
+        //     own design finish date with no queueing. Known limitation; can be extended later if the
+        //     dyeing department gets its own staffing settings in "ตั้งค่าเวลาผลิต".
+        function getStageConcurrency(stage) {
+            const s = productionSettings;
+            if (stage === 'weaving') return Math.max(1, Number(s.tufting.loomCount) || 1);
+            if (stage === 'design') return Math.max(1, Number(s.design.staffCount) || 1);
+            if (stage === 'finishing') return Math.max(1, Number(s.finishing.staffCount) || 1);
+            return null; // dyeing — unconstrained
+        }
+
+        // Greedy Earliest-Due-Date (EDD) parallel-machine scheduler for ONE department/stage.
+        //   items: [{ id, earliestStart: Date, duration: number (days, > 0), dueDate: Date|null }]
+        //   concurrency: number of parallel slots (looms/staff) this stage can run at once, or a
+        //     falsy value (null) for an unconstrained stage — every item then simply runs starting at
+        //     its own earliestStart with no queueing at all.
+        // Priority rule (confirmed with the user): the job with the EARLIER "กำหนดส่ง" (dueDate) gets
+        // the next free slot first; a job with no dueDate yet goes last. When two jobs tie on dueDate,
+        // whichever became ready for this stage earlier keeps its place, then original order — so
+        // re-running this on unchanged input always produces the same schedule (no random reshuffling
+        // every time recomputeAllSchedules() runs).
+        // Returns a Map: id -> { start: Date, finish: Date }.
+        function scheduleStageEDD(items, concurrency) {
+            const result = new Map();
+            const runnable = items.filter(it => it.duration > 0);
+            if (!concurrency || concurrency === Infinity) {
+                runnable.forEach(it => {
+                    result.set(it.id, { start: it.earliestStart, finish: addDaysUTC(it.earliestStart, it.duration) });
+                });
+                return result;
+            }
+            const sorted = runnable.map((it, i) => ({ it, i })).sort((a, b) => {
+                const da = a.it.dueDate ? a.it.dueDate.getTime() : Infinity;
+                const db = b.it.dueDate ? b.it.dueDate.getTime() : Infinity;
+                if (da !== db) return da - db;
+                const sa = a.it.earliestStart.getTime(), sb = b.it.earliestStart.getTime();
+                if (sa !== sb) return sa - sb;
+                return a.i - b.i;
+            });
+            const slotFreeAt = new Array(concurrency).fill(null); // null = free from the very start
+            sorted.forEach(({ it }) => {
+                let bestSlot = 0;
+                for (let s = 1; s < slotFreeAt.length; s++) {
+                    const cur = slotFreeAt[s] ? slotFreeAt[s].getTime() : -Infinity;
+                    const best = slotFreeAt[bestSlot] ? slotFreeAt[bestSlot].getTime() : -Infinity;
+                    if (cur < best) bestSlot = s;
+                }
+                const slotReadyAt = slotFreeAt[bestSlot];
+                const start = (slotReadyAt && slotReadyAt.getTime() > it.earliestStart.getTime()) ? slotReadyAt : it.earliestStart;
+                const finish = addDaysUTC(start, it.duration);
+                slotFreeAt[bestSlot] = finish;
+                result.set(it.id, { start, finish });
+            });
+            return result;
+        }
+
+        // Recomputes EVERY active (non-shipped) M/O, S/O's order.planDates.{design,dyeing,weaving,
+        // finishing} TOGETHER in one pass, walking the pipeline design → dyeing → weaving → finishing
+        // stage by stage. Within each stage it uses scheduleStageEDD() so that when two or more jobs'
+        // schedules would overlap in the same department beyond its actual capacity (looms/staff), the
+        // job with the earlier กำหนดส่ง keeps its dates and the other one automatically gets pushed
+        // back to whenever a slot actually frees up — this is what replaces having to manually notice
+        // and re-schedule a conflicting job.
+        //
+        // Important, confirmed boundaries:
+        //   - order.dueDate (the customer commitment) is NEVER touched here — only the internal
+        //     working schedule order.planDates.*. If a pushed-back plan date now lands after the due
+        //     date, that already surfaces via the existing getDeadlineWarning()/deadline badge — no
+        //     changes needed there.
+        //   - order.isInserted ("งานแทรก") is a separate, purely manual queue-jump flag on the Kanban
+        //     board and is left untouched — this scheduler only ever looks at dueDate for priority.
+        //   - Runs automatically after anything that can change the queue (see call sites): a new
+        //     M/O/S/O, an edited duration/open date/due date, or a change to the staff/loom counts.
+        //   - Only orders whose computed dates actually changed get re-persisted/synced, to avoid
+        //     spamming the Google Sheet with writes on every keystroke-triggered recompute.
+        function recomputeAllSchedules() {
+            const STAGES = ['design', 'dyeing', 'weaving', 'finishing'];
+            const activeOrders = [];
+            productionOrders.forEach((order, idx) => {
+                if (order.shipped) return; // finished & shipped — no longer competing for capacity
+                const anchorRaw = normalizeDateString(order.openDate) || normalizeDateString(order.createdAt);
+                const anchor = anchorRaw ? parseDateOnly(anchorRaw) : null;
+                if (!anchor) return; // no anchor date yet — nothing to schedule (same as the old logic)
+                activeOrders.push({ order, idx, anchor });
+            });
+
+            // cursor[idx] = earliest date this order's NEXT stage may start — begins at its own
+            // openDate/createdAt anchor, then advances stage by stage as each department is resolved.
+            const cursor = {};
+            activeOrders.forEach(a => { cursor[a.idx] = a.anchor; });
+
+            const dueDateByIdx = {};
+            activeOrders.forEach(a => {
+                const d = normalizeDateString(a.order.dueDate);
+                dueDateByIdx[a.idx] = d ? parseDateOnly(d) : null;
+            });
+
+            const changedIdx = new Set();
+
+            STAGES.forEach(stage => {
+                const concurrency = getStageConcurrency(stage);
+                const items = [];
+                activeOrders.forEach(a => {
+                    const days = Number((a.order.planDurations || {})[stage]) || 0;
+                    if (days <= 0) return; // duration not entered for this stage yet — skip, as before
+                    items.push({ id: a.idx, earliestStart: cursor[a.idx], duration: days, dueDate: dueDateByIdx[a.idx] });
+                });
+                const scheduled = scheduleStageEDD(items, concurrency);
+                scheduled.forEach((res, idx) => {
+                    cursor[idx] = res.finish;
+                    const order = productionOrders[idx];
+                    if (!order.planDates || typeof order.planDates !== 'object') {
+                        order.planDates = { design: '', planning: '', dyeing: '', weaving: '', finishing: '' };
+                    }
+                    const newDateStr = formatDateKeyUTC(res.finish);
+                    if (order.planDates[stage] !== newDateStr) {
+                        order.planDates[stage] = newDateStr;
+                        changedIdx.add(idx);
+                    }
+                });
+            });
+
+            // Re-apply the "แผนกวางแผน ต้องเสร็จวันที่ = last computed stage" auto-follow behaviour —
+            // same rule the old recomputePlanDatesFromDurations() had (see order.planningDeadlineAuto).
+            activeOrders.forEach(a => {
+                const order = a.order;
+                if (order.planningDeadlineAuto === false) return;
+                const lastComputedDate = STAGES.map(s => order.planDates && order.planDates[s]).filter(Boolean).pop();
+                if (lastComputedDate && order.planDates.planning !== lastComputedDate) {
+                    order.planDates.planning = lastComputedDate;
+                    changedIdx.add(a.idx);
+                }
+            });
+
+            if (changedIdx.size > 0) {
+                changedIdx.forEach(idx => persistOrderChange(productionOrders[idx]));
+                rerenderOrderViews(currentDetailOrderIndex);
+                if (changedIdx.size > 1) {
+                    showToast(`จัดคิวตารางแผนกใหม่อัตโนมัติ (${changedIdx.size} งาน) เนื่องจากมีงานชนกันในคิว`, 'fa-calendar-check', 'text-indigo-500');
+                }
+            }
         }
 
         // Generic setter for the few fields that stay scalar (not itemized): due date, the planning
@@ -5899,10 +6826,13 @@
                 recomputeStagePercent(order, 'weaving');
             }
             // NEW (2026-09-11): a department duration (or the order's own open date, which anchors the
-            // whole chain) changed — recompute the resulting planDates.design/dyeing/weaving/finishing.
-            // See recomputePlanDatesFromDurations().
-            if (path.indexOf('planDurations.') === 0 || path === 'openDate') {
-                recomputePlanDatesFromDurations(order);
+            // whole chain) changed — recompute the resulting planDates.design/dyeing/weaving/finishing
+            // for EVERY order together (not just this one), since a duration/open-date/due-date change
+            // can also shift which orders compete for the same loom/staff slots. See
+            // recomputeAllSchedules() above (dueDate is included here because it drives scheduling
+            // PRIORITY — the earlier-due job keeps its slot — even though it's never written back to).
+            if (path.indexOf('planDurations.') === 0 || path === 'openDate' || path === 'dueDate') {
+                recomputeAllSchedules();
             }
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
@@ -6040,7 +6970,18 @@
             renderDepartmentFields();
         }
 
+        // NEW (2026-09-11): this used to open a popup modal — the same form now lives inline as the
+        // "แผนกขาย" board tab (id="salesFormContainer"), so "opening" it means resetting the fields and
+        // switching to that tab instead of un-hiding an overlay. Name kept as-is since callers (the
+        // toolbar button, board tab pill) didn't need to change.
         function openNewOrderModal() {
+            // NEW (2026-09-11): เปิด M/O, S/O ใหม่ เป็นสิทธิ์แผนกวางแผน/Admin เท่านั้น (ตรงกับ
+            // orders_insert_planning_admin ใน supabase/schema.sql) — no-op (ทุกคนเปิดได้ตามเดิม) ถ้ายัง
+            // ไม่ได้ตั้งค่า Supabase
+            if (!canEditMaster()) {
+                showToast('เฉพาะแผนกวางแผน/Admin เท่านั้นที่เปิด M/O, S/O ใหม่ได้', 'fa-lock', 'text-amber-400');
+                return;
+            }
             document.getElementById('newOrderMoSo').value = '';
             document.getElementById('newOrderCustomerName').value = '';
             document.getElementById('newOrderCustomerPO').value = '';
@@ -6069,11 +7010,13 @@
             document.getElementById('newOrderSalesName').value = '';
             document.getElementById('newOrderSizeItemsBody').innerHTML = '';
             addNewOrderSizeRow();
-            document.getElementById('newOrderModal').classList.remove('hidden');
+            setBoardDepartmentTab('sales');
         }
 
+        // "Closing" now means leaving the แผนกขาย tab and going back to ทั้งหมด — used by the ยกเลิก
+        // button and by submitNewOrder() after a successful add.
         function closeNewOrderModal() {
-            document.getElementById('newOrderModal').classList.add('hidden');
+            setBoardDepartmentTab('');
         }
 
         // Shared formula for every size line item, new-order modal and order-detail modal alike:
@@ -6269,7 +7212,7 @@
                 // renderDesignSectionHtml().
                 design: { done: false, doneBy: '', note: '' },
                 dyeing: { colorsOrdered: 0, colorsPerDay: 0, colorsCompleted: 0, percent: 0, items: [], plannedColorCount: 0, plannedKg: 0, surplusUsed: false, surplusColorCount: 0, surplusKg: 0 },
-                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0 },
+                weaving: { receivedPrintedFabric: false, yarnComplete: false, status: 'waiting', percent: 0, items: [], totalYarnColors: 0, yarnColorsReceived: 0, sqmWoven: 0, sqmPerDay: 0, dailyLog: [] },
                 finishing: { status: 'waiting', percent: 0, items: [] },
                 readyToShip: false,
                 shipped: false,
@@ -6289,6 +7232,10 @@
             productionOrders.push(order);
             saveOrdersToLocal();
             syncOrderToSheet(order);
+            // NEW: a brand-new M/O, S/O joins the queue for design/weaving/finishing capacity right
+            // away — recompute every order's schedule together so it (and anything it bumps) gets
+            // correct plan dates immediately, not just after the next unrelated edit.
+            recomputeAllSchedules();
             renderProductionBoard();
             renderProductionTimeline();
             renderProductionOverview();
@@ -6819,6 +7766,7 @@
                             <input type="number" min="0" step="0.01" value="${order.weaving.sqmPerDay || ''}" onchange="updateOrderField(${orderIndex}, 'weaving.sqmPerDay', Number(this.value))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                         </div>
                     </div>
+                    ${renderWeavingDailyLogHtml(order)}
                 `;
             }
 
@@ -6925,7 +7873,13 @@
                 const html = renderOrderDetailStageSection(order, orderIndex, stage);
                 return stage === 'planning' ? html + renderDesignSectionHtml(order, orderIndex) : html;
             }).join('');
-            document.getElementById('orderDetailBody').innerHTML = orderSizeItemsHtml + orderDesignImageHtml + orderExtraInfoHtml + stageSectionsHtml;
+            // NEW (2026-09-11): wrapped in a named container so applyDeptPermissionGating() (see the
+            // "Supabase — Login + สิทธิ์" block above) has one place to lock down when the signed-in
+            // user isn't วางแผน/Admin — everything here (size items, design image, PO/customer/due date
+            // etc.) is master M/O info, not any one department's working data.
+            document.getElementById('orderDetailBody').innerHTML =
+                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}</div>` + stageSectionsHtml;
+            applyDeptPermissionGating();
         }
 
         function openOrderDetailModal(orderIndex, focusStage) {
@@ -7093,6 +8047,8 @@
 
         function openConfigModal() {
             document.getElementById('gasUrlInput').value = gasWebAppUrl;
+            document.getElementById('supabaseUrlInput').value = supabaseUrl;
+            document.getElementById('supabaseAnonKeyInput').value = supabaseAnonKey;
             document.getElementById('configModal').classList.remove('hidden');
         }
 
@@ -7106,11 +8062,25 @@
             document.getElementById('prodSettingRegularHours').value = productionSettings.regularHoursPerDay;
             document.getElementById('prodSettingTuftingStaff').value = productionSettings.tufting.staffCount;
             document.getElementById('prodSettingTuftingOt').value = productionSettings.tufting.otHours;
+            document.getElementById('prodSettingTuftingLoomCount').value = productionSettings.tufting.loomCount;
             document.getElementById('prodSettingDesignStaff').value = productionSettings.design.staffCount;
             document.getElementById('prodSettingDesignOt').value = productionSettings.design.otHours;
             document.getElementById('prodSettingFinishingStaff').value = productionSettings.finishing.staffCount;
             document.getElementById('prodSettingFinishingOt').value = productionSettings.finishing.otHours;
             document.getElementById('productionSettingsModal').classList.remove('hidden');
+
+            // NEW (2026-09-11): ค่าตั้งต้นการคำนวณเวลาผลิตเป็นค่ากลางระดับบริษัท — จำกัดให้ Admin แก้ไข
+            // เท่านั้น (ตรงกับ settings_update_admin ใน supabase/schema.sql) แผนกอื่นเปิดดูได้แต่แก้ไม่ได้
+            const modalEl = document.getElementById('productionSettingsModal');
+            const isReadOnly = supabaseClient && !(currentUser && currentUser.role === 'admin');
+            modalEl.querySelectorAll('input').forEach(el => { el.disabled = isReadOnly; });
+            const saveBtn = document.getElementById('prodSettingsSaveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = isReadOnly;
+                saveBtn.classList.toggle('opacity-40', isReadOnly);
+                saveBtn.classList.toggle('cursor-not-allowed', isReadOnly);
+                saveBtn.title = isReadOnly ? 'เฉพาะ Admin เท่านั้นที่แก้ไขค่านี้ได้' : '';
+            }
         }
 
         function closeProductionSettingsModal() {
@@ -7124,15 +8094,17 @@
             };
             productionSettings = {
                 regularHoursPerDay: num('prodSettingRegularHours', 8),
-                tufting: { staffCount: num('prodSettingTuftingStaff', 1), otHours: num('prodSettingTuftingOt', 0) },
+                tufting: { staffCount: num('prodSettingTuftingStaff', 1), otHours: num('prodSettingTuftingOt', 0), loomCount: num('prodSettingTuftingLoomCount', 1) },
                 design: { staffCount: num('prodSettingDesignStaff', 1), otHours: num('prodSettingDesignOt', 0) },
                 finishing: { staffCount: num('prodSettingFinishingStaff', 1), otHours: num('prodSettingFinishingOt', 0) }
             };
             syncProductionSettingsToSheet();
             closeProductionSettingsModal();
             // Every open M/O's suggested days/rate depends on these settings — refresh the currently-
-            // open detail modal + the Gantt timeline (tufting daily-rate badge) so nothing looks stale.
+            // open detail modal + the Gantt timeline (tufting daily-rate badge) so nothing looks stale,
+            // then re-run the capacity-aware scheduler since staff/loom counts just changed.
             if (currentDetailOrderIndex !== null) renderOrderDetailModalBody(currentDetailOrderIndex);
+            recomputeAllSchedules();
             renderProductionTimeline();
             showToast('บันทึกค่าตั้งต้นการคำนวณเวลาผลิตแล้ว');
         }
@@ -7215,8 +8187,17 @@
         function saveGasConfig() {
             gasWebAppUrl = document.getElementById('gasUrlInput').value.trim();
             localStorage.setItem('qc_gas_url', gasWebAppUrl);
+
+            // NEW (2026-09-11): Supabase URL/anon key — see initSupabase()/"Supabase — Login + สิทธิ์"
+            // block above. Saving a blank value here turns the whole login/permission system back off.
+            supabaseUrl = document.getElementById('supabaseUrlInput').value.trim();
+            supabaseAnonKey = document.getElementById('supabaseAnonKeyInput').value.trim();
+            localStorage.setItem('qc_supabase_url', supabaseUrl);
+            localStorage.setItem('qc_supabase_anon_key', supabaseAnonKey);
+            initSupabase();
+
             closeConfigModal();
-            showToast('บันทึก URL สำเร็จ กำลังซิงค์...');
+            showToast('บันทึกการตั้งค่าสำเร็จ กำลังซิงค์...');
             if (gasWebAppUrl) fetchDataFromGoogleSheet(true);
         }
 
