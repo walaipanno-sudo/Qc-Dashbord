@@ -586,7 +586,23 @@
                  of a modal. Same ids/functions as before (openNewOrderModal(), submitNewOrder(), the
                  size-row helpers) — only the wrapper changed from a fixed-overlay modal to inline content
                  shown/hidden by updateBoardColumnVisibility(). -->
-            <div id="salesFormContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 max-w-lg mx-auto overflow-hidden p-6 space-y-4 mb-4">
+            <div id="salesFormContainer" class="hidden mb-4">
+                <!-- NEW (2026-09-11): "แผนกขาย" sub-tabs — the tab used to be JUST the add-order form;
+                     now it also holds a spreadsheet-style summary report (see renderSalesReportTables()),
+                     so a small local pill switcher picks between the two. Kept as its own switcher
+                     (not more BOARD_TABS pills) since these two panes share the one "แผนกขาย" department,
+                     they don't filter productionOrders columns the way the outer department tabs do. -->
+                <div class="flex items-center gap-2 mb-4">
+                    <button onclick="setSalesSubTab('add')" id="salesSubTabBtn-add" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                        <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O, S/O ใหม่
+                    </button>
+                    <button onclick="setSalesSubTab('report')" id="salesSubTabBtn-report" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-table"></i> รายการทั้งหมด (M/O, S/O)
+                    </button>
+                </div>
+
+                <div id="salesSubTab-add">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 max-w-lg mx-auto overflow-hidden p-6 space-y-4">
                 <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> เพิ่ม M/O, S/O ใหม่เข้าสายการผลิต</h3>
                 <p class="text-[11px] text-slate-400 -mt-3"><i class="fa-solid fa-circle-info mr-1"></i>สำหรับแผนกขายเป็นผู้กรอกข้อมูล — ทุกแผนกยังแก้ไข/ลบรายการนี้ได้ตามปกติ</p>
                 <div>
@@ -617,7 +633,20 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O และ S/O</label>
-                    <input type="text" id="newOrderMoSo" placeholder="เช่น M/O: 6902-01, S/O: 45001" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <!-- NEW (2026-09-11): auto-run number — RUNS automatically from the ประเภทรายการ
+                         (M/O/S/O) + ตลาด (ต่างประเทศ/ในประเทศ) toggles above (see refreshAutoMoSo(),
+                         triggered from updateNewOrderTypeStyle()/updateNewOrderMarketStyle()), but stays
+                         a plain editable text field — typing in it (markNewOrderMoSoManual()) stops it
+                         from being overwritten if the type/market toggles change afterward. The refresh
+                         button lets someone re-run the auto number on demand (e.g. after editing it away
+                         and changing their mind). -->
+                    <div class="flex items-center gap-1.5">
+                        <input type="text" id="newOrderMoSo" oninput="markNewOrderMoSoManual()" placeholder="เลือกประเภทรายการ + ตลาด ด้านบนเพื่อรันเลขอัตโนมัติ (แก้ไขเองได้)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="button" onclick="refreshAutoMoSo(true)" title="รันเลขใหม่อัตโนมัติ" class="shrink-0 w-10 h-10 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition inline-flex items-center justify-center">
+                            <i class="fa-solid fa-arrows-rotate text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">M/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">TH</span> • S/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">D</span> • S/O ต่างประเทศ = นำหน้าด้วย <span class="font-semibold">SC</span> • M/O ต่างประเทศ = รันเลขปกติ</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อลูกค้า</label>
@@ -697,6 +726,189 @@
                 <div class="flex gap-2 pt-2">
                     <button type="button" onclick="closeNewOrderModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
                     <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่มรายการ</button>
+                </div>
+                </div>
+                </div>
+
+                <!-- NEW (2026-09-11): "รายการทั้งหมด (M/O, S/O)" — spreadsheet-style summary report,
+                     styled like an Excel/Google Sheets grid (gridlines, frozen header row, frozen
+                     row-number column on the left — see renderSalesReportTables()). M/O and S/O get their
+                     own separate table each, per the user's preference, using the same core fields already
+                     captured on the "เพิ่ม M/O, S/O ใหม่" form above. -->
+                <div id="salesSubTab-report" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-6">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-600"></i> สรุปรายการ M/O, S/O ทั้งหมด</h3>
+                        <div class="relative w-full sm:w-72">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                            <input type="text" id="salesReportSearchInput" oninput="renderSalesReportTables()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- NEW (2026-09-11): M/O and S/O each split into their own ต่างประเทศ/ในประเทศ table
+                         (4 tables total) per the user's request — the ตลาด column is dropped from each
+                         since it's now implied by which table a row is in. renderSalesReportTable() below
+                         is the one shared row-renderer all 4 (plus the 2 "ยังไม่ระบุตลาด" fallback tables)
+                         call, so the column layout only has to be maintained in one place. -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-invoice"></i> M/O ต่างประเทศ
+                                <span id="salesReportCount-MO-export" class="text-[11px] bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">0</span>
+                            </h4>
+                            <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                                <table class="min-w-full text-xs border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-slate-100">
+                                            <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ M/O</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesReportBody-MO-export"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-indigo-700 text-xs uppercase mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-invoice"></i> M/O ในประเทศ
+                                <span id="salesReportCount-MO-domestic" class="text-[11px] bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">0</span>
+                            </h4>
+                            <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                                <table class="min-w-full text-xs border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-slate-100">
+                                            <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ M/O</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesReportBody-MO-domestic"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-amber-700 text-xs uppercase mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-invoice"></i> S/O ต่างประเทศ
+                                <span id="salesReportCount-SO-export" class="text-[11px] bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200">0</span>
+                            </h4>
+                            <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                                <table class="min-w-full text-xs border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-slate-100">
+                                            <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ S/O</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesReportBody-SO-export"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-amber-700 text-xs uppercase mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-invoice"></i> S/O ในประเทศ
+                                <span id="salesReportCount-SO-domestic" class="text-[11px] bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200">0</span>
+                            </h4>
+                            <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                                <table class="min-w-full text-xs border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-slate-100">
+                                            <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ S/O</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                            <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesReportBody-SO-domestic"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fallback tables — only shown (see renderSalesReportTables()) if an M/O or S/O
+                         exists with no ตลาด chosen at all (e.g. old data from before the ตลาด toggle
+                         existed), so a record like that is never silently dropped from the report. -->
+                    <div id="salesReportFallbackWrap-MO" class="hidden">
+                        <h4 class="font-bold text-slate-500 text-xs uppercase mb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-question"></i> M/O — ยังไม่ระบุตลาด
+                            <span id="salesReportCount-MO-none" class="text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-300">0</span>
+                        </h4>
+                        <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                            <table class="min-w-full text-xs border-collapse">
+                                <thead class="sticky top-0 z-10">
+                                    <tr class="bg-slate-100">
+                                        <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ M/O</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesReportBody-MO-none"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="salesReportFallbackWrap-SO" class="hidden">
+                        <h4 class="font-bold text-slate-500 text-xs uppercase mb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-question"></i> S/O — ยังไม่ระบุตลาด
+                            <span id="salesReportCount-SO-none" class="text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full border border-slate-300">0</span>
+                        </h4>
+                        <div class="overflow-auto border border-slate-300 rounded-lg max-h-[380px]">
+                            <table class="min-w-full text-xs border-collapse">
+                                <thead class="sticky top-0 z-10">
+                                    <tr class="bg-slate-100">
+                                        <th class="sticky left-0 top-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-500 w-10">#</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">วันที่เปิด</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ S/O</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600">ชื่อลูกค้า</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">เลขที่ PO ลูกค้า</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-left font-semibold text-slate-600 whitespace-nowrap">กำหนดส่ง</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">ตร.ม.</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">จำนวนชิ้น</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 whitespace-nowrap">สถานะ</th>
+                                        <th class="border border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-600 w-14">ดู</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesReportBody-SO-none"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -4550,7 +4762,13 @@
                 // the same information gets captured right when the order is opened instead of living
                 // only in a separate spreadsheet — everything from that sheet EXCEPT price/amount
                 // columns (Unit Price, Amount, Grand Total), which this dashboard has no use for.
-                openDate: normalizeDateString(raw.openDate) || raw.createdAt || '',
+                // NEW (2026-09-11): wrap the raw.createdAt fallback in normalizeDateString() too — an
+                // order saved before this openDate field existed used to fall back to the raw createdAt
+                // TIMESTAMP as-is (e.g. "2026-09-11T08:23:45.123Z"), which broke the <input type="date">
+                // in the order-detail modal (that input silently rejects anything but YYYY-MM-DD) and
+                // showed a time portion in the "รายการทั้งหมด" sales report. Now openDate is always either
+                // a clean YYYY-MM-DD or ''.
+                openDate: normalizeDateString(raw.openDate) || normalizeDateString(raw.createdAt) || '',
                 locationName: raw.locationName || '',           // LOCATION NUMBER & LOCATION NAME
                 quality: raw.quality || '',                     // QUALITY (YARNS COUNT & TEXTURE TUFTING)
                 packaging: raw.packaging || '',                 // PACKAGING
@@ -5978,6 +6196,10 @@
 
             renderDesignBoardColumn(searchTerm);
             renderNotifyBoardColumn(searchTerm);
+            // NEW (2026-09-11): keep the "แผนกขาย" > "รายการทั้งหมด" spreadsheet report fresh too,
+            // whenever it's the currently-visible sub-tab — same reasoning as the design/notify columns
+            // above, this function gets called on every productionOrders mutation already.
+            if (typeof salesActiveSubTab !== 'undefined' && salesActiveSubTab === 'report') renderSalesReportTables();
             updateBoardDepartmentTabCounts();
         }
 
@@ -6093,6 +6315,11 @@
             boardDepartmentFilter = (stage === 'sales' || BOARD_TABS.includes(stage)) ? stage : '';
             updateBoardDepartmentTabStyles();
             updateBoardColumnVisibility();
+            // NEW (2026-09-11): refresh the "รายการทั้งหมด" report in case productionOrders changed
+            // while the sales tab wasn't visible (e.g. an order was shipped from another board tab).
+            if (stage === 'sales' && typeof salesActiveSubTab !== 'undefined' && salesActiveSubTab === 'report') {
+                renderSalesReportTables();
+            }
         }
 
         function updateBoardDepartmentTabStyles() {
@@ -7105,6 +7332,7 @@
                 return;
             }
             document.getElementById('newOrderMoSo').value = '';
+            document.getElementById('newOrderMoSo').dataset.moSoAuto = 'true';
             document.getElementById('newOrderCustomerName').value = '';
             document.getElementById('newOrderCustomerPO').value = '';
             document.getElementById('newOrderDueDate').value = '';
@@ -7133,12 +7361,116 @@
             document.getElementById('newOrderSizeItemsBody').innerHTML = '';
             addNewOrderSizeRow();
             setBoardDepartmentTab('sales');
+            // NEW (2026-09-11): "opening" the add-order form should always land on the เพิ่ม M/O, S/O
+            // ใหม่ sub-tab, even if someone left แผนกขาย parked on the รายการทั้งหมด report last time.
+            setSalesSubTab('add');
         }
 
         // "Closing" now means leaving the แผนกขาย tab and going back to ทั้งหมด — used by the ยกเลิก
         // button and by submitNewOrder() after a successful add.
         function closeNewOrderModal() {
             setBoardDepartmentTab('');
+        }
+
+        // NEW (2026-09-11): "แผนกขาย" local sub-tab switcher — เพิ่ม M/O, S/O ใหม่ (the form) vs
+        // รายการทั้งหมด (the spreadsheet-style summary report, see renderSalesReportTables()). Purely a
+        // display toggle within the already-selected แผนกขาย department tab.
+        let salesActiveSubTab = 'add';
+        function setSalesSubTab(tab) {
+            salesActiveSubTab = (tab === 'report') ? 'report' : 'add';
+            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            [
+                { el: document.getElementById('salesSubTabBtn-add'), isActive: salesActiveSubTab === 'add' },
+                { el: document.getElementById('salesSubTabBtn-report'), isActive: salesActiveSubTab === 'report' }
+            ].forEach(({ el, isActive }) => {
+                if (!el) return;
+                if (isActive) { el.classList.remove(...inactiveClasses); el.classList.add(...activeClasses); }
+                else { el.classList.remove(...activeClasses); el.classList.add(...inactiveClasses); }
+            });
+            const addPane = document.getElementById('salesSubTab-add');
+            const reportPane = document.getElementById('salesSubTab-report');
+            if (addPane) addPane.classList.toggle('hidden', salesActiveSubTab !== 'add');
+            if (reportPane) reportPane.classList.toggle('hidden', salesActiveSubTab !== 'report');
+            if (salesActiveSubTab === 'report') renderSalesReportTables();
+        }
+
+        // NEW (2026-09-11): "รายการทั้งหมด (M/O, S/O)" spreadsheet-style report — split into 4 tables
+        // (M/O ต่างประเทศ / M/O ในประเทศ / S/O ต่างประเทศ / S/O ในประเทศ), each sorted by วันที่เปิด so the
+        // list reads the same order a Google Sheet log would accumulate in. Reuses the same
+        // productionOrders data + helpers (detectOrderTypeFromMoSo, getEffectiveStage, STAGE_LABELS) as
+        // every other view — this is purely a different layout on data that's already correct everywhere
+        // else, not a second source of truth. Any M/O, S/O with no ตลาด chosen at all falls into the
+        // "ยังไม่ระบุตลาด" table for its type instead of silently disappearing from the report.
+        function renderSalesReportRow(order, rowNumber) {
+            const orderIndex = productionOrders.indexOf(order);
+            const statusLabel = STAGE_LABELS[getEffectiveStage(order)] || '-';
+            const openDateOnly = normalizeDateString(order.openDate) || order.openDate || '-';
+            const rowBg = rowNumber % 2 === 0 ? 'bg-slate-50/70' : 'bg-white';
+            const rowNumBg = rowNumber % 2 === 0 ? 'bg-slate-100' : 'bg-slate-50';
+            return `
+                <tr class="${rowBg} hover:bg-indigo-50/40">
+                    <td class="sticky left-0 z-[5] ${rowNumBg} border border-slate-300 px-2 py-1.5 text-center text-slate-500 font-medium">${rowNumber + 1}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 whitespace-nowrap">${escapeHtml(openDateOnly)}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 font-mono font-semibold ${orderTypeTextClass(order.orderType)} whitespace-nowrap">${escapeHtml(order.moSo || '-')}</td>
+                    <td class="border border-slate-300 px-2 py-1.5">${escapeHtml(order.customerName || '-')}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.customerPO || '-')}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.dueDate || '-')}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 text-right whitespace-nowrap">${escapeHtml(String(order.totalSqm || 0))}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 text-right whitespace-nowrap">${escapeHtml(String(order.totalPieces || 0))}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 text-center whitespace-nowrap">${escapeHtml(statusLabel)}</td>
+                    <td class="border border-slate-300 px-2 py-1.5 text-center">
+                        <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-[11px] font-medium"><i class="fa-solid fa-eye"></i> ดู</button>
+                    </td>
+                </tr>
+            `;
+        }
+        function renderSalesReportTable(bodyId, countId, list, emptyMessage) {
+            const tbody = document.getElementById(bodyId);
+            const countEl = document.getElementById(countId);
+            if (!tbody) return;
+            if (countEl) countEl.textContent = list.length;
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="border border-slate-300 px-2 py-4 text-center text-slate-400">${emptyMessage}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = list.map((order, i) => renderSalesReportRow(order, i)).join('');
+        }
+        function renderSalesReportTables() {
+            const searchInputEl = document.getElementById('salesReportSearchInput');
+            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
+
+            const matchesSearch = (order) => {
+                if (!searchTerm) return true;
+                const haystack = [order.moSo, order.customerName, order.customerPO]
+                    .map(v => String(v || '').toLowerCase())
+                    .join(' ');
+                return haystack.includes(searchTerm);
+            };
+            const sortByOpenDateThenMoSo = (a, b) => {
+                const ad = normalizeDateString(a.openDate) || '';
+                const bd = normalizeDateString(b.openDate) || '';
+                if (ad !== bd) return ad < bd ? -1 : 1;
+                return String(a.moSo || '').localeCompare(String(b.moSo || ''));
+            };
+            const emptyMsg = searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ยังไม่มีรายการ';
+
+            ['MO', 'SO'].forEach(type => {
+                const ofType = productionOrders.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === type && matchesSearch(o));
+
+                const exportList = ofType.filter(o => o.market === 'export').sort(sortByOpenDateThenMoSo);
+                const domesticList = ofType.filter(o => o.market === 'domestic').sort(sortByOpenDateThenMoSo);
+                const noneList = ofType.filter(o => o.market !== 'export' && o.market !== 'domestic').sort(sortByOpenDateThenMoSo);
+
+                renderSalesReportTable(`salesReportBody-${type}-export`, `salesReportCount-${type}-export`, exportList, emptyMsg);
+                renderSalesReportTable(`salesReportBody-${type}-domestic`, `salesReportCount-${type}-domestic`, domesticList, emptyMsg);
+                renderSalesReportTable(`salesReportBody-${type}-none`, `salesReportCount-${type}-none`, noneList, emptyMsg);
+
+                // "ยังไม่ระบุตลาด" fallback table only takes up space on screen when there's actually
+                // something in it — an order created before the ตลาด toggle existed, most likely.
+                const fallbackWrap = document.getElementById(`salesReportFallbackWrap-${type}`);
+                if (fallbackWrap) fallbackWrap.classList.toggle('hidden', noneList.length === 0);
+            });
         }
 
         // Shared formula for every size line item, new-order modal and order-detail modal alike:
@@ -7241,6 +7573,9 @@
             const soLabel = document.getElementById('newOrderTypeSoLabel');
             moLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isSo ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-indigo-600 border-indigo-600 text-white'}`;
             soLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isSo ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-300 text-amber-700'}`;
+            // NEW (2026-09-11): M/O <-> S/O uses a different auto-number prefix (see refreshAutoMoSo()),
+            // so re-run it whenever the type toggle changes.
+            refreshAutoMoSo();
         }
 
         // NEW (2026-09c): mirrors updateNewOrderTypeStyle() above, for the ต่างประเทศ/ในประเทศ toggle —
@@ -7253,6 +7588,67 @@
             const domesticLabel = document.getElementById('newOrderMarketDomesticLabel');
             exportLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isExport ? 'bg-sky-600 border-sky-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`;
             domesticLabel.className = `flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition ${isDomestic ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`;
+            // NEW (2026-09-11): M/O/S/O × ตลาด each map to a different auto-number prefix (see
+            // refreshAutoMoSo()), so re-run it whenever the market toggle changes.
+            refreshAutoMoSo();
+        }
+
+        // NEW (2026-09-11): auto-run M/O, S/O numbering — prefix by ประเภทรายการ × ตลาด:
+        //   M/O ในประเทศ -> "TH" + running number   |   M/O ต่างประเทศ -> running number, no prefix
+        //   S/O ในประเทศ -> "D" + running number    |   S/O ต่างประเทศ -> "SC" + running number
+        // "Running number" = 1 higher than the highest number already used with that exact prefix among
+        // existing productionOrders (so it keeps counting up correctly even after M/O, S/O get deleted
+        // or entered out of order), formatted to 5 digits — the field stays a normal editable text input,
+        // this only ever WRITES a starting suggestion into it.
+        function moSoPrefixFor(orderType, market) {
+            if (orderType === 'MO') return market === 'domestic' ? 'TH' : '';
+            if (orderType === 'SO') return market === 'domestic' ? 'D' : (market === 'export' ? 'SC' : null);
+            return null;
+        }
+        function nextMoSoRunNumber(prefix) {
+            let maxN = 0;
+            productionOrders.forEach(o => {
+                const raw = String(o.moSo || '').trim().toUpperCase();
+                if (prefix) {
+                    if (!raw.startsWith(prefix)) return;
+                    const m = raw.slice(prefix.length).match(/^(\d+)/);
+                    if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
+                } else {
+                    // "no prefix" group (M/O ต่างประเทศ): plain digits only, so a TH/D/SC-prefixed
+                    // number from one of the other 3 groups never bleeds into this count.
+                    const m = raw.match(/^(\d+)$/);
+                    if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
+                }
+            });
+            return maxN + 1;
+        }
+        function generateAutoMoSo() {
+            const orderType = document.getElementById('newOrderTypeSo').checked ? 'SO' : 'MO';
+            const isExport = document.getElementById('newOrderMarketExport').checked;
+            const isDomestic = document.getElementById('newOrderMarketDomestic').checked;
+            if (!isExport && !isDomestic) return ''; // ยังไม่เลือกตลาด — รอเลือกก่อนถึงจะรันเลขได้
+            const market = isDomestic ? 'domestic' : 'export';
+            const prefix = moSoPrefixFor(orderType, market) || '';
+            const n = nextMoSoRunNumber(prefix);
+            return prefix + String(n).padStart(5, '0');
+        }
+        // Re-runs the auto number into #newOrderMoSo — unless the person already typed their own value
+        // in there (markNewOrderMoSoManual() below flips off auto-tracking), in which case changing the
+        // type/market toggles afterward must NOT clobber what they typed. `force: true` (the refresh
+        // button) always re-runs it regardless, since that's an explicit "regenerate" action.
+        function refreshAutoMoSo(force) {
+            const input = document.getElementById('newOrderMoSo');
+            if (!input) return;
+            if (!force && input.dataset.moSoAuto === 'false') return;
+            const auto = generateAutoMoSo();
+            if (auto) {
+                input.value = auto;
+                input.dataset.moSoAuto = 'true';
+            }
+        }
+        function markNewOrderMoSoManual() {
+            const input = document.getElementById('newOrderMoSo');
+            if (input) input.dataset.moSoAuto = 'false';
         }
 
         function submitNewOrder() {
