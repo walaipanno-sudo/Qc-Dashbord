@@ -646,7 +646,7 @@
                             <i class="fa-solid fa-arrows-rotate text-sm"></i>
                         </button>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-1">M/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">TH</span> • S/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">D</span> • S/O ต่างประเทศ = นำหน้าด้วย <span class="font-semibold">SC</span> • M/O ต่างประเทศ = รันเลขปกติ</p>
+                    <p class="text-[10px] text-slate-400 mt-1">รูปแบบ: [นำหน้า][เลข 4 หลัก]/[ปี 2 หลัก] — M/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">TH</span> • S/O ในประเทศ = นำหน้าด้วย <span class="font-semibold">D</span> • S/O ต่างประเทศ = นำหน้าด้วย <span class="font-semibold">SC</span> • M/O ต่างประเทศ = ไม่มีตัวนำหน้า (เช่น 0178/26) • เลขรันใหม่ทุกปี</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อลูกค้า</label>
@@ -966,8 +966,22 @@
                      and drops out of the "ตร.ม. อยู่ในไลน์ผลิต" total exactly the same way either path. -->
                 <div id="boardColWrap-ready_to_ship" class="bg-orange-50/60 border border-orange-100 border-t-4 border-t-orange-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
-                        <h4 class="font-bold text-orange-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-bell text-orange-500"></i> แจ้งเตือน (รอส่ง)</h4>
+                        <h4 class="font-bold text-orange-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-bell text-orange-500"></i> แจ้งเตือน</h4>
                         <span id="boardCount-ready_to_ship" class="text-[11px] bg-white text-orange-700 font-semibold px-2 py-0.5 rounded-full border border-orange-200">0</span>
+                    </div>
+                    <!-- NEW (2026-09-11): "เร่งด่วน" sub-section — orders that AREN'T ready to ship yet
+                         (still in planning/dyeing/weaving/finishing) but are at risk of missing their
+                         deadline (see getDeadlineWarning() — it already returns null for ready_to_ship/
+                         shipped orders, so this list can never overlap with "รอส่ง" below). This is the
+                         part that actually warns ฝ่ายผลิต to hurry up; "รอส่ง" further down is orders
+                         production has ALREADY finished, just waiting on logistics to physically ship. -->
+                    <div class="flex items-center justify-between px-1 -mb-1.5">
+                        <h5 class="font-bold text-rose-700 text-[10px] uppercase flex items-center gap-1.5"><i class="fa-solid fa-fire"></i> เร่งด่วน — ใกล้/เกินกำหนดส่ง</h5>
+                        <span id="boardCount-urgent" class="text-[10px] bg-white text-rose-700 font-semibold px-1.5 py-0.5 rounded-full border border-rose-200">0</span>
+                    </div>
+                    <div id="boardColumn-urgent" class="flex flex-col gap-3"></div>
+                    <div class="flex items-center justify-between px-1 pt-1 border-t border-orange-100 -mb-1.5">
+                        <h5 class="font-bold text-orange-700 text-[10px] uppercase flex items-center gap-1.5"><i class="fa-solid fa-box"></i> รอส่ง — ผลิตเสร็จแล้ว</h5>
                     </div>
                     <div id="boardColumn-ready_to_ship" class="flex flex-col gap-3"></div>
                 </div>
@@ -6196,6 +6210,7 @@
 
             renderDesignBoardColumn(searchTerm);
             renderNotifyBoardColumn(searchTerm);
+            renderUrgentProductionColumn(searchTerm);
             // NEW (2026-09-11): keep the "แผนกขาย" > "รายการทั้งหมด" spreadsheet report fresh too,
             // whenever it's the currently-visible sub-tab — same reasoning as the design/notify columns
             // above, this function gets called on every productionOrders mutation already.
@@ -6247,6 +6262,81 @@
                 const orderIndex = productionOrders.indexOf(order);
                 column.appendChild(buildReadyToShipOrderCard(order, orderIndex));
             });
+        }
+
+        // NEW (2026-09-11): "เร่งด่วน — ใกล้/เกินกำหนดส่ง" — the part of "แจ้งเตือน" that actually warns
+        // ฝ่ายผลิต to hurry up: every order that ISN'T ready to ship yet (still stuck in planning/dyeing/
+        // weaving/finishing) but IS at risk of missing its deadline. Reuses getDeadlineWarning() as-is —
+        // it already returns null for readyToShip/shipped orders (see its own comment), so this list can
+        // never double up with "รอส่ง" below it, and the warning wording/levels stay identical to every
+        // other place a deadline warning already shows (Overview table, Kanban card, detail modal).
+        function renderUrgentProductionColumn(searchTerm) {
+            const column = document.getElementById('boardColumn-urgent');
+            const countEl = document.getElementById('boardCount-urgent');
+            if (!column) return;
+            column.innerHTML = '';
+
+            let ordersHere = productionOrders.filter(o => !!getDeadlineWarning(o));
+            if (orderTypeFilter !== 'all') {
+                ordersHere = ordersHere.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === orderTypeFilter);
+            }
+            ordersHere = ordersHere.filter(o => matchesMarketFilter(o));
+            if (searchTerm) {
+                ordersHere = ordersHere.filter(order => {
+                    const haystack = [order.moSo, order.customerName, order.customerPO]
+                        .map(v => String(v || '').toLowerCase())
+                        .join(' ');
+                    return haystack.includes(searchTerm);
+                });
+            }
+            countEl.textContent = ordersHere.length;
+
+            if (ordersHere.length === 0) {
+                column.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-2">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการเร่งด่วนตอนนี้'}</p>`;
+                return;
+            }
+
+            // Most overdue first (most negative daysRemaining), then soonest-due next — the worst cases
+            // surface at the top so ฝ่ายผลิตเห็นรายการที่ต้องรีบที่สุดก่อน.
+            ordersHere = ordersHere.slice().sort((a, b) => getDeadlineWarning(a).daysRemaining - getDeadlineWarning(b).daysRemaining);
+
+            ordersHere.forEach(order => {
+                const orderIndex = productionOrders.indexOf(order);
+                column.appendChild(buildUrgentProductionCard(order, orderIndex));
+            });
+        }
+
+        // Card for the "เร่งด่วน" list above — shows which department the order is currently stuck in
+        // and the same deadline-warning chip used everywhere else (renderDeadlineWarningBadge()). The
+        // edit button jumps straight to that department's section in the detail modal (openOrderDetailModal
+        // already supports a focusStage — see buildDesignOrderCard()'s equivalent button) so whoever's
+        // looking can update progress without hunting for the right tab first.
+        function buildUrgentProductionCard(order, orderIndex) {
+            const warning = getDeadlineWarning(order);
+            const card = document.createElement('div');
+            const cardBorderCls = warning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200';
+            card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2`;
+            const stage = order.currentStage;
+            const stageLabel = STAGE_LABELS[stage] || stage;
+            const stageTextCls = (STAGE_COLORS[stage] && STAGE_COLORS[stage].text) || 'text-slate-600';
+            const percent = (order[stage] && order[stage].percent) || 0;
+
+            const headerHtml = `
+                <div class="flex justify-between items-start gap-2">
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">อยู่ที่แผนก: <span class="font-semibold ${stageTextCls}">${escapeHtml(stageLabel)}</span> (${percent}%)</p>
+                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
+                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </button>
+                </div>
+            `;
+            const warningHtml = renderDeadlineWarningBadge(order);
+            card.innerHTML = headerHtml + (warningHtml ? `<div>${warningHtml}</div>` : '');
+            return card;
         }
 
         // NEW (2026-09-16): "ดีไซน์/ขยายลาย" Kanban column — NOT one of the mutually-exclusive
@@ -6387,12 +6477,17 @@
             const designCountEl = document.getElementById('boardCount-design');
             const designTabCountEl = document.getElementById('boardTabCount-design');
             if (designTabCountEl) designTabCountEl.textContent = designCountEl ? designCountEl.textContent : '0';
-            // NEW (2026-09-11): "แจ้งเตือน" (ready_to_ship) — same convention as ดีไซน์/ขยายลาย above:
-            // an order here has already left all 4 currentStage columns (see getEffectiveStage()), so it
-            // is NOT summed into "ทั้งหมด" — it never contributed to that sum in the first place.
+            // NEW (2026-09-11): "แจ้งเตือน" pill badge = "รอส่ง" count + "เร่งด่วน" count — the pill should
+            // reflect everything that needs attention in that tab, not just the ready-to-ship half.
+            // Neither half is summed into "ทั้งหมด" above: "รอส่ง" orders already left all 4 currentStage
+            // columns (see getEffectiveStage()), and "เร่งด่วน" orders are already counted in whichever
+            // currentStage column they're still sitting in — summing either in here would double-count.
             const readyToShipCountEl = document.getElementById('boardCount-ready_to_ship');
+            const urgentCountEl = document.getElementById('boardCount-urgent');
             const readyToShipTabCountEl = document.getElementById('boardTabCount-ready_to_ship');
-            if (readyToShipTabCountEl) readyToShipTabCountEl.textContent = readyToShipCountEl ? readyToShipCountEl.textContent : '0';
+            const readyToShipN = readyToShipCountEl ? (parseInt(readyToShipCountEl.textContent, 10) || 0) : 0;
+            const urgentN = urgentCountEl ? (parseInt(urgentCountEl.textContent, 10) || 0) : 0;
+            if (readyToShipTabCountEl) readyToShipTabCountEl.textContent = String(readyToShipN + urgentN);
             const allCountEl = document.getElementById('boardTabCountAll');
             if (allCountEl) allCountEl.textContent = String(total);
         }
@@ -7596,30 +7691,43 @@
         // NEW (2026-09-11): auto-run M/O, S/O numbering — prefix by ประเภทรายการ × ตลาด:
         //   M/O ในประเทศ -> "TH" + running number   |   M/O ต่างประเทศ -> running number, no prefix
         //   S/O ในประเทศ -> "D" + running number    |   S/O ต่างประเทศ -> "SC" + running number
-        // "Running number" = 1 higher than the highest number already used with that exact prefix among
-        // existing productionOrders (so it keeps counting up correctly even after M/O, S/O get deleted
-        // or entered out of order), formatted to 5 digits — the field stays a normal editable text input,
-        // this only ever WRITES a starting suggestion into it.
+        // UPDATED (2026-09-11): switched to match the REAL numbering already in use in the Google Sheet
+        // — format "{prefix}{NNNN}/{YY}" (YY = 2-digit year the number was issued in), e.g. "0178/26",
+        // "TH0163/26", "D0177/26", "SC0371/26". The running count resets every year (a new "/YY" suffix
+        // starts back at 1) since that's what the "/YY" suffix is FOR — matches how the sheet's own
+        // numbers are laid out. SEED_LATEST_MOSO_NUMBER pins the floor for each prefix+year to the real
+        // last-used number the sales team reported (M/O ต่างประเทศ 0177/26, M/O ในประเทศ TH162/26, S/O
+        // ในประเทศ D0176/26, S/O ต่างประเทศ SC0370/26), so the very first number generated after this
+        // update continues correctly from there — once real orders using this format exist in
+        // productionOrders, the scan below finds them directly and the seed only matters as a floor.
+        // ASSUMPTION (flag if wrong): all 4 groups are zero-padded to 4 digits here for consistency, even
+        // though "TH162/26" as reported has 3 digits without a leading zero — ping if TH shouldn't be
+        // zero-padded, easy to change.
+        const SEED_LATEST_MOSO_NUMBER = {
+            '|26': 177,    // M/O ต่างประเทศ (no prefix), ปี 26 — reported: 0177/26
+            'TH|26': 162,  // M/O ในประเทศ, ปี 26 — reported: TH162/26
+            'D|26': 176,   // S/O ในประเทศ, ปี 26 — reported: D0176/26
+            'SC|26': 370   // S/O ต่างประเทศ, ปี 26 — reported: SC0370/26
+        };
         function moSoPrefixFor(orderType, market) {
             if (orderType === 'MO') return market === 'domestic' ? 'TH' : '';
             if (orderType === 'SO') return market === 'domestic' ? 'D' : (market === 'export' ? 'SC' : null);
             return null;
         }
+        function currentMoSoYearSuffix() {
+            return String(new Date().getFullYear()).slice(-2);
+        }
         function nextMoSoRunNumber(prefix) {
+            const yy = currentMoSoYearSuffix();
             let maxN = 0;
+            const pattern = new RegExp(`^${prefix}(\\d+)/${yy}$`);
             productionOrders.forEach(o => {
                 const raw = String(o.moSo || '').trim().toUpperCase();
-                if (prefix) {
-                    if (!raw.startsWith(prefix)) return;
-                    const m = raw.slice(prefix.length).match(/^(\d+)/);
-                    if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
-                } else {
-                    // "no prefix" group (M/O ต่างประเทศ): plain digits only, so a TH/D/SC-prefixed
-                    // number from one of the other 3 groups never bleeds into this count.
-                    const m = raw.match(/^(\d+)$/);
-                    if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
-                }
+                const m = raw.match(pattern);
+                if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
             });
+            const seeded = SEED_LATEST_MOSO_NUMBER[`${prefix}|${yy}`];
+            if (seeded) maxN = Math.max(maxN, seeded);
             return maxN + 1;
         }
         function generateAutoMoSo() {
@@ -7629,8 +7737,9 @@
             if (!isExport && !isDomestic) return ''; // ยังไม่เลือกตลาด — รอเลือกก่อนถึงจะรันเลขได้
             const market = isDomestic ? 'domestic' : 'export';
             const prefix = moSoPrefixFor(orderType, market) || '';
+            const yy = currentMoSoYearSuffix();
             const n = nextMoSoRunNumber(prefix);
-            return prefix + String(n).padStart(5, '0');
+            return `${prefix}${String(n).padStart(4, '0')}/${yy}`;
         }
         // Re-runs the auto number into #newOrderMoSo — unless the person already typed their own value
         // in there (markNewOrderMoSoManual() below flips off auto-tracking), in which case changing the
