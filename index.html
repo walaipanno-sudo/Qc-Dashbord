@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -5294,6 +5296,80 @@
             }
         }
 
+        // NEW (2026-09-11): แจ้งเตือนแผนกวางแผนผ่าน LINE ทันทีที่ฝ่ายขายเปิด M/O, S/O ใหม่ ("ถ้า Sale
+        // เปิด M/O,S/O ให้แจ้งเตือนแผนกวางแผน") — same best-effort broadcast mechanism as
+        // notifyLineReadyToShip()/notifyLineStageTransfer() above, reusing the same ?type=lineNotify
+        // backend endpoint (no .gs changes needed). Called from submitNewOrder(); never blocks creating
+        // the order if it fails.
+        async function notifyLineNewOrder(order) {
+            if (!gasWebAppUrl) return;
+            const messageLines = [
+                '🆕 เปิด M/O, S/O ใหม่ — แจ้งแผนกวางแผน',
+                `M/O, S/O: ${order.moSo || '-'}`
+            ];
+            if (order.salesName) messageLines.push(`เซล: ${order.salesName}`);
+            if (order.customerName) messageLines.push(`ลูกค้า: ${order.customerName}${order.customerPO ? ` • PO ${order.customerPO}` : ''}`);
+            if (order.totalSqm) messageLines.push(`ตร.ม.: ${order.totalSqm}`);
+            if (order.dueDate) messageLines.push(`กำหนดส่ง: ${order.dueDate}`);
+            messageLines.push('👉 กรุณากำหนดวันเสร็จแต่ละแผนก (ระยะเวลาที่ใช้) ให้ M/O, S/O นี้');
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE new-order notification:", err);
+            }
+        }
+
+        // NEW (2026-09-11): แจ้งเตือนผ่าน LINE เมื่อแผนกวางแผนกำหนด/ปรับ "วันเสร็จแต่ละแผนก"
+        // (order.planDates.design/dyeing/weaving/finishing) ("แผนกวางแผนกำหนดวันกำหนดเสร็จให้แต่ละแผนก
+        // ให้แจ้งเตือนด้วย") — called from recomputeAllSchedules()'s existing changedIdx block below, so
+        // it only fires when a plan date ACTUALLY changed (never on every keystroke) and reuses the exact
+        // same "which orders changed" set that block already computes for the in-app toast. A single
+        // changed order (the common case — Planning just filled in that order's own durations) gets a
+        // detailed per-department message; several at once (a staff/loom-count change reshuffling the
+        // whole queue) get one consolidated list instead of spamming one message per order.
+        async function notifyLinePlanDatesUpdate(changedOrders) {
+            if (!gasWebAppUrl || changedOrders.length === 0) return;
+            let messageLines;
+            if (changedOrders.length === 1) {
+                const order = changedOrders[0];
+                const pd = order.planDates || {};
+                messageLines = [
+                    '📅 แผนกวางแผนกำหนดวันเสร็จให้แต่ละแผนกแล้ว',
+                    `M/O, S/O: ${order.moSo || '-'}`
+                ];
+                if (order.customerName) messageLines.push(`ลูกค้า: ${order.customerName}`);
+                if (pd.design) messageLines.push(`ดีไซน์/ขยายลาย: ${pd.design}`);
+                if (pd.dyeing) messageLines.push(`ย้อม: ${pd.dyeing}`);
+                if (pd.weaving) messageLines.push(`ทอ: ${pd.weaving}`);
+                if (pd.finishing) messageLines.push(`ตกแต่ง/บรรจุ: ${pd.finishing}`);
+                if (order.dueDate) messageLines.push(`กำหนดส่งลูกค้า: ${order.dueDate}`);
+            } else {
+                messageLines = [
+                    '📅 แผนกวางแผนปรับคิวตารางแผนกใหม่ (มีงานชนคิว)',
+                    `จำนวน M/O, S/O ที่ปรับวันใหม่: ${changedOrders.length} รายการ`,
+                    ...changedOrders.slice(0, 10).map(o => `• ${o.moSo || '-'}${o.dueDate ? ` (กำหนดส่ง ${o.dueDate})` : ''}`)
+                ];
+                if (changedOrders.length > 10) messageLines.push(`...และอีก ${changedOrders.length - 10} รายการ`);
+            }
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE plan-dates notification:", err);
+            }
+        }
+
         // =========================================================================================
         // Design images ("รูปดีไซน์"): one optional image per M/O overall, plus one optional image
         // per line item ("ชิ้นที่") in the ย้อม/ทอ/ตกแต่ง departments. Images are uploaded to Google
@@ -7226,6 +7302,11 @@
                 if (changedIdx.size > 1) {
                     showToast(`จัดคิวตารางแผนกใหม่อัตโนมัติ (${changedIdx.size} งาน) เนื่องจากมีงานชนกันในคิว`, 'fa-calendar-check', 'text-indigo-500');
                 }
+                // NEW (2026-09-11): LINE notification — see notifyLinePlanDatesUpdate()'s own comment.
+                // This is the one place every route that can set/change a plan date (a new order's first
+                // durations, an edited duration, or a cascading reschedule from a staff/loom-count change)
+                // funnels through, so hooking it here covers all of them without duplicating the trigger.
+                notifyLinePlanDatesUpdate(Array.from(changedIdx).map(idx => productionOrders[idx]));
             }
         }
 
@@ -7859,6 +7940,8 @@
             productionOrders.push(order);
             saveOrdersToLocal();
             syncOrderToSheet(order);
+            // NEW (2026-09-11): "ถ้า Sale เปิด M/O,S/O ให้แจ้งเตือนแผนกวางแผน" — see notifyLineNewOrder().
+            notifyLineNewOrder(order);
             // NEW: a brand-new M/O, S/O joins the queue for design/weaving/finishing capacity right
             // away — recompute every order's schedule together so it (and anything it bumps) gets
             // correct plan dates immediately, not just after the next unrelated edit.
