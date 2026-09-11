@@ -560,6 +560,17 @@
                         <i class="fa-solid fa-box-archive"></i> ตกแต่ง/บรรจุ
                         <span id="boardTabCount-finishing" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
+                    <!-- NEW (2026-09-11): "แจ้งเตือน (รอส่ง)" — same non-currentStage pattern as
+                         "ดีไซน์/ขยายลาย" above: lists every order whose readyToShip flag is set (see
+                         getEffectiveStage()), so anyone looking at the Board can see what's waiting to
+                         ship without switching to the separate "รายการรอส่ง" tab. Confirming here calls
+                         the SAME markOrderShipped() the รายการรอส่ง tab uses — sqm-in-line deduction and
+                         moving to จัดส่งเรียบร้อยแล้ว both already happen correctly via that one function,
+                         no duplicate logic needed. See renderNotifyBoardColumn() / buildReadyToShipOrderCard(). -->
+                    <button onclick="setBoardDepartmentTab('ready_to_ship')" id="boardTabBtn-ready_to_ship" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-bell"></i> แจ้งเตือน
+                        <span id="boardTabCount-ready_to_ship" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    </button>
                 </div>
             </div>
 
@@ -688,7 +699,7 @@
                     <button type="button" onclick="submitNewOrder()" class="w-1/2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition shadow">เพิ่มรายการ</button>
                 </div>
             </div>
-            <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div id="boardColWrap-planning" class="bg-blue-50/60 border border-blue-100 border-t-4 border-t-blue-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
                         <h4 class="font-bold text-blue-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-blue-500"></i> วางแผน</h4>
@@ -732,6 +743,21 @@
                         <span id="boardCount-finishing" class="text-[11px] bg-white text-fuchsia-700 font-semibold px-2 py-0.5 rounded-full border border-fuchsia-200">0</span>
                     </div>
                     <div id="boardColumn-finishing" class="flex flex-col gap-3"></div>
+                </div>
+                <!-- NEW (2026-09-11): "แจ้งเตือน" column — orange to match STAGE_COLORS.ready_to_ship.
+                     Same pattern as the ดีไซน์/ขยายลาย column above: not one of the mutually-exclusive
+                     currentStage columns (an order LEAVES those 4 once readyToShip is set — see
+                     getEffectiveStage()), so it's populated separately by renderNotifyBoardColumn().
+                     Lets whoever is looking at the board itself see what's waiting to ship, without
+                     switching to the separate "รายการรอส่ง" tab — confirming "ยืนยันจัดส่งแล้ว" here calls
+                     the same markOrderShipped() the "รายการรอส่ง" tab uses, so it moves to "จัดส่งเรียบร้อยแล้ว"
+                     and drops out of the "ตร.ม. อยู่ในไลน์ผลิต" total exactly the same way either path. -->
+                <div id="boardColWrap-ready_to_ship" class="bg-orange-50/60 border border-orange-100 border-t-4 border-t-orange-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
+                    <div class="flex items-center justify-between px-1">
+                        <h4 class="font-bold text-orange-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-bell text-orange-500"></i> แจ้งเตือน (รอส่ง)</h4>
+                        <span id="boardCount-ready_to_ship" class="text-[11px] bg-white text-orange-700 font-semibold px-2 py-0.5 rounded-full border border-orange-200">0</span>
+                    </div>
+                    <div id="boardColumn-ready_to_ship" class="flex flex-col gap-3"></div>
                 </div>
             </div>
         </div>
@@ -5951,7 +5977,54 @@
             });
 
             renderDesignBoardColumn(searchTerm);
+            renderNotifyBoardColumn(searchTerm);
             updateBoardDepartmentTabCounts();
+        }
+
+        // NEW (2026-09-11): "แจ้งเตือน (รอส่ง)" Kanban column — same non-currentStage pattern as
+        // renderDesignBoardColumn() above: an order that's readyToShip has already left all 4
+        // mutually-exclusive currentStage columns (see getEffectiveStage()), so it's populated
+        // separately here instead of by the main ORDER_STAGES.forEach loop. Purely a convenience view
+        // into data the "รายการรอส่ง" tab already shows — confirming ship here calls the same
+        // markOrderShipped(), which already handles moving the order to "จัดส่งเรียบร้อยแล้ว" and
+        // excluding it from the "ตร.ม. อยู่ในไลน์ผลิต" total, so no new business logic lives here.
+        function renderNotifyBoardColumn(searchTerm) {
+            const column = document.getElementById('boardColumn-ready_to_ship');
+            const countEl = document.getElementById('boardCount-ready_to_ship');
+            if (!column) return;
+            column.innerHTML = '';
+
+            let ordersHere = productionOrders.filter(o => getEffectiveStage(o) === 'ready_to_ship');
+            if (orderTypeFilter !== 'all') {
+                ordersHere = ordersHere.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === orderTypeFilter);
+            }
+            ordersHere = ordersHere.filter(o => matchesMarketFilter(o));
+            if (searchTerm) {
+                ordersHere = ordersHere.filter(order => {
+                    const haystack = [order.moSo, order.customerName, order.customerPO]
+                        .map(v => String(v || '').toLowerCase())
+                        .join(' ');
+                    return haystack.includes(searchTerm);
+                });
+            }
+            countEl.textContent = ordersHere.length;
+
+            if (ordersHere.length === 0) {
+                column.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการรอส่ง'}</p>`;
+                return;
+            }
+
+            ordersHere = ordersHere.slice().sort((a, b) => {
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0);
+            });
+
+            ordersHere.forEach(order => {
+                const orderIndex = productionOrders.indexOf(order);
+                column.appendChild(buildReadyToShipOrderCard(order, orderIndex));
+            });
         }
 
         // NEW (2026-09-16): "ดีไซน์/ขยายลาย" Kanban column — NOT one of the mutually-exclusive
@@ -6011,7 +6084,7 @@
         // column-visibility functions — deliberately kept separate from ORDER_STAGES itself, which stays
         // untouched everywhere it drives the real transfer/percent state machine (transferOrderStage(),
         // NEXT_STAGE, buildOrderCard(), etc.).
-        const BOARD_TABS = ['design', 'planning', 'dyeing', 'weaving', 'finishing'];
+        const BOARD_TABS = ['design', 'planning', 'dyeing', 'weaving', 'finishing', 'ready_to_ship'];
         let boardDepartmentFilter = ''; // '' = ทั้งหมด (all columns visible); otherwise one of BOARD_TABS
 
         function setBoardDepartmentTab(stage) {
@@ -6057,9 +6130,9 @@
                 grid.classList.toggle('hidden', isSales);
                 if (boardDepartmentFilter === '') {
                     grid.classList.remove('md:grid-cols-1');
-                    grid.classList.add('md:grid-cols-5');
+                    grid.classList.add('md:grid-cols-6');
                 } else {
-                    grid.classList.remove('md:grid-cols-5');
+                    grid.classList.remove('md:grid-cols-6');
                     grid.classList.add('md:grid-cols-1');
                 }
             }
@@ -6087,6 +6160,12 @@
             const designCountEl = document.getElementById('boardCount-design');
             const designTabCountEl = document.getElementById('boardTabCount-design');
             if (designTabCountEl) designTabCountEl.textContent = designCountEl ? designCountEl.textContent : '0';
+            // NEW (2026-09-11): "แจ้งเตือน" (ready_to_ship) — same convention as ดีไซน์/ขยายลาย above:
+            // an order here has already left all 4 currentStage columns (see getEffectiveStage()), so it
+            // is NOT summed into "ทั้งหมด" — it never contributed to that sum in the first place.
+            const readyToShipCountEl = document.getElementById('boardCount-ready_to_ship');
+            const readyToShipTabCountEl = document.getElementById('boardTabCount-ready_to_ship');
+            if (readyToShipTabCountEl) readyToShipTabCountEl.textContent = readyToShipCountEl ? readyToShipCountEl.textContent : '0';
             const allCountEl = document.getElementById('boardTabCountAll');
             if (allCountEl) allCountEl.textContent = String(total);
         }
@@ -6454,6 +6533,49 @@
             `;
 
             card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>`;
+            return card;
+        }
+
+        // NEW (2026-09-11): "แจ้งเตือน (รอส่ง)" board card — same non-currentStage pattern as
+        // buildDesignOrderCard() above. Only action is "ยืนยันจัดส่งแล้ว", which calls the SAME
+        // markOrderShipped() the "รายการรอส่ง" tab's ship-confirm button already uses — the order moves
+        // to "จัดส่งเรียบร้อยแล้ว" and drops out of the "ตร.ม. อยู่ในไลน์ผลิต" total exactly the same way
+        // either path is used, so there is nothing new to keep in sync here.
+        function buildReadyToShipOrderCard(order, orderIndex) {
+            const card = document.createElement('div');
+            const cardWarning = getDeadlineWarning(order);
+            const cardBorderCls = cardWarning
+                ? (cardWarning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200')
+                : 'border-orange-200';
+            card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2.5`;
+
+            const headerHtml = `
+                <div class="flex justify-between items-start gap-2">
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">ตร.ม.: ${escapeHtml(String(order.totalSqm || '-'))}</p>
+                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
+                    <button onclick="openOrderDetailModal(${orderIndex})" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </button>
+                </div>
+            `;
+
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            const bodyHtml = `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[11px] font-semibold"><i class="fa-solid fa-clock text-[10px]"></i> รอจัดส่ง</span>
+                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
+            `;
+
+            const footerHtml = `
+                <button onclick="markOrderShipped(${orderIndex})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-truck-fast"></i> ยืนยันจัดส่งแล้ว
+                </button>
+            `;
+
+            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1 border-t border-slate-100">${footerHtml}</div>`;
             return card;
         }
 
