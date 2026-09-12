@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -626,6 +629,21 @@
                 </div>
             </div>
 
+            <!-- NEW (2026-09-12): "แผนกทอ" sub-tabs — เพิ่มตามคำขอ "เอาตารางรายงานการผลิตตามแนบ ไปอยู่ใน
+                 แผนกทอ" — same local-pill-switcher pattern as salesFormContainer's sub-tabs above, just
+                 shown only when boardDepartmentFilter === 'weaving' (see updateBoardColumnVisibility()).
+                 "บอร์ดงานทอ" is the pre-existing Kanban column (boardColWrap-weaving, unchanged); "บันทึก
+                 การทอรายวัน" is the new native data-entry table matching the uploaded Excel format
+                 (see weavingLogContainer below / setWeavingSubTab()). -->
+            <div id="weavingSubTabBar" class="hidden flex items-center gap-2 mb-4">
+                <button onclick="setWeavingSubTab('board')" id="weavingSubTabBtn-board" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> บอร์ดงานทอ
+                </button>
+                <button onclick="setWeavingSubTab('log')" id="weavingSubTabBtn-log" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-table-list"></i> บันทึกการทอรายวัน
+                </button>
+            </div>
+
             <div id="boardSearchCard" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
                 <div class="relative w-full sm:w-80">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
@@ -1121,6 +1139,147 @@
                         <h5 class="font-bold text-orange-700 text-[10px] uppercase flex items-center gap-1.5"><i class="fa-solid fa-box"></i> รอส่ง — ผลิตเสร็จแล้ว</h5>
                     </div>
                     <div id="boardColumn-ready_to_ship" class="flex flex-col gap-3"></div>
+                </div>
+            </div>
+
+            <!-- NEW (2026-09-12): "บันทึกการทอรายวัน" — native daily weaving log matching the uploaded
+                 Excel format 1:1 (date × loom × M/O × shift), writing into the SAME order.weaving.dailyLog[]
+                 data model already used by "นำเข้าข้อมูลทอ" (Excel import, see confirmWeavingImport()) — so
+                 either entry path keeps ทอได้กี่ตารางเมตรแล้ว (order.weaving.sqmWoven) and % เทียบเกรด in
+                 sync (see recomputeWeavingSqmFromLog()). Shown only when แผนกทอ → "บันทึกการทอรายวัน"
+                 sub-tab is active — see setWeavingSubTab() / updateBoardColumnVisibility(). -->
+            <div id="weavingLogContainer" class="hidden space-y-4">
+                <div id="weavingLogFormCard" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-hand-holding-heart mr-2 text-teal-600"></i> บันทึกรายการทอรายวัน</h3>
+                        <p class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>ดึงข้อมูลจากเลขที่ M/O อัตโนมัติ — แก้ไขได้ทุกช่อง</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">วันที่</label>
+                            <input type="date" id="weavingLogDate" onchange="handleWeavingLogMoSoChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">จอทอ</label>
+                            <select id="weavingLogLoom" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                <option value="1">จอ 1</option>
+                                <option value="2">จอ 2</option>
+                                <option value="3">จอ 3</option>
+                                <option value="4">จอ 4</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O</label>
+                            <input type="text" id="weavingLogMoSo" list="weavingLogMoSoOptions" oninput="handleWeavingLogMoSoChange()" placeholder="พิมพ์/เลือกเลขที่ M/O" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <datalist id="weavingLogMoSoOptions"></datalist>
+                            <p id="weavingLogMoSoNotFound" class="hidden text-[10px] text-amber-600 mt-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>ไม่พบ M/O นี้ในระบบ — ต้องเปิด M/O ไว้ก่อนจึงจะบันทึกได้</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">ชิ้นที่</label>
+                            <input type="text" id="weavingLogPieceNo" placeholder="เช่น 1/3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">คุณภาพ</label>
+                            <input type="text" id="weavingLogQuality" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">กว้าง X ยาว</label>
+                            <input type="text" id="weavingLogSizeText" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">เกรดการทอ</label>
+                            <select id="weavingLogGrade" onchange="recalcWeavingLogPreview()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                <option value="">-- เลือกเกรด --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">พื้นที่รวม M/O (ตร.ม.)</label>
+                            <input type="number" id="weavingLogTotalSqm" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">คงเหลือยกมา (ตร.ม.)</label>
+                            <input type="number" id="weavingLogRemainingBefore" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="border border-teal-100 bg-teal-50/40 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-bold text-teal-800"><i class="fa-solid fa-sun mr-1"></i> กะปกติ</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">เริ่ม</label><input type="time" id="weavingLogRegStart" onchange="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">เลิก</label><input type="time" id="weavingLogRegEnd" onchange="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">พ.ท.ทำได้ (ตร.ม.)</label><input type="number" step="0.01" id="weavingLogRegArea" oninput="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-1">พนักงาน (ติ๊กผู้ที่เข้ากะนี้)</label>
+                                <div id="weavingLogRegularEmployees" class="flex flex-wrap gap-1.5"></div>
+                            </div>
+                        </div>
+                        <div class="border border-amber-100 bg-amber-50/40 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-bold text-amber-800"><i class="fa-solid fa-moon mr-1"></i> กะ OT</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">เริ่ม</label><input type="time" id="weavingLogOtStart" onchange="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">เลิก</label><input type="time" id="weavingLogOtEnd" onchange="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                                <div><label class="block text-[10px] text-slate-500 mb-0.5">พ.ท.ทำได้ (ตร.ม.)</label><input type="number" step="0.01" id="weavingLogOtArea" oninput="recalcWeavingLogPreview()" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"></div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-1">พนักงาน (ติ๊กผู้ที่เข้ากะนี้)</label>
+                                <div id="weavingLogOtEmployees" class="flex flex-wrap gap-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weavingLogPreview"></div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <button type="button" id="weavingLogSaveBtn" onclick="saveWeavingLogEntry()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition"><i class="fa-solid fa-floppy-disk mr-1"></i>บันทึกรายการทอวันนี้</button>
+                        <button type="button" onclick="resetWeavingLogForm(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-4 py-2.5 rounded-xl transition">ยกเลิก / เริ่มรายการใหม่</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-users mr-2 text-teal-600"></i> จัดการรายชื่อพนักงานทอ</h3>
+                    <div id="weavingStaffManagerList" class="flex flex-wrap gap-1.5"></div>
+                    <div class="flex items-center gap-1.5 pt-1">
+                        <input type="text" id="weavingStaffNewName" placeholder="ชื่อ-นามสกุล" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <input type="text" id="weavingStaffNewNickname" placeholder="ชื่อเล่น" class="w-28 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <button type="button" onclick="addWeavingStaffMember()" class="shrink-0 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition"><i class="fa-solid fa-user-plus mr-1"></i>เพิ่ม</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-table-list mr-2 text-teal-600"></i> ประวัติการทอทั้งหมด — เทียบ % กับเกรดการทอ</h3>
+                        <div class="flex items-center gap-1.5">
+                            <input type="month" id="weavingLogTableMonth" onchange="renderWeavingLogTable()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <input type="text" id="weavingLogTableSearch" oninput="renderWeavingLogTable()" placeholder="ค้นหา M/O, คุณภาพ, ชื่อพนักงาน..." class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-56">
+                        </div>
+                    </div>
+                    <div id="weavingLogGradeSummary"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500">
+                                    <th class="py-1.5 px-2 text-left font-semibold whitespace-nowrap">วันที่</th>
+                                    <th class="py-1.5 px-2 text-center font-semibold">จอ</th>
+                                    <th class="py-1.5 px-2 text-left font-semibold">M/O</th>
+                                    <th class="py-1.5 px-2 text-left font-semibold">คุณภาพ</th>
+                                    <th class="py-1.5 px-2 text-center font-semibold">เกรด</th>
+                                    <th class="py-1.5 px-2 text-right font-semibold">ตร.ม.</th>
+                                    <th class="py-1.5 px-2 text-right font-semibold">ชม. (คน×ชม.)</th>
+                                    <th class="py-1.5 px-2 text-right font-semibold">ประสิทธิภาพ</th>
+                                    <th class="py-1.5 px-2 text-center font-semibold">% เทียบเกรด</th>
+                                    <th class="py-1.5 px-2 text-left font-semibold">พนักงาน</th>
+                                    <th class="py-1.5 px-2 text-center font-semibold">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="weavingLogTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2207,6 +2366,11 @@
         // key + own Google Sheet tab, เหมือน issuesData ด้านบน) — see renderSpecTemplateOptions()/
         // applySpecTemplate()/saveCurrentAsSpecTemplate() near resetNewOrderSpecState().
         let specTemplates = [];
+        // NEW (2026-09-12): "รายชื่อพนักงานทอมือ" — shared roster used by the "บันทึกการทอรายวัน" daily
+        // weaving log (แผนกทอ) to pick which weaver(s) worked each shift, same own-localStorage-key +
+        // own-Google-Sheet-tab convention as specTemplates/issuesData above — see
+        // fetchWeavingStaffFromGoogleSheet()/renderWeavingStaffManagerHtml() near the weaving log code.
+        let weavingStaffList = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
 
         // =========================================================================================
@@ -2777,6 +2941,11 @@
             if (savedSpecTemplates) {
                 try { specTemplates = JSON.parse(savedSpecTemplates); } catch(e) {}
             }
+            // NEW (2026-09-12): รายชื่อพนักงานทอมือ — same load-then-refresh-from-Sheet pattern above.
+            const savedWeavingStaff = localStorage.getItem('qc_weaving_staff_v1');
+            if (savedWeavingStaff) {
+                try { weavingStaffList = JSON.parse(savedWeavingStaff); } catch(e) {}
+            }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
@@ -2789,6 +2958,7 @@
                 fetchIssuesFromGoogleSheet(false);
                 fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
                 fetchSpecTemplatesFromGoogleSheet(false); // NEW (2026-09-12): shared SPECIFICATIONS templates
+                fetchWeavingStaffFromGoogleSheet(false); // NEW (2026-09-12): shared รายชื่อพนักงานทอมือ
             } else {
                 updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
                 openConfigModal();
@@ -2813,6 +2983,11 @@
             localStorage.setItem('qc_spec_templates_v1', JSON.stringify(specTemplates));
         }
 
+        // NEW (2026-09-12): persists weavingStaffList locally, same convention as saveSpecTemplatesToLocal() above.
+        function saveWeavingStaffToLocal() {
+            localStorage.setItem('qc_weaving_staff_v1', JSON.stringify(weavingStaffList));
+        }
+
         function initApp() {
             populateMoSoFilterOptions();
             filterTable(); // applies the search/status/dept/month filters plus the global M/O, S/O switch, and renders both the records table and the shipping list
@@ -2823,6 +2998,17 @@
             renderQcShippedArchive();
             updateStats();
             updateIssuesCountBadge(); // NEW (2026-09e): open-issue count on the tab badge, independent of which tab is active
+            // NEW (2026-09-12): "บันทึกการทอรายวัน" — one-time setup of the weaving-department daily log
+            // pane (staff checkboxes/manager list, M/O suggestions, blank form defaults, log table) so
+            // it's ready the instant someone switches to it — see setWeavingSubTab(), which deliberately
+            // does NOT re-run renderWeavingStaffCheckboxesHtml()/resetWeavingLogForm() on every visit, so
+            // an in-progress entry never gets wiped just by navigating away and back.
+            populateWeavingLogGradeOptions();
+            renderWeavingStaffCheckboxesHtml();
+            renderWeavingStaffManagerHtml();
+            populateWeavingLogMoSoOptions();
+            resetWeavingLogForm(false);
+            renderWeavingLogTable();
         }
 
         function switchView(view) {
@@ -4506,6 +4692,46 @@
             }
         }
 
+        // NEW (2026-09-12): mirrors fetchSpecTemplatesFromGoogleSheet() above for the shared รายชื่อ
+        // พนักงานทอมือ roster used by the "บันทึกการทอรายวัน" daily weaving log.
+        async function fetchWeavingStaffFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getWeavingStaff' : gasWebAppUrl + '?action=getWeavingStaff';
+                const response = await fetch(fetchUrl);
+                const text = await response.text();
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    return;
+                }
+                let result;
+                try { result = JSON.parse(text); } catch(e) { return; }
+                if (Array.isArray(result) && result.length > 0) {
+                    weavingStaffList = result.map(s => ({ id: s.id || '', name: s.name || '', nickname: s.nickname || '', code: s.code || '' }));
+                    saveWeavingStaffToLocal();
+                    renderWeavingStaffCheckboxesHtml();
+                    renderWeavingStaffManagerHtml();
+                    if (isManual) showToast(`ซิงค์รายชื่อพนักงานทอมือสำเร็จ (${weavingStaffList.length} คน)`);
+                }
+            } catch(e) {
+                console.error("Fetch weaving staff error (backend may not support this endpoint yet):", e);
+            }
+        }
+
+        async function syncWeavingStaffMemberToSheet(member) {
+            if (!gasWebAppUrl) return;
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=weavingStaff' : gasWebAppUrl + '?type=weavingStaff';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(member)
+                });
+            } catch(err) {
+                console.error("Error syncing weaving staff member to Google Sheet:", err);
+            }
+        }
+
         // NEW (2026-09-10): mirrors fetchOrdersFromGoogleSheet()/fetchIssuesFromGoogleSheet() above for
         // the production calc engine's shared settings — same silent-fallback-to-localStorage behavior
         // if the backend doesn't support this endpoint yet (older .gs deployment not yet redeployed).
@@ -5664,6 +5890,27 @@
             reader.readAsArrayBuffer(file);
         }
 
+        // NEW (2026-09-12): shared by BOTH the Excel import (confirmWeavingImport() below) and the new
+        // native "บันทึกการทอรายวัน" manual-entry form (see saveWeavingLogEntry()) — re-derives
+        // weaving.sqmWoven/sqmPerDay from whatever is currently in weaving.dailyLog[], the same way
+        // every time, so the two entry paths (import an Excel someone else filled in vs. key it in here
+        // directly) can never drift into two different calculations of "ทอได้กี่ตารางเมตรแล้ว".
+        // Cumulative sqm woven is always RE-DERIVED as a sum (never incremented in place), so re-saving/
+        // re-importing the same date twice never double-counts — see the (date, loom) upsert key used by
+        // both callers.
+        function recomputeWeavingSqmFromLog(order) {
+            const log = Array.isArray(order.weaving.dailyLog) ? order.weaving.dailyLog : [];
+            order.weaving.sqmWoven = Math.round(log.reduce((s, l) => s + (Number(l.sqm) || 0), 0) * 100) / 100;
+            // "ทอได้กี่ตารางเมตร/วัน" — mean sqm per distinct active day across the whole log, used
+            // elsewhere (see sumOfSqmPerDay around line ~4740) as this M/O's current weaving pace.
+            const sqmByDate = {};
+            log.forEach(l => { sqmByDate[l.date] = (sqmByDate[l.date] || 0) + (Number(l.sqm) || 0); });
+            const distinctDates = Object.keys(sqmByDate);
+            const totalAcrossDays = Object.values(sqmByDate).reduce((a, b) => a + b, 0);
+            order.weaving.sqmPerDay = distinctDates.length > 0 ? Math.round((totalAcrossDays / distinctDates.length) * 100) / 100 : 0;
+            recomputeStagePercent(order, 'weaving');
+        }
+
         function confirmWeavingImport() {
             if (!pendingWeavingImport) return;
             const { byMoSo } = pendingWeavingImport;
@@ -5688,18 +5935,7 @@
                     else order.weaving.dailyLog[existingIdx] = entry; // upsert — re-importing the same date never double-counts
                 });
 
-                // Cumulative sqm woven is always re-derived from the merged log (never incremented), so
-                // importing the same file twice, or a later file that re-includes earlier dates, is safe.
-                order.weaving.sqmWoven = Math.round(order.weaving.dailyLog.reduce((s, l) => s + (Number(l.sqm) || 0), 0) * 100) / 100;
-                // "ทอได้กี่ตารางเมตร/วัน" — mean sqm per distinct active day across the whole log, used
-                // elsewhere (see sumOfSqmPerDay around line ~4740) as this M/O's current weaving pace.
-                const sqmByDate = {};
-                order.weaving.dailyLog.forEach(l => { sqmByDate[l.date] = (sqmByDate[l.date] || 0) + (Number(l.sqm) || 0); });
-                const distinctDates = Object.keys(sqmByDate);
-                const totalAcrossDays = Object.values(sqmByDate).reduce((a, b) => a + b, 0);
-                order.weaving.sqmPerDay = distinctDates.length > 0 ? Math.round((totalAcrossDays / distinctDates.length) * 100) / 100 : 0;
-
-                recomputeStagePercent(order, 'weaving');
+                recomputeWeavingSqmFromLog(order);
                 persistOrderChange(order);
                 matched.push({ moSo: order.moSo, sqmWoven: order.weaving.sqmWoven, percent: order.weaving.percent });
             });
@@ -5724,6 +5960,489 @@
             }
             pendingWeavingImport = null;
             document.getElementById('importWeavingFileInput').value = '';
+        }
+
+        // =========================================================================================
+        // NEW (2026-09-12): "บันทึกการทอรายวัน" — native daily weaving-production log, built into the
+        // แผนกทอ tab itself instead of requiring a separate Excel file that later gets imported (see
+        // "นำเข้าข้อมูลทอ" above, which still works for anyone who prefers to keep filling in the Excel).
+        // Modeled directly on the user's attached "รายงานการผลิตประจำวันพรมทอมือ" workbook: 4 จอทอ, a
+        // ปกติ (regular) + โอที (OT) shift each with its own start/end time and weaver(s), พื้นที่ที่ทำได้
+        // per shift, and a live ประสิทธิภาพ (ตรม./คน/ชม.) — which is exactly the same unit
+        // TUFTING_GRADE_TABLE's "target" already uses for the AI planning engine above, so every entry
+        // here can show "% เทียบเกรด" (actual ÷ grade's target × 100) for free. Every entry is stored
+        // straight into that M/O's own order.weaving.dailyLog[] — the exact same array/shape "นำเข้า
+        // ข้อมูลทอ" already uses (see recomputeWeavingSqmFromLog()) — just with richer optional fields
+        // (regular/ot breakdown, grade, quality, size, piece no.) riding along; older imported entries
+        // that don't have those fields keep rendering fine (see renderWeavingLogRow()'s fallbacks).
+        // =========================================================================================
+
+        // Seed roster (from the user's uploaded "รายชื่อพนักงานทอมือ" sheet) — used only the very first
+        // time this dashboard runs on a fresh Google Sheet with no "WeavingStaff" tab yet (see the
+        // backend's getOrCreateWeavingStaffSheet()); after that, the shared Sheet is always the source
+        // of truth and this constant is never consulted again. Kept here too as an OFFLINE fallback so
+        // the employee checkboxes aren't empty before the very first successful sync.
+        const DEFAULT_WEAVING_STAFF = [
+            { id: 'ws1', name: 'สายฝน กลิ่นหอม', nickname: 'ฝน' },
+            { id: 'ws2', name: 'สมพร คิดแต่ง', nickname: 'ตา' },
+            { id: 'ws3', name: 'พนารัตน์ ทองสาย', nickname: 'ต่าย' },
+            { id: 'ws4', name: 'ปิ่นรัช อาจหาญ', nickname: 'ปิ่น' },
+            { id: 'ws5', name: 'อรพินน์ ปู่จินะ', nickname: 'นก' },
+            { id: 'ws6', name: 'สุพัฒตา แซ่โง้ว', nickname: 'ปุ้ย' },
+            { id: 'ws7', name: 'ปราณี แสงทอง', nickname: 'เจี้ยบ' },
+            { id: 'ws8', name: 'PAN WAR', nickname: 'วา' },
+            { id: 'ws9', name: 'รัตนา จ้อยประดิษฐ์', nickname: 'จ้อย' },
+            { id: 'ws10', name: 'NAN HTAY HTAY AUNG', nickname: 'จีจี้' },
+            { id: 'ws11', name: 'จุฑามาศ แสงหิรัญ', nickname: 'นุ่น' },
+            { id: 'ws12', name: 'THOMGDAM SI OUTHAI', nickname: 'ต้า' },
+            { id: 'ws13', name: 'บุษบา เพียรักษ์', nickname: 'แล๊ค' },
+            { id: 'ws14', name: 'อภิเชษ เพียรักษ์', nickname: 'เขต' },
+            { id: 'ws15', name: 'AYE WIN THEIN', nickname: 'โม' },
+            { id: 'ws16', name: 'HKIN SU HLAING', nickname: 'แข' },
+            { id: 'ws17', name: 'KHUM', nickname: 'คำ' }
+        ];
+        if (weavingStaffList.length === 0) weavingStaffList = DEFAULT_WEAVING_STAFF.map(s => Object.assign({}, s));
+
+        function weavingStaffDisplayName(s) {
+            return s.nickname ? `${s.name} (${s.nickname})` : s.name;
+        }
+
+        // Renders the employee checkboxes for BOTH shift pickers on the log form — called once after
+        // weavingStaffList changes (initial load, sheet sync, or add/delete) rather than on every
+        // keystroke, since the roster itself changes rarely.
+        function renderWeavingStaffCheckboxesHtml() {
+            ['reg', 'ot'].forEach(shift => {
+                const wrap = document.getElementById(`weavingLog${shift === 'reg' ? 'Regular' : 'Ot'}Employees`);
+                if (!wrap) return;
+                wrap.innerHTML = weavingStaffList.map(s => `
+                    <label class="inline-flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] cursor-pointer">
+                        <input type="checkbox" value="${escapeHtml(s.id)}" data-name="${escapeHtml(weavingStaffDisplayName(s))}" class="weaving-log-emp-${shift} rounded" onchange="recalcWeavingLogPreview()">
+                        ${escapeHtml(weavingStaffDisplayName(s))}
+                    </label>
+                `).join('') || `<p class="text-[10px] text-slate-400">ยังไม่มีรายชื่อพนักงาน — เพิ่มได้ที่ "จัดการรายชื่อพนักงาน" ด้านล่าง</p>`;
+            });
+        }
+
+        // Small add/remove manager for the roster — same "own list, own Sheet tab" CRUD pattern as
+        // specTemplates (see saveCurrentAsSpecTemplate()/deleteSelectedSpecTemplate()), just simpler
+        // (name + nickname only, no need for a dropdown-select-then-act flow since the whole list is
+        // already on screen).
+        function renderWeavingStaffManagerHtml() {
+            const wrap = document.getElementById('weavingStaffManagerList');
+            if (!wrap) return;
+            wrap.innerHTML = weavingStaffList.map(s => `
+                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-slate-50 border border-slate-200 rounded-full text-[11px]">
+                    ${escapeHtml(weavingStaffDisplayName(s))}
+                    <button type="button" onclick="deleteWeavingStaffMember('${escapeHtml(s.id)}')" title="ลบพนักงานคนนี้" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('') || `<p class="text-[10px] text-slate-400">ยังไม่มีรายชื่อพนักงาน</p>`;
+        }
+
+        function addWeavingStaffMember() {
+            const nameInput = document.getElementById('weavingStaffNewName');
+            const nicknameInput = document.getElementById('weavingStaffNewNickname');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const nickname = nicknameInput ? nicknameInput.value.trim() : '';
+            if (!name) {
+                showToast('กรุณากรอกชื่อพนักงาน', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const member = { id: 'ws_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name, nickname, code: '' };
+            weavingStaffList.push(member);
+            saveWeavingStaffToLocal();
+            syncWeavingStaffMemberToSheet(member);
+            renderWeavingStaffCheckboxesHtml();
+            renderWeavingStaffManagerHtml();
+            if (nameInput) nameInput.value = '';
+            if (nicknameInput) nicknameInput.value = '';
+            showToast(`เพิ่ม "${name}" เข้ารายชื่อพนักงานทอแล้ว`, 'fa-user-plus', 'text-emerald-400');
+        }
+
+        function deleteWeavingStaffMember(id) {
+            const member = weavingStaffList.find(s => s.id === id);
+            if (!member) return;
+            if (!window.confirm(`ลบ "${weavingStaffDisplayName(member)}" ออกจากรายชื่อพนักงานทอถาวรหรือไม่?`)) return;
+            weavingStaffList = weavingStaffList.filter(s => s.id !== id);
+            saveWeavingStaffToLocal();
+            renderWeavingStaffCheckboxesHtml();
+            renderWeavingStaffManagerHtml();
+            showToast(`ลบ "${weavingStaffDisplayName(member)}" ออกจากรายชื่อแล้ว`, 'fa-circle-xmark', 'text-rose-400');
+            if (gasWebAppUrl) {
+                const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteWeavingStaff&id=' + encodeURIComponent(id);
+                fetch(deleteUrl).catch(err => console.error("Error deleting weaving staff member from Google Sheet:", err));
+            }
+        }
+
+        // --- Entry form: M/O lookup + auto-fill ------------------------------------------------
+
+        // Datalist options — "ไม่รวม S/O ใช้เลขที่ M/O ดึงมาได้" — only M/O-type, not-yet-shipped orders
+        // are suggested, but the field stays a plain text input (not a locked <select>), so typing any
+        // other M/O (or a shipped one, for a late correction) still works — see handleWeavingLogMoSoChange().
+        function populateWeavingLogMoSoOptions() {
+            const dl = document.getElementById('weavingLogMoSoOptions');
+            if (!dl) return;
+            const moOrders = productionOrders
+                .filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === 'MO' && getEffectiveStage(o) !== 'shipped')
+                .sort((a, b) => String(a.moSo || '').localeCompare(String(b.moSo || '')));
+            dl.innerHTML = moOrders.map(o => `<option value="${escapeHtml(o.moSo)}">`).join('');
+        }
+
+        // Looks up an order by M/O across EVERY order (any status) — not just the datalist's active-M/O
+        // suggestions — so typing an already-shipped M/O for a late correction still resolves.
+        function findOrderByMoSoKey(moSo) {
+            const key = normalizeMoSoKey(moSo);
+            if (!key) return null;
+            const idx = productionOrders.findIndex(o => normalizeMoSoKey(o.moSo) === key);
+            return idx === -1 ? null : { order: productionOrders[idx], orderIndex: idx };
+        }
+
+        // Fires when the M/O field changes — pulls quality/grade/size/total sqm/remaining-brought-
+        // forward from the matched order (per "ใช้เลขที่ M/O ดึงมาได้") but every pulled field stays a
+        // normal editable input afterward ("แต่ทุกอย่างแก้ได้หมด").
+        function handleWeavingLogMoSoChange() {
+            const moSoInput = document.getElementById('weavingLogMoSo');
+            const moSo = moSoInput ? moSoInput.value.trim() : '';
+            const found = findOrderByMoSoKey(moSo);
+            const notFoundEl = document.getElementById('weavingLogMoSoNotFound');
+            if (!found) {
+                if (notFoundEl) notFoundEl.classList.toggle('hidden', !moSo);
+                recalcWeavingLogPreview();
+                return;
+            }
+            if (notFoundEl) notFoundEl.classList.add('hidden');
+            const { order } = found;
+            const qualityEl = document.getElementById('weavingLogQuality');
+            const sizeEl = document.getElementById('weavingLogSizeText');
+            const totalSqmEl = document.getElementById('weavingLogTotalSqm');
+            const remainingEl = document.getElementById('weavingLogRemainingBefore');
+            const gradeEl = document.getElementById('weavingLogGrade');
+            if (qualityEl) qualityEl.value = order.quality || '';
+            if (sizeEl) sizeEl.value = (Array.isArray(order.sizeItems) ? order.sizeItems : [])
+                .map(it => `${it.width || '-'} X ${it.length || '-'}`).join(', ');
+            const totalSqm = Number(order.totalSqm) || 0;
+            if (totalSqmEl) totalSqmEl.value = totalSqm || '';
+            // "คงเหลือยกมา" — total sqm minus whatever this M/O has already logged on EARLIER dates (this
+            // date's own entry, if editing one, is excluded so re-opening it for edit doesn't double-
+            // subtract itself).
+            const editDate = document.getElementById('weavingLogDate') ? document.getElementById('weavingLogDate').value : '';
+            const loggedSoFar = (Array.isArray(order.weaving.dailyLog) ? order.weaving.dailyLog : [])
+                .filter(l => l.date < editDate)
+                .reduce((s, l) => s + (Number(l.sqm) || 0), 0);
+            if (remainingEl) remainingEl.value = Math.max(0, Math.round((totalSqm - loggedSoFar) * 100) / 100) || '';
+            if (gradeEl && order.productionCalc && Number(order.productionCalc.totalArea) > 0) {
+                gradeEl.value = computeTuftingGrade(order.productionCalc).grade;
+            }
+            recalcWeavingLogPreview();
+        }
+
+        function checkedWeavingEmployees(shiftClass) {
+            return Array.from(document.querySelectorAll(`.${shiftClass}:checked`)).map(el => el.dataset.name);
+        }
+
+        function timeRangeHours(start, end) {
+            if (!start || !end) return 0;
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            if ([sh, sm, eh, em].some(n => isNaN(n))) return 0;
+            const diff = (eh + em / 60) - (sh + sm / 60);
+            return diff > 0 ? Math.round(diff * 100) / 100 : 0;
+        }
+
+        // Builds the {regular, ot, sqm, hours, efficiency, employees, gradeTargetEfficiency, gradePercent}
+        // shape shared by both the live preview (recalcWeavingLogPreview()) and the actual saved entry
+        // (saveWeavingLogEntry()) — one calculation, read from the DOM once, so the preview never shows
+        // a number different from what actually gets saved.
+        function readWeavingLogShiftsFromForm() {
+            const regStart = document.getElementById('weavingLogRegStart').value;
+            const regEnd = document.getElementById('weavingLogRegEnd').value;
+            const regArea = Number(document.getElementById('weavingLogRegArea').value) || 0;
+            const regEmployees = checkedWeavingEmployees('weaving-log-emp-reg');
+            const regHours = timeRangeHours(regStart, regEnd);
+            const regStaff = regEmployees.length;
+            const regular = {
+                start: regStart, end: regEnd, hours: regHours, staffCount: regStaff, employees: regEmployees,
+                areaDone: regArea,
+                efficiency: (regStaff > 0 && regHours > 0) ? Math.round((regArea / (regStaff * regHours)) * 10000) / 10000 : null
+            };
+
+            const otStart = document.getElementById('weavingLogOtStart').value;
+            const otEnd = document.getElementById('weavingLogOtEnd').value;
+            const otArea = Number(document.getElementById('weavingLogOtArea').value) || 0;
+            const otEmployees = checkedWeavingEmployees('weaving-log-emp-ot');
+            const otHours = timeRangeHours(otStart, otEnd);
+            const otStaff = otEmployees.length;
+            const ot = {
+                start: otStart, end: otEnd, hours: otHours, staffCount: otStaff, employees: otEmployees,
+                areaDone: otArea,
+                efficiency: (otStaff > 0 && otHours > 0) ? Math.round((otArea / (otStaff * otHours)) * 10000) / 10000 : null
+            };
+
+            const sqm = Math.round((regular.areaDone + ot.areaDone) * 100) / 100;
+            const totalStaffHours = Math.round(((regular.staffCount * regular.hours) + (ot.staffCount * ot.hours)) * 100) / 100;
+            const efficiency = totalStaffHours > 0 ? Math.round((sqm / totalStaffHours) * 10000) / 10000 : null;
+            const grade = document.getElementById('weavingLogGrade').value || '';
+            const gradeTargetEfficiency = grade ? getTuftingGradeTarget(grade) : null;
+            const gradePercent = (gradeTargetEfficiency && efficiency !== null) ? Math.round((efficiency / gradeTargetEfficiency) * 1000) / 10 : null;
+
+            return {
+                regular, ot, sqm, hours: totalStaffHours, efficiency,
+                employees: Array.from(new Set([...regEmployees, ...otEmployees])),
+                grade, gradeTargetEfficiency, gradePercent
+            };
+        }
+
+        // Live preview — recalculates on every relevant input's onchange/oninput without touching any
+        // order data yet (nothing is saved until "บันทึก" is pressed).
+        function recalcWeavingLogPreview() {
+            const preview = document.getElementById('weavingLogPreview');
+            if (!preview) return;
+            const s = readWeavingLogShiftsFromForm();
+            const pct = (val) => val === null ? '-' : `${val}%`;
+            const eff = (val) => val === null ? '-' : val.toFixed(4);
+            preview.innerHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div class="bg-white rounded-lg border border-slate-200 p-2"><p class="text-[10px] text-slate-400">รวมพื้นที่วันนี้</p><p class="text-sm font-bold text-slate-800">${s.sqm.toFixed(2)} ตร.ม.</p></div>
+                    <div class="bg-white rounded-lg border border-slate-200 p-2"><p class="text-[10px] text-slate-400">รวมชั่วโมง (คน×ชม.)</p><p class="text-sm font-bold text-slate-800">${s.hours.toFixed(2)}</p></div>
+                    <div class="bg-white rounded-lg border border-slate-200 p-2"><p class="text-[10px] text-slate-400">ประสิทธิภาพ (ตรม./คน/ชม.)</p><p class="text-sm font-bold text-slate-800">${eff(s.efficiency)}</p></div>
+                    <div class="bg-white rounded-lg border ${s.gradePercent !== null && s.gradePercent < 90 ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'} p-2"><p class="text-[10px] text-slate-400">% เทียบเกรด${s.grade ? ` (${escapeHtml(s.grade)})` : ''}</p><p class="text-sm font-bold ${s.gradePercent !== null && s.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${pct(s.gradePercent)}</p></div>
+                </div>
+            `;
+        }
+
+        let weavingLogEditContext = null; // { orderIndex, date, loom } of the entry currently being edited, or null when creating fresh
+
+        function resetWeavingLogForm(keepDate) {
+            const dateEl = document.getElementById('weavingLogDate');
+            const prevDate = dateEl ? dateEl.value : '';
+            ['weavingLogMoSo', 'weavingLogPieceNo', 'weavingLogQuality', 'weavingLogSizeText',
+             'weavingLogTotalSqm', 'weavingLogRemainingBefore', 'weavingLogRegArea', 'weavingLogOtArea'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            if (dateEl) dateEl.value = keepDate ? prevDate : new Date().toISOString().split('T')[0];
+            const loomEl = document.getElementById('weavingLogLoom');
+            if (loomEl && !keepDate) loomEl.value = '1';
+            document.getElementById('weavingLogRegStart').value = '08:00';
+            document.getElementById('weavingLogRegEnd').value = '16:30';
+            document.getElementById('weavingLogOtStart').value = '17:00';
+            document.getElementById('weavingLogOtEnd').value = '20:00';
+            document.getElementById('weavingLogGrade').value = '';
+            document.querySelectorAll('.weaving-log-emp-reg, .weaving-log-emp-ot').forEach(cb => { cb.checked = false; });
+            const notFoundEl = document.getElementById('weavingLogMoSoNotFound');
+            if (notFoundEl) notFoundEl.classList.add('hidden');
+            weavingLogEditContext = null;
+            const saveBtn = document.getElementById('weavingLogSaveBtn');
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>บันทึกรายการทอวันนี้';
+            recalcWeavingLogPreview();
+        }
+
+        function saveWeavingLogEntry() {
+            const date = document.getElementById('weavingLogDate').value;
+            const loom = document.getElementById('weavingLogLoom').value;
+            const moSo = document.getElementById('weavingLogMoSo').value.trim();
+            if (!date || !loom) {
+                showToast('กรุณาระบุวันที่และจอทอ', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const found = findOrderByMoSoKey(moSo);
+            if (!found) {
+                showToast('ไม่พบ M/O นี้ในระบบ — กรุณาตรวจสอบเลขที่ M/O (ต้องเปิด M/O ไว้ในระบบก่อน)', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const { order, orderIndex } = found;
+            const shifts = readWeavingLogShiftsFromForm();
+            if (shifts.sqm <= 0) {
+                showToast('กรุณากรอกพื้นที่ที่ทำได้อย่างน้อย 1 กะ', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            // If editing an existing entry AND the M/O, date, or loom changed, the old entry no longer
+            // belongs where it used to live — remove it from its original order first so it doesn't
+            // linger as a stale duplicate.
+            if (weavingLogEditContext) {
+                const ctx = weavingLogEditContext;
+                const movedAway = ctx.orderIndex !== orderIndex || ctx.date !== date || String(ctx.loom) !== String(loom);
+                if (movedAway) {
+                    const oldOrder = productionOrders[ctx.orderIndex];
+                    if (oldOrder && Array.isArray(oldOrder.weaving.dailyLog)) {
+                        oldOrder.weaving.dailyLog = oldOrder.weaving.dailyLog.filter(l => !(l.date === ctx.date && String(l.loom || '') === String(ctx.loom || '')));
+                        recomputeWeavingSqmFromLog(oldOrder);
+                        persistOrderChange(oldOrder);
+                    }
+                }
+            }
+
+            if (!Array.isArray(order.weaving.dailyLog)) order.weaving.dailyLog = [];
+            const entry = {
+                date, loom,
+                pieceNo: document.getElementById('weavingLogPieceNo').value.trim(),
+                quality: document.getElementById('weavingLogQuality').value.trim(),
+                sizeText: document.getElementById('weavingLogSizeText').value.trim(),
+                grade: shifts.grade,
+                gradeTargetEfficiency: shifts.gradeTargetEfficiency,
+                gradePercent: shifts.gradePercent,
+                regular: shifts.regular,
+                ot: shifts.ot,
+                sqm: shifts.sqm,
+                hours: shifts.hours,
+                efficiency: shifts.efficiency,
+                employees: shifts.employees,
+                source: 'manual'
+            };
+            const existingIdx = order.weaving.dailyLog.findIndex(l => l.date === date && String(l.loom || '') === String(loom || ''));
+            if (existingIdx === -1) order.weaving.dailyLog.push(entry);
+            else order.weaving.dailyLog[existingIdx] = entry; // upsert — saving the same (date, loom) twice never double-counts
+
+            recomputeWeavingSqmFromLog(order);
+            persistOrderChange(order);
+            renderProductionBoard();
+            renderProductionTimeline();
+            renderProductionOverview();
+            renderWeavingLogTable();
+            if (currentDetailOrderIndex === orderIndex) renderOrderDetailModalBody(orderIndex);
+            showToast(`บันทึกรายการทอ ${escapeHtml(order.moSo)} วันที่ ${date} จอ ${loom} แล้ว (${shifts.sqm.toFixed(2)} ตร.ม.)`, 'fa-floppy-disk', 'text-emerald-400');
+            resetWeavingLogForm(true); // keep the date so entering the next loom for the same day is quick
+        }
+
+        // Loads a saved entry back into the form for editing — see saveWeavingLogEntry()'s
+        // weavingLogEditContext handling for what happens if the M/O/date/loom is then changed.
+        function editWeavingLogEntry(orderIndex, date, loom) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const entry = (order.weaving.dailyLog || []).find(l => l.date === date && String(l.loom || '') === String(loom || ''));
+            if (!entry) return;
+            setWeavingSubTab('log');
+            document.getElementById('weavingLogDate').value = entry.date;
+            document.getElementById('weavingLogLoom').value = String(entry.loom || '1');
+            document.getElementById('weavingLogMoSo').value = order.moSo;
+            document.getElementById('weavingLogPieceNo').value = entry.pieceNo || '';
+            document.getElementById('weavingLogQuality').value = entry.quality || order.quality || '';
+            document.getElementById('weavingLogSizeText').value = entry.sizeText || '';
+            document.getElementById('weavingLogTotalSqm').value = order.totalSqm || '';
+            document.getElementById('weavingLogGrade').value = entry.grade || '';
+            const reg = entry.regular || {};
+            const ot = entry.ot || {};
+            document.getElementById('weavingLogRegStart').value = reg.start || '08:00';
+            document.getElementById('weavingLogRegEnd').value = reg.end || '16:30';
+            document.getElementById('weavingLogRegArea').value = reg.areaDone || '';
+            document.getElementById('weavingLogOtStart').value = ot.start || '17:00';
+            document.getElementById('weavingLogOtEnd').value = ot.end || '20:00';
+            document.getElementById('weavingLogOtArea').value = ot.areaDone || '';
+            document.querySelectorAll('.weaving-log-emp-reg').forEach(cb => { cb.checked = (reg.employees || []).includes(cb.dataset.name); });
+            document.querySelectorAll('.weaving-log-emp-ot').forEach(cb => { cb.checked = (ot.employees || []).includes(cb.dataset.name); });
+            const loggedSoFar = (order.weaving.dailyLog || []).filter(l => l.date < date).reduce((s, l) => s + (Number(l.sqm) || 0), 0);
+            document.getElementById('weavingLogRemainingBefore').value = Math.max(0, Math.round(((Number(order.totalSqm) || 0) - loggedSoFar) * 100) / 100) || '';
+            weavingLogEditContext = { orderIndex, date, loom };
+            const saveBtn = document.getElementById('weavingLogSaveBtn');
+            if (saveBtn) saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1"></i>บันทึกการแก้ไข (${escapeHtml(order.moSo)} • ${date} • จอ ${loom})`;
+            recalcWeavingLogPreview();
+            const formEl = document.getElementById('weavingLogFormCard');
+            if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function deleteWeavingLogEntry(orderIndex, date, loom) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!window.confirm(`ลบรายการทอ ${order.moSo} วันที่ ${date} จอ ${loom} ถาวรหรือไม่?`)) return;
+            order.weaving.dailyLog = (order.weaving.dailyLog || []).filter(l => !(l.date === date && String(l.loom || '') === String(loom || '')));
+            recomputeWeavingSqmFromLog(order);
+            persistOrderChange(order);
+            renderProductionBoard();
+            renderProductionTimeline();
+            renderProductionOverview();
+            renderWeavingLogTable();
+            if (currentDetailOrderIndex === orderIndex) renderOrderDetailModalBody(orderIndex);
+            showToast('ลบรายการทอแล้ว', 'fa-circle-xmark', 'text-rose-400');
+        }
+
+        // --- Log table: every entry, across every M/O, flattened + filterable + a per-grade summary
+        // footer matching the excel's own "รวม ตร.ม. / รวม ชั่วโมง ต่อเกรด" block at the bottom of each
+        // day's sheet — here it summarizes whatever date range/search is currently filtered to. -------
+
+        function flattenAllWeavingLogEntries() {
+            const rows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                (order.weaving.dailyLog || []).forEach(entry => {
+                    rows.push(Object.assign({ orderIndex, moSo: order.moSo }, entry));
+                });
+            });
+            return rows;
+        }
+
+        function renderWeavingLogTable() {
+            const tbody = document.getElementById('weavingLogTableBody');
+            const summaryEl = document.getElementById('weavingLogGradeSummary');
+            if (!tbody) return;
+            const monthFilter = document.getElementById('weavingLogTableMonth') ? document.getElementById('weavingLogTableMonth').value : '';
+            const searchTerm = document.getElementById('weavingLogTableSearch') ? document.getElementById('weavingLogTableSearch').value.trim().toLowerCase() : '';
+
+            let rows = flattenAllWeavingLogEntries();
+            if (monthFilter) rows = rows.filter(r => String(r.date || '').startsWith(monthFilter));
+            if (searchTerm) {
+                rows = rows.filter(r => [r.moSo, r.quality, ...(r.employees || [])].map(v => String(v || '').toLowerCase()).some(v => v.includes(searchTerm)));
+            }
+            rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : String(a.loom).localeCompare(String(b.loom))));
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center text-slate-400 py-4 text-xs">ยังไม่มีรายการทอในช่วงที่เลือก</td></tr>`;
+            } else {
+                tbody.innerHTML = rows.map(r => {
+                    const pctBadge = r.gradePercent === null || r.gradePercent === undefined
+                        ? '<span class="text-slate-300">-</span>'
+                        : `<span class="font-semibold ${r.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${r.gradePercent}%</span>`;
+                    return `
+                    <tr class="border-t border-slate-100 hover:bg-slate-50">
+                        <td class="py-1.5 px-2 whitespace-nowrap">${escapeHtml(r.date || '-')}</td>
+                        <td class="py-1.5 px-2 text-center">${escapeHtml(String(r.loom || '-'))}</td>
+                        <td class="py-1.5 px-2 font-mono font-semibold text-indigo-700 cursor-pointer" onclick="openOrderDetailModal(${r.orderIndex})">${escapeHtml(r.moSo || '-')}</td>
+                        <td class="py-1.5 px-2">${escapeHtml(r.quality || '-')}</td>
+                        <td class="py-1.5 px-2 text-center">${escapeHtml(r.grade || '-')}</td>
+                        <td class="py-1.5 px-2 text-right font-medium">${(Number(r.sqm) || 0).toFixed(2)}</td>
+                        <td class="py-1.5 px-2 text-right">${(Number(r.hours) || 0).toFixed(2)}</td>
+                        <td class="py-1.5 px-2 text-right">${r.efficiency === null || r.efficiency === undefined ? '-' : Number(r.efficiency).toFixed(4)}</td>
+                        <td class="py-1.5 px-2 text-center">${pctBadge}</td>
+                        <td class="py-1.5 px-2 text-slate-500 text-[11px]">${(r.employees || []).map(escapeHtml).join(', ') || '-'}</td>
+                        <td class="py-1.5 px-2 text-center whitespace-nowrap">
+                            <button onclick="editWeavingLogEntry(${r.orderIndex}, '${escapeHtml(r.date)}', '${escapeHtml(String(r.loom))}')" class="text-indigo-500 hover:text-indigo-700 px-1"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteWeavingLogEntry(${r.orderIndex}, '${escapeHtml(r.date)}', '${escapeHtml(String(r.loom))}')" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+            }
+
+            // Per-grade rollup — same shape as the excel's bottom summary block (A/B/C/C+/D/D+/E/X/Z: รวม
+            // ตร.ม. + รวม ชั่วโมง), plus an overall %เทียบเกรด per grade so it's obvious at a glance which
+            // grades are running below their target pace.
+            if (summaryEl) {
+                const byGrade = {};
+                TUFTING_GRADE_OPTIONS.forEach(g => { byGrade[g] = { sqm: 0, hours: 0 }; });
+                let totalSqm = 0, totalHours = 0;
+                rows.forEach(r => {
+                    totalSqm += Number(r.sqm) || 0;
+                    totalHours += Number(r.hours) || 0;
+                    if (r.grade && byGrade[r.grade]) {
+                        byGrade[r.grade].sqm += Number(r.sqm) || 0;
+                        byGrade[r.grade].hours += Number(r.hours) || 0;
+                    }
+                });
+                const gradeCellsHtml = TUFTING_GRADE_OPTIONS.map(g => {
+                    const cell = byGrade[g];
+                    const target = getTuftingGradeTarget(g);
+                    const actualEff = cell.hours > 0 ? cell.sqm / cell.hours : null;
+                    const pct = (actualEff !== null && target) ? Math.round((actualEff / target) * 1000) / 10 : null;
+                    if (cell.sqm === 0 && cell.hours === 0) return '';
+                    return `<div class="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-center">
+                        <p class="text-[10px] font-bold text-slate-500">เกรด ${escapeHtml(g)}</p>
+                        <p class="text-xs font-semibold text-slate-800">${cell.sqm.toFixed(2)} ตร.ม. / ${cell.hours.toFixed(1)} ชม.</p>
+                        <p class="text-[11px] font-bold ${pct !== null && pct < 90 ? 'text-rose-600' : 'text-emerald-700'}">${pct === null ? '-' : pct + '%'}</p>
+                    </div>`;
+                }).join('');
+                summaryEl.innerHTML = `
+                    <div class="flex flex-wrap gap-2 mb-2">${gradeCellsHtml || '<p class="text-[11px] text-slate-400">ยังไม่มีข้อมูลเกรด</p>'}</div>
+                    <p class="text-xs text-slate-600"><i class="fa-solid fa-ruler-combined mr-1 text-indigo-500"></i>รวมทั้งหมด: <span class="font-bold">${totalSqm.toFixed(2)} ตร.ม.</span> • <span class="font-bold">${totalHours.toFixed(1)} ชม.</span> • ประสิทธิภาพรวม <span class="font-bold">${totalHours > 0 ? (totalSqm / totalHours).toFixed(4) : '-'}</span> ตรม./คน/ชม.</p>
+                `;
+            }
         }
 
         async function syncOrderToSheet(order) {
@@ -6603,10 +7322,21 @@
                 if (stage !== 'shipped' && stage !== 'ready_to_ship') totalSqmRemainingInLine += Number(o.totalSqm) || 0;
                 if (stage !== 'shipped' && !(o.design && o.design.done)) designNotDoneCount++;
             });
+            // NEW (2026-09-12): "ตารางเมตรที่ได้ต่อวันให้ไปสรุปภาพรวมบริษัท" — sums TODAY's logged sqm
+            // (order.weaving.dailyLog[].sqm where date === today) across every M/O, S/O, regardless of
+            // which entry path wrote it (native "บันทึกการทอรายวัน" form or the "นำเข้าข้อมูลทอ" Excel
+            // import — both write the same dailyLog[] shape, see recomputeWeavingSqmFromLog()).
+            const todayKey = new Date().toISOString().split('T')[0];
+            let sqmWovenToday = 0;
+            productionOrders.forEach(o => {
+                const log = (o.weaving && Array.isArray(o.weaving.dailyLog)) ? o.weaving.dailyLog : [];
+                log.forEach(l => { if (l.date === todayKey) sqmWovenToday += Number(l.sqm) || 0; });
+            });
             return {
                 totalSqmRemainingInLine,
                 stageCounts,
                 designNotDoneCount,
+                sqmWovenToday: Math.round(sqmWovenToday * 100) / 100,
                 dyeingColorsPerDay: getDyeingColorsPerDayTotal(),
                 weavingSqmPerDay: getWeavingSqmPerDayTotal(),
                 finishingMoPerDay: getFinishingCapacityPerDay(),
@@ -6816,10 +7546,11 @@
                     <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-chart-simple mr-2 text-indigo-600"></i>สรุปภาพรวมทั้งบริษัท</h3>
                     <span class="text-[11px] text-slate-400">อัปเดตอัตโนมัติตามข้อมูลปัจจุบัน</span>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-8 gap-2">
                     ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. คงเหลือในไลน์ผลิต (ไม่รวมรอส่ง)', `${s.totalSqmRemainingInLine.toLocaleString('th-TH')} ตร.ม.`)}
                     ${overviewStatTileHtml('fa-droplet', 'text-violet-500', 'ย้อมได้/วัน (ที่กำลังย้อม)', `${s.dyeingColorsPerDay.toLocaleString('th-TH')} สี/วัน`)}
                     ${overviewStatTileHtml('fa-hand-holding-heart', 'text-teal-500', 'ทอได้/วัน (ที่กำลังทอ)', `${s.weavingSqmPerDay.toLocaleString('th-TH')} ตร.ม./วัน`)}
+                    ${overviewStatTileHtml('fa-calendar-day', 'text-cyan-500', 'ตร.ม. ที่ทอได้วันนี้', `${s.sqmWovenToday.toLocaleString('th-TH')} ตร.ม.`)}
                     ${overviewStatTileHtml('fa-box-archive', 'text-fuchsia-500', 'แต่งได้/วัน (ตั้งค่ากำลังผลิต)', `
                         <span class="inline-flex items-center gap-1">
                             <input type="number" min="0" value="${s.finishingMoPerDay || ''}" placeholder="0" onchange="updateFinishingCapacityInput(this.value)" class="w-14 px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-800">
@@ -7263,14 +7994,23 @@
 
         function updateBoardColumnVisibility() {
             const isSales = boardDepartmentFilter === 'sales';
+            // NEW (2026-09-12): "แผนกทอ" → "บันทึกการทอรายวัน" sub-tab — same swap-the-grid-out idea as
+            // แผนกขาย above, gated on BOTH boardDepartmentFilter === 'weaving' AND the inner sub-tab
+            // pill (weavingActiveSubTab, see setWeavingSubTab()) being on 'log'.
+            const isWeaving = boardDepartmentFilter === 'weaving';
+            const isWeavingLog = isWeaving && typeof weavingActiveSubTab !== 'undefined' && weavingActiveSubTab === 'log';
             const salesContainer = document.getElementById('salesFormContainer');
             const searchCard = document.getElementById('boardSearchCard');
+            const weavingSubTabBar = document.getElementById('weavingSubTabBar');
+            const weavingLogContainer = document.getElementById('weavingLogContainer');
             if (salesContainer) salesContainer.classList.toggle('hidden', !isSales);
-            if (searchCard) searchCard.classList.toggle('hidden', isSales);
+            if (searchCard) searchCard.classList.toggle('hidden', isSales || isWeavingLog);
+            if (weavingSubTabBar) weavingSubTabBar.classList.toggle('hidden', !isWeaving);
+            if (weavingLogContainer) weavingLogContainer.classList.toggle('hidden', !isWeavingLog);
 
             const grid = document.getElementById('boardColumnsGrid');
             if (grid) {
-                grid.classList.toggle('hidden', isSales);
+                grid.classList.toggle('hidden', isSales || isWeavingLog);
                 if (boardDepartmentFilter === '') {
                     grid.classList.remove('md:grid-cols-1');
                     grid.classList.add('md:grid-cols-6');
@@ -7282,7 +8022,7 @@
             BOARD_TABS.forEach(stage => {
                 const wrap = document.getElementById(`boardColWrap-${stage}`);
                 if (!wrap) return;
-                const shouldShow = !isSales && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
+                const shouldShow = !isSales && !isWeavingLog && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
                 wrap.classList.toggle('hidden', !shouldShow);
             });
         }
@@ -7756,6 +8496,22 @@
         function computeTuftingGrade(calc) {
             for (const row of TUFTING_GRADE_TABLE) { if (row.test(calc)) return { grade: row.grade, target: row.target }; }
             return { grade: 'A', target: 0.42 };
+        }
+
+        // NEW (2026-09-12): reverse lookup grade-letter -> target ตรม./คน/ชม. — used by the "บันทึกการทอ
+        // รายวัน" daily weaving log (see renderWeavingLogForm()/buildWeavingLogEntryFromForm() below) to
+        // compare each shift's ACTUAL efficiency against its grade's TARGET efficiency as a %, per the
+        // user's "ให้เปรียบเทียบ % กับเกรดการทอด้วย" request. Same table TUFTING_GRADE_TABLE already drives
+        // the AI planning-suggestion engine above — one source of truth for what each grade means.
+        const TUFTING_GRADE_TARGETS = (function() {
+            const map = {};
+            TUFTING_GRADE_TABLE.forEach(row => { map[row.grade] = row.target; });
+            map.A = 0.42; // same fallback grade/target as computeTuftingGrade()'s default case
+            return map;
+        })();
+        const TUFTING_GRADE_OPTIONS = Object.keys(TUFTING_GRADE_TARGETS).sort((a, b) => TUFTING_GRADE_TARGETS[a] - TUFTING_GRADE_TARGETS[b]);
+        function getTuftingGradeTarget(grade) {
+            return TUFTING_GRADE_TARGETS.hasOwnProperty(grade) ? TUFTING_GRADE_TARGETS[grade] : null;
         }
         function computeTuftingBaseHours(calc, gradeInfo) {
             let baseHours = gradeInfo.target > 0 ? (Number(calc.totalArea) || 0) / gradeInfo.target : 0;
@@ -8438,6 +9194,54 @@
             if (addPane) addPane.classList.toggle('hidden', salesActiveSubTab !== 'add');
             if (reportPane) reportPane.classList.toggle('hidden', salesActiveSubTab !== 'report');
             if (salesActiveSubTab === 'report') renderSalesReportTables();
+        }
+
+        // NEW (2026-09-12): "แผนกทอ" local sub-tab switcher — "บอร์ดงานทอ" (the pre-existing Kanban
+        // column) vs "บันทึกการทอรายวัน" (the new native daily log). Same purely-a-display-toggle
+        // pattern as setSalesSubTab() above, except this one only matters while boardDepartmentFilter
+        // === 'weaving' — see updateBoardColumnVisibility(), which is what actually shows/hides
+        // weavingLogContainer/boardColumnsGrid/boardSearchCard based on this value.
+        let weavingActiveSubTab = 'board';
+        function setWeavingSubTab(tab) {
+            weavingActiveSubTab = (tab === 'log') ? 'log' : 'board';
+            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            [
+                { el: document.getElementById('weavingSubTabBtn-board'), isActive: weavingActiveSubTab === 'board' },
+                { el: document.getElementById('weavingSubTabBtn-log'), isActive: weavingActiveSubTab === 'log' }
+            ].forEach(({ el, isActive }) => {
+                if (!el) return;
+                if (isActive) { el.classList.remove(...inactiveClasses); el.classList.add(...activeClasses); }
+                else { el.classList.remove(...activeClasses); el.classList.add(...inactiveClasses); }
+            });
+            // Make sure "แผนกทอ" is actually the selected board department tab — editWeavingLogEntry()
+            // calls this directly (e.g. from the Overview or another department's view of an order),
+            // so it needs to also switch the outer department filter, not just this inner pill.
+            if (boardDepartmentFilter !== 'weaving') {
+                setBoardDepartmentTab('weaving');
+                return; // setBoardDepartmentTab() -> updateBoardColumnVisibility() already re-runs with the new sub-tab
+            }
+            updateBoardColumnVisibility();
+            if (weavingActiveSubTab === 'log') {
+                // Refresh the M/O suggestions + history table every time the log pane is opened (cheap,
+                // and picks up any orders added/shipped elsewhere) — but deliberately does NOT touch the
+                // staff checkboxes or reset the entry form, so an in-progress entry survives switching
+                // away and back.
+                populateWeavingLogMoSoOptions();
+                renderWeavingLogTable();
+            }
+        }
+
+        // Fills the "เกรดการทอ" <select> from TUFTING_GRADE_OPTIONS (see computeTuftingGrade() /
+        // getTuftingGradeTarget() above) — called once at startup since the grade table itself never
+        // changes at runtime.
+        function populateWeavingLogGradeOptions() {
+            const sel = document.getElementById('weavingLogGrade');
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">-- เลือกเกรด --</option>' +
+                TUFTING_GRADE_OPTIONS.map(g => `<option value="${escapeHtml(g)}">เกรด ${escapeHtml(g)}</option>`).join('');
+            sel.value = current;
         }
 
         // NEW (2026-09-11): "รายการทั้งหมด (M/O, S/O)" spreadsheet-style report — split into 4 tables
