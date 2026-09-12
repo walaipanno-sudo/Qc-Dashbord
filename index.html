@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -22,7 +20,42 @@
          and the app behaves exactly like before (Google Sheets only). -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
-        body { font-family: 'Prompt', sans-serif; }
+        :root {
+            --brand-950: #14213d;
+            --brand-800: #1f3a5f;
+            --brand-700: #28527a;
+            --brand-600: #326a9d;
+            --surface: #ffffff;
+            --page: #f4f7fb;
+            --line: #dce4ee;
+            --muted: #64748b;
+        }
+        body { font-family: 'Prompt', sans-serif; background: var(--page) !important; color: #1e293b; }
+
+        /* Corporate dashboard treatment: calm navy, clean surfaces and clear information grouping. */
+        #mainHeader { background: linear-gradient(115deg, var(--brand-950), var(--brand-800)) !important; box-shadow: 0 4px 18px rgba(20, 33, 61, .18); }
+        #mainHeader .max-w-7xl { max-width: 1440px; }
+        main.max-w-7xl { max-width: 1440px; }
+        main > .bg-white.rounded-2xl,
+        main .bg-white.rounded-2xl { border-color: var(--line); box-shadow: 0 2px 10px rgba(15, 23, 42, .045); }
+        #mascotWidget { display: none !important; }
+        .app-navigation { border-color: var(--line) !important; box-shadow: 0 2px 12px rgba(15, 23, 42, .055) !important; }
+        .app-navigation-title { color: var(--brand-950); letter-spacing: .01em; }
+        .app-navigation-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: thin; }
+        .app-navigation-tabs button { white-space: nowrap; }
+        .app-navigation-tabs button:hover { background: #e8f0f7; }
+        #tabOverviewBtn.bg-white, #tabBoardBtn.bg-white, #tabTimelineBtn.bg-white,
+        #tabRecordsBtn.bg-white, #tabShippingBtn.bg-white, #tabShippedBtn.bg-white,
+        #tabIssuesBtn.bg-white, #tabAnalyticsBtn.bg-white, #tabCentralBtn.bg-white {
+            background: var(--brand-800) !important; color: #fff !important; box-shadow: none !important;
+        }
+        #globalSearchFilterWrapper input, #globalSearchFilterWrapper select { border-color: var(--line); background: #fff; }
+        #globalSearchFilterWrapper input:focus, #globalSearchFilterWrapper select:focus { --tw-ring-color: rgba(50,106,157,.28); border-color: var(--brand-600); }
+        .formal-filter-label { color: var(--brand-800); }
+        @media (max-width: 768px) {
+            #mainHeader .max-w-7xl { align-items: stretch; }
+            .app-navigation-tabs { width: 100%; }
+        }
 
         /* ===== Print-only header (shown only when printing the full list) ===== */
         .print-only-header { display: none; }
@@ -133,10 +166,10 @@
                     <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">QC & Production Dashboard (GitHub Pages)</h1>
-                    <p class="text-xs text-indigo-200 flex items-center gap-1.5">
+                    <h1 class="text-xl font-bold tracking-wide">ศูนย์ควบคุมคุณภาพและแผนการผลิต</h1>
+                    <p class="text-xs text-slate-200 flex items-center gap-1.5">
                         <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                        <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อ...</span>
+                        <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อข้อมูล...</span>
                     </p>
                 </div>
                 <!-- NEW (2026-09-11): shows "ชื่อ (แผนก) [ออกจากระบบ]" once signed in via Supabase — see
@@ -322,9 +355,17 @@
         </div>
 
         <!-- View Switcher & Filter Section -->
-        <div class="no-print bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <section class="app-navigation no-print bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3" aria-label="เมนูและตัวกรองข้อมูล">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                    <h2 class="app-navigation-title text-sm font-bold"><i class="fa-solid fa-layer-group mr-1.5"></i>พื้นที่ทำงาน</h2>
+                    <p class="text-[11px] text-slate-500">เลือกมุมมองเพื่อติดตามสถานะงาน แผนการผลิต และคุณภาพ</p>
+                </div>
+                <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Operations workspace</span>
+            </div>
+            <div class="flex flex-col md:flex-row gap-4 justify-between md:items-center">
             <!-- View Tabs -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto flex-wrap">
+            <div class="app-navigation-tabs flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto">
                 <button onclick="switchView('overview')" id="tabOverviewBtn" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold bg-white text-indigo-700 shadow-sm transition">
                     <i class="fa-solid fa-diagram-project mr-1.5"></i> ภาพรวมการผลิต
                 </button>
@@ -403,14 +444,15 @@
                     <i class="fa-solid fa-rotate-right mr-1"></i> รีเซ็ต
                 </button>
             </div>
-        </div>
+            </div>
+        </section>
 
         <!-- Global M/O / S/O Filter Switch — persistent across every tab (ภาพรวม, แผนผังการผลิต,
              รายงาน QC ทั้งหมด, รอส่ง, ส่งแล้ว). Narrows each tab's own content down to just the
              selected order type; does not affect the weekly QC summary report, which is always
              company-wide by design. -->
         <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide"><i class="fa-solid fa-filter mr-1.5"></i>แสดงเฉพาะประเภท:</span>
+            <span class="formal-filter-label text-xs font-semibold uppercase tracking-wide"><i class="fa-solid fa-filter mr-1.5"></i>ตัวกรองประเภทงาน</span>
             <div class="flex items-center bg-slate-100 p-1 rounded-xl">
                 <button onclick="setOrderTypeFilter('all')" id="orderTypeFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
                 <button onclick="setOrderTypeFilter('MO')" id="orderTypeFilterMoBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-700 transition">M/O</button>
@@ -425,7 +467,7 @@
              "ทั้งหมด" (there's no way to guess export/domestic from the M/O number the way order type
              can be guessed from it) until someone tags them via the order detail modal. -->
         <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide"><i class="fa-solid fa-earth-asia mr-1.5"></i>แสดงเฉพาะตลาด:</span>
+            <span class="formal-filter-label text-xs font-semibold uppercase tracking-wide"><i class="fa-solid fa-earth-asia mr-1.5"></i>ตัวกรองตลาด</span>
             <div class="flex items-center bg-slate-100 p-1 rounded-xl">
                 <button onclick="setMarketFilter('all')" id="marketFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
                 <button onclick="setMarketFilter('export')" id="marketFilterExportBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-sky-700 transition">ต่างประเทศ</button>
@@ -685,6 +727,26 @@
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รหัสดีไซน์ (Design Ref.)</label>
                         <input type="text" id="newOrderDesignRef" placeholder="เช่น RLS-26-002-02" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
+                </div>
+                <div class="border border-indigo-100 bg-indigo-50/40 rounded-xl p-3 space-y-3">
+                    <div>
+                        <p class="text-xs font-bold text-indigo-800"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">ข้อมูลนี้จะแสดงในใบสั่งผลิต เพื่อให้ทอ ย้อม ตกแต่ง และ QC ใช้ข้อกำหนดชุดเดียวกัน</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">ชนิดไหม (Yarn type)</label><input type="text" id="newOrderYarnType" placeholder="เช่น NZ Wool 100% / Rayon" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">สเปกทอ (Tufting spec)</label><input type="text" id="newOrderTuftingSpec" placeholder="เช่น Cut pile 9 mm. / Gauge" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">ผิวงาน (Surface)</label><input type="text" id="newOrderSurface" placeholder="เช่น Cut / Loop / Carving" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">ผิวสัมผัส (Texture)</label><input type="text" id="newOrderTexture" placeholder="เช่น Soft / Flat / High-low" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ตำแหน่งและรายละเอียดสี (Color & Color placement)</label><textarea id="newOrderColorPlacement" rows="2" placeholder="ระบุสีหลัก สีขอบ ตำแหน่งพิเศษ หรือแนบอ้างอิงตามดีไซน์" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></textarea></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">แผนไหม/สีสำหรับผลิต</label><textarea id="newOrderYarnPlan" rows="3" placeholder="หนึ่งบรรทัดต่อหนึ่งสี: รหัสสี | จ้างย้อม กก. | ย้อมเอง กก. | Surplus กก. | ย้อมเพิ่ม กก." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></textarea></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">งานทากาว (Latexing)</label><input type="text" id="newOrderLatexing" placeholder="ระบุวิธี/ความหนา" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">Tuft bind</label><input type="text" id="newOrderTuftBind" placeholder="ระบุข้อกำหนด" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">Sprouting / Label</label><input type="text" id="newOrderSproutingLabel" placeholder="การเก็บปลายไหม / ป้าย" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">คำสั่งพิเศษถึงฝ่ายผลิต / QC</label><textarea id="newOrderProductionInstruction" rows="2" placeholder="ข้อควรระวัง มาตรฐานรับงาน หรือรายละเอียดพิเศษ" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></textarea></div>
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
@@ -1885,7 +1947,8 @@
 
     <!-- NEW (2026-09-10): Carpet Production Planning calc engine — shared settings modal (เอกสารอ้างอิง
          TH098/26-แก้แบบ, Section 1.2). regular_hours_per_day + staff_count/ot_hours per department
-         (แผนกทอ/ดีไซน์/แผนกตกแต่ง — แผนกย้อมไม่มีเครื่องคำนวณอัตโนมัติ ยังคงกรอกจำนวนวันเองเหมือนเดิม).
+         (แผนกทอ/ดีไซน์/ย้อม/แผนกตกแต่ง).  ค่าการผลิตของแผนกย้อมเพิ่มเข้ามาเพื่อให้ AI
+         แนะนำระยะเวลาได้ครบทุกแผนก โดยผู้วางแผนยังแก้ไขจำนวนวันเองได้เสมอ.
          Shared across every M/O (ตั้งค่ากลาง ใช้ร่วมกันทุก M/O) — see openProductionSettingsModal() /
          saveProductionSettings() / productionSettings in the script below. -->
     <div id="productionSettingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -1930,6 +1993,21 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                    <div class="sm:col-span-3 text-xs font-bold text-slate-500 uppercase">แผนกย้อม (Dyeing)</div>
+                    <div>
+                        <label class="block text-[11px] text-slate-500 mb-0.5">จำนวนคน</label>
+                        <input type="number" min="0" step="1" id="prodSettingDyeingStaff" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-500 mb-0.5">กำลังย้อม/คน/วัน (กก.)</label>
+                        <input type="number" min="0" step="0.1" id="prodSettingDyeingKgPerDay" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-500 mb-0.5">เวลาเตรียมต่อสี (ชม.)</label>
+                        <input type="number" min="0" step="0.5" id="prodSettingDyeingSetupHours" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
                     <div class="sm:col-span-3 text-xs font-bold text-slate-500 uppercase">แผนกตกแต่ง (Finishing)</div>
                     <div>
                         <label class="block text-[11px] text-slate-500 mb-0.5">จำนวนคน</label>
@@ -1940,7 +2018,7 @@
                         <input type="number" min="0" step="0.5" id="prodSettingFinishingOt" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-400">หมายเหตุ: แผนกย้อมไม่มีสูตรคำนวณอัตโนมัติ (ยังกรอกจำนวนวันเองตามเดิม)</p>
+                <p class="text-[11px] text-slate-400">AI ใช้ค่าแรงงาน/กำลังผลิตชุดนี้เป็นค่าประมาณ ผู้วางแผนสามารถปรับจำนวนวันของทุกแผนกด้วยตนเองได้เสมอ</p>
             </div>
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
                 <button type="button" onclick="closeProductionSettingsModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium text-sm rounded-xl transition">ปิด</button>
@@ -2219,6 +2297,7 @@
                 regularHoursPerDay: 8,
                 tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
                 design: { staffCount: 1, otHours: 0 },
+                dyeing: { staffCount: 1, kgPerDay: 12, setupHoursPerColor: 0.5 },
                 finishing: { staffCount: 1, otHours: 0 }
             };
             let saved = {};
@@ -2227,6 +2306,7 @@
                 regularHoursPerDay: (saved.regularHoursPerDay !== undefined) ? saved.regularHoursPerDay : defaults.regularHoursPerDay,
                 tufting: Object.assign({}, defaults.tufting, saved.tufting || {}),
                 design: Object.assign({}, defaults.design, saved.design || {}),
+                dyeing: Object.assign({}, defaults.dyeing, saved.dyeing || {}),
                 finishing: Object.assign({}, defaults.finishing, saved.finishing || {})
             };
         })();
@@ -4184,12 +4264,14 @@
                         regularHoursPerDay: 8,
                         tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
                         design: { staffCount: 1, otHours: 0 },
+                        dyeing: { staffCount: 1, kgPerDay: 12, setupHoursPerColor: 0.5 },
                         finishing: { staffCount: 1, otHours: 0 }
                     };
                     productionSettings = {
                         regularHoursPerDay: (result.regularHoursPerDay !== undefined) ? result.regularHoursPerDay : defaults.regularHoursPerDay,
                         tufting: Object.assign({}, defaults.tufting, result.tufting || {}),
                         design: Object.assign({}, defaults.design, result.design || {}),
+                        dyeing: Object.assign({}, defaults.dyeing, result.dyeing || {}),
                         finishing: Object.assign({}, defaults.finishing, result.finishing || {})
                     };
                     saveProductionSettingsToLocal();
@@ -4620,6 +4702,10 @@
                 specDoneBy: planningRaw.specDoneBy || '',
                 planEntered: !!planningRaw.planEntered,
                 planEnteredBy: planningRaw.planEnteredBy || '',
+                // "ai" shows recommendations and lets the planner apply them; "manual" keeps the
+                // exact same schedule fields but makes it explicit that entered durations are owned
+                // by the planner, not calculated values. Older records migrate to manual safely.
+                planMode: planningRaw.planMode === 'ai' ? 'ai' : 'manual',
                 percent: 0
             };
             if (!('specDone' in planningRaw) && !('planEntered' in planningRaw)) {
@@ -7057,6 +7143,29 @@
             return Math.ceil((Number(activeHours) || 0) / capacityPerDay);
         }
 
+        // AI-assist estimate for dyeing. It converts the planned kilograms into production days using
+        // the department's real daily capacity and adds the colour-change/setup time. Surplus yarn is
+        // excluded because it does not need a new dye batch. This is deliberately a recommendation,
+        // never a hidden overwrite of the planner's manual duration.
+        function computeDyeingSuggestion(order) {
+            const d = order.dyeing || {};
+            const s = productionSettings.dyeing || {};
+            const staff = Number(s.staffCount) || 0;
+            const kgPerPerson = Number(s.kgPerDay) || 0;
+            const plannedKg = Number(d.plannedKg) || 0;
+            const surplusKg = d.surplusUsed ? (Number(d.surplusKg) || 0) : 0;
+            const kgToDye = Math.max(0, plannedKg - surplusKg);
+            const colorCount = Math.max(0, (Number(d.plannedColorCount) || 0) - (d.surplusUsed ? (Number(d.surplusColorCount) || 0) : 0));
+            const setupHours = colorCount * (Number(s.setupHoursPerColor) || 0);
+            const regularHours = Number(productionSettings.regularHoursPerDay) || 0;
+            const capacityKgPerDay = staff * kgPerPerson;
+            const hasWorkInput = kgToDye > 0 || colorCount > 0;
+            if (!hasWorkInput || capacityKgPerDay <= 0 || regularHours <= 0) return { days: null, kgToDye, colorCount, setupHours, hasWorkInput };
+            const dyeDays = kgToDye > 0 ? Math.ceil(kgToDye / capacityKgPerDay) : 0;
+            const setupDays = setupHours > 0 ? Math.ceil(setupHours / (staff * regularHours)) : 0;
+            return { days: Math.max(1, dyeDays + setupDays), kgToDye, colorCount, setupHours, hasWorkInput };
+        }
+
         // Convenience wrapper used by the UI: given an order + the shared productionSettings, returns
         // { grade, target, baseHours, days } for all 3 auto-calculated departments in one call.
         function computeProductionSuggestions(order) {
@@ -7077,6 +7186,7 @@
                     grade: designGrade.grade, target: designGrade.target, baseHours: designBaseHours,
                     days: computeProductionDays(designBaseHours, s.design.staffCount, s.regularHoursPerDay, s.design.otHours)
                 },
+                dyeing: computeDyeingSuggestion(order),
                 finishing: {
                     grade: finishingGrade.grade, target: finishingGrade.target, baseHours: finishingBaseHours,
                     days: computeProductionDays(finishingBaseHours, s.finishing.staffCount, s.regularHoursPerDay, s.finishing.otHours)
@@ -7097,7 +7207,36 @@
                 showToast('กรุณาตั้งค่าจำนวนพนักงาน/ชั่วโมงทำงานก่อน (ตั้งค่าเวลาผลิต)', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
+            order.planning.planMode = 'ai';
             updateOrderField(orderIndex, 'planDurations.' + stage, days);
+            order.planning.planMode = 'ai';
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function setPlanningMode(orderIndex, mode) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            order.planning.planMode = mode === 'ai' ? 'ai' : 'manual';
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+        }
+
+        function applyAllProductionSuggestions(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const suggestions = computeProductionSuggestions(order);
+            const unavailable = ['design', 'dyeing', 'weaving', 'finishing'].filter(stage => suggestions[stage].days === null);
+            if (unavailable.length) {
+                showToast('กรุณาตั้งค่ากำลังผลิตของทุกแผนกก่อนใช้แผน AI', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            ['design', 'dyeing', 'weaving', 'finishing'].forEach(stage => { order.planDurations[stage] = suggestions[stage].days; });
+            order.planning.planMode = 'ai';
+            recomputeAllSchedules();
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+            showToast('ใช้แผน AI กับทุกแผนกแล้ว — ยังปรับจำนวนวันรายแผนกได้', 'fa-wand-magic-sparkles', 'text-fuchsia-400');
         }
 
         // NEW (2026-09-11): "กำหนดงานที่รับผิดชอบ" — Planning enters how many DAYS each department needs
@@ -7161,16 +7300,15 @@
         //   - ดีไซน์/ตกแต่ง (design/finishing): one job per staff member, consistent with how
         //     computeProductionDays() already assumes the whole department's staff work one job at a
         //     time to produce that job's day count.
-        //   - ย้อม (dyeing): no capacity/staffing setting exists for this department yet, so it is left
-        //     unconstrained (returns null) — every order's dyeing dates simply chain right after its
-        //     own design finish date with no queueing. Known limitation; can be extended later if the
-        //     dyeing department gets its own staffing settings in "ตั้งค่าเวลาผลิต".
+        //   - ย้อม (dyeing): uses the configured dyeing staff count, so two dyeing jobs cannot be
+        //     scheduled beyond the department capacity.
         function getStageConcurrency(stage) {
             const s = productionSettings;
             if (stage === 'weaving') return Math.max(1, Number(s.tufting.loomCount) || 1);
             if (stage === 'design') return Math.max(1, Number(s.design.staffCount) || 1);
+            if (stage === 'dyeing') return Math.max(1, Number(s.dyeing && s.dyeing.staffCount) || 1);
             if (stage === 'finishing') return Math.max(1, Number(s.finishing.staffCount) || 1);
-            return null; // dyeing — unconstrained
+            return null;
         }
 
         // Greedy Earliest-Due-Date (EDD) parallel-machine scheduler for ONE department/stage.
@@ -7357,6 +7495,9 @@
             // recomputeAllSchedules() above (dueDate is included here because it drives scheduling
             // PRIORITY — the earlier-due job keeps its slot — even though it's never written back to).
             if (path.indexOf('planDurations.') === 0 || path === 'openDate' || path === 'dueDate') {
+                // Typing a duration is a deliberate planner decision. AI actions reset this marker
+                // immediately after calling this shared setter, so the visible mode remains accurate.
+                if (path.indexOf('planDurations.') === 0) order.planning.planMode = 'manual';
                 recomputeAllSchedules();
             }
             persistOrderChange(order);
@@ -7987,13 +8128,24 @@
         // line shown under a duration input for the 3 calc-engine-covered departments (design/weaving/
         // finishing). Shows a plain warning instead of a button when total_area is 0 (nothing to
         // calculate yet) or staff/OT for that department isn't set (see computeProductionDays()).
-        const CALC_STAGE_LABELS = { design: 'ดีไซน์/ขยายลาย', weaving: 'แผนกทอ', finishing: 'แผนกตกแต่ง' };
+        const CALC_STAGE_LABELS = { design: 'ดีไซน์/ขยายลาย', dyeing: 'แผนกย้อม', weaving: 'แผนกทอ', finishing: 'แผนกตกแต่ง' };
         function renderCalcSuggestionHtml(orderIndex, stage, order) {
             const calc = order.productionCalc || {};
             if (!calc.totalArea) {
                 return `<p class="text-[10px] text-slate-400 mt-0.5">กรอก "พื้นที่รวม" ด้านบนเพื่อดูเกรด/จำนวนวันที่แนะนำ</p>`;
             }
             const suggestion = computeProductionSuggestions(order)[stage];
+            if (stage === 'dyeing') {
+                const dyeDetails = `${suggestion.kgToDye.toFixed(2)} กก. / ${suggestion.colorCount} สี`;
+                if (!suggestion.hasWorkInput) {
+                    return `<p class="text-[10px] text-slate-400 mt-0.5">ระบุกิโลหรือจำนวนสีในส่วน “งานย้อม” ด้านล่าง เพื่อให้ AI ประเมินเวลา</p>`;
+                }
+                if (suggestion.days === null) {
+                    return `<p class="text-[10px] text-fuchsia-600 mt-0.5">AI: ${dyeDetails} — <span class="text-amber-600">กรุณาตั้งค่ากำลังผลิตแผนกย้อมก่อน</span></p>`;
+                }
+                const alreadyApplied = Number(order.planDurations.dyeing) === suggestion.days;
+                return `<p class="text-[10px] text-fuchsia-600 mt-0.5 flex items-center gap-1 flex-wrap">AI: ${dyeDetails} → แนะนำ <span class="font-semibold">${suggestion.days} วัน</span>${alreadyApplied ? '' : `<button type="button" onclick="applyProductionSuggestion(${orderIndex}, 'dyeing')" class="ml-1 px-1.5 py-0.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded whitespace-nowrap">ใช้ค่านี้</button>`}</p>`;
+            }
             const gradeText = `เกรดที่แนะนำ: <span class="font-semibold">${escapeHtml(suggestion.grade)}</span> (${suggestion.target} ตร.ม./ชม.แรงงาน)`;
             if (suggestion.days === null) {
                 return `<p class="text-[10px] text-fuchsia-600 mt-0.5">${gradeText} — <span class="text-amber-600">กรุณาตั้งค่าจำนวนพนักงาน/ชม. ${escapeHtml(CALC_STAGE_LABELS[stage])} ก่อน (ตั้งค่าเวลาผลิต)</span></p>`;
@@ -8015,12 +8167,24 @@
                     <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(order.planning.planEnteredBy || '')}" onchange="updateOrderField(${orderIndex}, 'planning.planEnteredBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 </div>
 
+                <div class="bg-indigo-50/70 border border-indigo-100 p-2.5 rounded-xl space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-bold text-indigo-700 flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> วิธีวางแผนระยะเวลาผลิต</p>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${order.planning.planMode === 'ai' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-slate-200 text-slate-600'}">${order.planning.planMode === 'ai' ? 'AI assist' : 'Manual'}</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button type="button" onclick="setPlanningMode(${orderIndex}, 'ai')" class="text-left p-2 rounded-lg border transition ${order.planning.planMode === 'ai' ? 'bg-white border-fuchsia-300 ring-1 ring-fuchsia-100' : 'bg-white/60 border-indigo-100 hover:border-fuchsia-200'}"><span class="block text-[11px] font-semibold text-fuchsia-700"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>ให้ AI ช่วยคำนวณ</span><span class="block text-[10px] text-slate-500 mt-0.5">ใช้พื้นที่ ลาย ปริมาณย้อม และกำลังผลิตจริง</span></button>
+                        <button type="button" onclick="setPlanningMode(${orderIndex}, 'manual')" class="text-left p-2 rounded-lg border transition ${order.planning.planMode === 'manual' ? 'bg-white border-indigo-300 ring-1 ring-indigo-100' : 'bg-white/60 border-indigo-100 hover:border-indigo-300'}"><span class="block text-[11px] font-semibold text-indigo-700"><i class="fa-solid fa-pen-to-square mr-1"></i>กำหนดเอง (Manual)</span><span class="block text-[10px] text-slate-500 mt-0.5">ระบุวันของแต่ละแผนกตามดุลยพินิจผู้วางแผน</span></button>
+                    </div>
+                    ${order.planning.planMode === 'ai' ? `<button type="button" onclick="applyAllProductionSuggestions(${orderIndex})" class="w-full bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-semibold py-1.5 rounded-lg shadow transition"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>ใช้ระยะเวลาที่ AI แนะนำกับทุกแผนก</button>` : `<p class="text-[10px] text-indigo-600"><i class="fa-solid fa-circle-info mr-1"></i>กรอกจำนวนวันในแต่ละแผนกด้านล่าง ระบบจะเรียงวันเสร็จให้ต่อเนื่องอัตโนมัติ</p>`}
+                </div>
+
                 <!-- NEW (2026-09-10): Carpet Production Planning calc engine's "Global Design Inputs"
                      (เอกสารอ้างอิง TH098/26-แก้แบบ, Section 1.1) — drives the auto-grade/hours/production-
                      days suggestions shown next to the duration fields below for แผนกทอ/ดีไซน์/แผนกตกแต่ง.
                      Persisted per-M/O as order.productionCalc (see normalizeOrder()). -->
                 <div class="bg-fuchsia-50/60 border border-fuchsia-100 p-2.5 rounded-xl space-y-2">
-                    <p class="text-xs font-bold text-fuchsia-700 flex items-center gap-1.5"><i class="fa-solid fa-ruler-combined"></i> ข้อมูลออกแบบ (สำหรับคำนวณเวลาผลิตอัตโนมัติ — ไม่บังคับ)</p>
+                    <p class="text-xs font-bold text-fuchsia-700 flex items-center gap-1.5"><i class="fa-solid fa-ruler-combined"></i> ข้อมูลสำหรับ AI ช่วยคำนวณเวลา (ไม่บังคับ)</p>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[10px] text-slate-500 mb-0.5">พื้นที่รวม (ตร.ม.)</label>
@@ -8076,6 +8240,7 @@
                             <label class="block text-[10px] text-slate-500 mb-0.5">แผนกย้อม ใช้เวลา (วัน)</label>
                             <input type="number" min="0" placeholder="จำนวนวัน" value="${order.planDurations.dyeing === '' ? '' : order.planDurations.dyeing}" onchange="updateOrderField(${orderIndex}, 'planDurations.dyeing', this.value === '' ? '' : Number(this.value))" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
                             <p class="text-[10px] text-sky-700 mt-0.5">→ เสร็จวันที่ <span class="font-semibold">${escapeHtml(order.planDates.dyeing || '-')}</span></p>
+                            ${renderCalcSuggestionHtml(orderIndex, 'dyeing', order)}
                         </div>
                         <div>
                             <label class="block text-[10px] text-slate-500 mb-0.5">แผนกทอ ใช้เวลา (วัน)</label>
@@ -8775,6 +8940,9 @@
             document.getElementById('prodSettingTuftingLoomCount').value = productionSettings.tufting.loomCount;
             document.getElementById('prodSettingDesignStaff').value = productionSettings.design.staffCount;
             document.getElementById('prodSettingDesignOt').value = productionSettings.design.otHours;
+            document.getElementById('prodSettingDyeingStaff').value = productionSettings.dyeing.staffCount;
+            document.getElementById('prodSettingDyeingKgPerDay').value = productionSettings.dyeing.kgPerDay;
+            document.getElementById('prodSettingDyeingSetupHours').value = productionSettings.dyeing.setupHoursPerColor;
             document.getElementById('prodSettingFinishingStaff').value = productionSettings.finishing.staffCount;
             document.getElementById('prodSettingFinishingOt').value = productionSettings.finishing.otHours;
             document.getElementById('productionSettingsModal').classList.remove('hidden');
@@ -8806,6 +8974,7 @@
                 regularHoursPerDay: num('prodSettingRegularHours', 8),
                 tufting: { staffCount: num('prodSettingTuftingStaff', 1), otHours: num('prodSettingTuftingOt', 0), loomCount: num('prodSettingTuftingLoomCount', 1) },
                 design: { staffCount: num('prodSettingDesignStaff', 1), otHours: num('prodSettingDesignOt', 0) },
+                dyeing: { staffCount: num('prodSettingDyeingStaff', 1), kgPerDay: num('prodSettingDyeingKgPerDay', 12), setupHoursPerColor: num('prodSettingDyeingSetupHours', 0.5) },
                 finishing: { staffCount: num('prodSettingFinishingStaff', 1), otHours: num('prodSettingFinishingOt', 0) }
             };
             syncProductionSettingsToSheet();
