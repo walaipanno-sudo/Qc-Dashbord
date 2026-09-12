@@ -1142,6 +1142,22 @@
                 </div>
             </div>
 
+            <!-- NEW (2026-09-12): "ใช้แผน AI กับทุก M/O, S/O" — ตามคำขอ "ตอนนี้ทั้งหมดให้ยึด AI คิดให้ก่อน
+                 เดี๋ยวค่อยแก้ไขทีหลัง": กดครั้งเดียวให้ระบบคำนวณระยะเวลาแต่ละแผนกด้วยสูตร AI
+                 (computeProductionSuggestions()) ให้ทุก M/O, S/O ที่ยังไม่ส่งพร้อมกันทั้งหมด แทนที่ต้องเข้า
+                 ไปกดทีละใบใน "ข้อมูลแผนกวางแผน" — ใบไหนข้อมูล/กำลังผลิตยังไม่ครบ (คำนวณไม่ได้) จะข้ามแผนก
+                 นั้นไปเฉยๆ ไม่บล็อกทั้งใบ ทีหลังยังเข้าไปแก้เป็นรายแผนก/รายใบด้วยมือได้ตามปกติ (สลับกลับเป็น
+                 "กำหนดเอง (Manual)" ในข้อมูลแผนกวางแผนของ M/O นั้นๆ) — see applyAiPlanToAllOrders(). -->
+            <div class="bg-fuchsia-50/60 border border-fuchsia-100 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div>
+                    <p class="text-xs font-bold text-fuchsia-700 flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> ให้ AI คิดแผนระยะเวลาให้ก่อนทั้งระบบ</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">คำนวณจำนวนวันแต่ละแผนกให้ทุก M/O, S/O ที่ยังไม่ส่งในคราวเดียว (ใบไหนคำนวณไม่ได้จะข้ามไป) — แก้ไขเป็นรายใบทีหลังได้ตามปกติ</p>
+                </div>
+                <button type="button" onclick="applyAiPlanToAllOrders()" class="shrink-0 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> ใช้แผน AI กับทุก M/O, S/O
+                </button>
+            </div>
+
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-600">
                 <!-- NEW (2026-09-09): ดีไซน์/ขยายลาย + แผนกวางแผน added so all 5 QC departments have a
                      distinct color on the timeline, not just the 3 that already had plan-date fields. -->
@@ -5065,8 +5081,15 @@
                 planEnteredBy: planningRaw.planEnteredBy || '',
                 // "ai" shows recommendations and lets the planner apply them; "manual" keeps the
                 // exact same schedule fields but makes it explicit that entered durations are owned
-                // by the planner, not calculated values. Older records migrate to manual safely.
-                planMode: planningRaw.planMode === 'ai' ? 'ai' : 'manual',
+                // by the planner, not calculated values.
+                // CHANGED (2026-09-12): default flipped from "manual" to "ai" — ตามคำขอ "ไทม์ไลน์การผลิต
+                // ตอนนี้ทั้งหมดให้ยึด AI คิดให้ก่อน เดี๋ยวค่อยแก้ไขทีหลัง". Only an order whose planMode was
+                // EXPLICITLY saved as 'manual' (a planner already chose that on purpose) stays manual —
+                // every other order (never touched this field, or was 'ai' already) now defaults to AI.
+                // Editing any planDurations.* field by hand still flips that one order back to 'manual'
+                // automatically (see updateOrderField()), so a manual correction is never silently
+                // reverted back to AI on the next reload.
+                planMode: planningRaw.planMode === 'manual' ? 'manual' : 'ai',
                 percent: 0
             };
             if (!('specDone' in planningRaw) && !('planEntered' in planningRaw)) {
@@ -7878,6 +7901,56 @@
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
             showToast('ใช้แผน AI กับทุกแผนกแล้ว — ยังปรับจำนวนวันรายแผนกได้', 'fa-wand-magic-sparkles', 'text-fuchsia-400');
+        }
+
+        // NEW (2026-09-12): whole-system version of applyAllProductionSuggestions() above — ตามคำขอ
+        // "ไทม์ไลน์การผลิต ตอนนี้ทั้งหมดให้ยึด AI คิดให้ก่อน เดี๋ยวค่อยแก้ไขทีหลัง". Key difference from the
+        // per-order button: this one does NOT block a whole M/O just because ONE department's inputs
+        // (productionCalc / dyeing plan / that department's staff-hours setting) aren't filled in yet —
+        // it applies whichever departments CAN be calculated right now and quietly skips the rest, so a
+        // single incomplete M/O never stops the other hundred from getting their AI plan. Never touches
+        // orders that are already shipped (nothing left to plan). Planning can still flip any individual
+        // M/O back to "กำหนดเอง (Manual)" and hand-edit its durations afterward exactly as before.
+        function applyAiPlanToAllOrders() {
+            const STAGES = ['design', 'dyeing', 'weaving', 'finishing'];
+            const touchedOrders = [];
+            let stagesApplied = 0;
+            let stagesSkipped = 0;
+            productionOrders.forEach(order => {
+                if (getEffectiveStage(order) === 'shipped') return; // ส่งแล้ว ไม่ต้องวางแผนซ้ำ
+                const suggestions = computeProductionSuggestions(order);
+                let touchedThisOrder = false;
+                STAGES.forEach(stage => {
+                    const days = suggestions[stage] && suggestions[stage].days;
+                    if (days === null || days === undefined) { stagesSkipped++; return; }
+                    order.planDurations[stage] = days;
+                    stagesApplied++;
+                    touchedThisOrder = true;
+                });
+                if (touchedThisOrder) {
+                    order.planning.planMode = 'ai';
+                    order.lastUpdated = new Date().toISOString().split('T')[0];
+                    touchedOrders.push(order);
+                }
+            });
+
+            if (touchedOrders.length === 0) {
+                showToast('ยังคำนวณ AI ให้ M/O, S/O ไหนไม่ได้เลย — กรุณากรอก "ข้อมูลสำหรับ AI ช่วยคำนวณเวลา" และตั้งค่ากำลังผลิตของแต่ละแผนกก่อน (ปุ่มตั้งค่าด้านบน)', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            saveOrdersToLocal();
+            touchedOrders.forEach(o => syncOrderToSheet(o));
+            recomputeAllSchedules(); // recomputes/persists planDates across every order together (also syncs)
+            renderProductionTimeline();
+            renderProductionOverview();
+            renderProductionBoard();
+            if (currentDetailOrderIndex !== null && currentDetailOrderIndex !== undefined) {
+                renderOrderDetailModalBody(currentDetailOrderIndex);
+            }
+            let msg = `ใช้แผน AI กับ ${touchedOrders.length} M/O, S/O แล้ว (${stagesApplied} แผนก)`;
+            if (stagesSkipped > 0) msg += ` — ข้าม ${stagesSkipped} แผนกที่ข้อมูล/กำลังผลิตยังไม่ครบ`;
+            showToast(msg, 'fa-wand-magic-sparkles', 'text-fuchsia-400');
         }
 
         // NEW (2026-09-11): "กำหนดงานที่รับผิดชอบ" — Planning enters how many DAYS each department needs
