@@ -139,6 +139,14 @@
            read the way an actual carton/crate marking would. */
         .mark-nos-box { border: 3px solid #1e293b; border-radius: 6px; padding: 18px; font-size: 18px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; text-align: center; letter-spacing: 0.02em; }
 
+        /* NEW: ใบสั่งเปิดงานผลิต (Production Work Order) print sheet — embeds the M/O's design image
+           (order.designImageUrl, the same picture the Design department uploads/sees — see
+           buildProductionWorkOrderPrintHTML()) directly in the printed/PDF page. break-inside: avoid
+           keeps the picture from being split across a page boundary. */
+        .print-design-image-wrap { text-align: center; margin: 10px 0 16px; break-inside: avoid; }
+        .print-design-image-wrap img { max-width: 100%; max-height: 320px; border: 1px solid #cbd5e1; border-radius: 6px; object-fit: contain; }
+        .print-design-image-caption { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
         /* NEW (2026-09-XX): "งานมีการเปลี่ยนแปลง" center-screen popup — see queueWorkChangeAlert().
            Unlike the toast/mascot bubble (which auto-fade and are easy to miss), this one sits center
            screen and pops in with a bounce so a new issue report / new M/O entering the system is hard
@@ -728,6 +736,40 @@
                         <input type="text" id="newOrderDesignRef" placeholder="เช่น RLS-26-002-02" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                 </div>
+                <!-- NEW: วันที่ส่งแบบที่ลูกค้าให้ ไปยังแผนกดีไซน์ + วันที่ได้รับแบบ (ขยายลายแล้ว) กลับมาจาก
+                     แผนกดีไซน์ — เก็บเป็น order.designSentDate/designReceivedDate (ดู submitNewOrder()/
+                     normalizeOrder()) และแสดง/แก้ไขซ้ำได้ทั้งที่นี่และในส่วนแผนกดีไซน์ของหน้ารายละเอียด M/O
+                     (renderDesignSectionHtml()) เป็นช่องเดียวกัน อัปเดตพร้อมกันเสมอ — ตอบโจทย์ "ต้องลิงค์กับ
+                     แผนกดีไซน์ด้วย". -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่ส่งแบบให้แผนกดีไซน์</label>
+                        <input type="date" id="newOrderDesignSentDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">วันที่ได้รับแบบจากแผนกดีไซน์</label>
+                        <input type="date" id="newOrderDesignReceivedDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <!-- NEW: แนบรูปดีไซน์/แบบที่ลูกค้าให้ ได้ทันทีตอนเปิด M/O, S/O ใหม่ — เก็บไฟล์ไว้ใน
+                     newOrderPendingDesignImageFile ก่อน แล้วอัปโหลดจริงหลัง submitNewOrder() สร้างออเดอร์
+                     สำเร็จแล้ว (ดู handleNewOrderDesignImageChange()/isAcceptableImageFile() — รับไฟล์รูป
+                     แทบทุกชนิด/นามสกุล ไม่ใช่แค่ที่ browser รายงาน MIME type มาให้ตรงเป๊ะ). -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">แนบรูปดีไซน์ (ถ้ามี)</label>
+                    <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                        <div id="newOrderDesignImagePreviewWrap" class="w-14 h-14 rounded-lg bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-300 shrink-0 overflow-hidden">
+                            <i class="fa-solid fa-image"></i>
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <p id="newOrderDesignImageFileName" class="text-[11px] text-slate-500 mb-1 truncate">ยังไม่ได้แนบรูป — จะอัปโหลดให้อัตโนมัติหลังกด "เพิ่มรายการ"</p>
+                            <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-medium px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1">
+                                <i class="fa-solid fa-upload"></i> เลือกไฟล์รูป
+                                <input type="file" accept="image/*,.heic,.heif" id="newOrderDesignImageInput" class="hidden" onchange="handleNewOrderDesignImageChange(event)">
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 <div class="border border-indigo-100 bg-indigo-50/40 rounded-xl p-3 space-y-3">
                     <div>
                         <p class="text-xs font-bold text-indigo-800"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</p>
@@ -747,6 +789,28 @@
                         <div><label class="block text-xs font-semibold text-slate-600 mb-1">Sprouting / Label</label><input type="text" id="newOrderSproutingLabel" placeholder="การเก็บปลายไหม / ป้าย" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></div>
                     </div>
                     <div><label class="block text-xs font-semibold text-slate-600 mb-1">คำสั่งพิเศษถึงฝ่ายผลิต / QC</label><textarea id="newOrderProductionInstruction" rows="2" placeholder="ข้อควรระวัง มาตรฐานรับงาน หรือรายละเอียดพิเศษ" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"></textarea></div>
+                </div>
+                <div class="border border-emerald-100 bg-emerald-50/40 rounded-xl p-3 space-y-2">
+                    <div>
+                        <p class="text-xs font-bold text-emerald-800"><i class="fa-solid fa-list-check mr-1"></i> SPECIFICATIONS</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">ติ๊กรายการที่ต้องใช้ในการผลิต — จะแสดงในใบสั่งเปิดงานผลิต</p>
+                    </div>
+                    <!-- NEW (2026-09-12): แม่แบบ (Template) ลูกค้า/สินค้า — เลือกแล้วติ๊ก SPECIFICATIONS ให้
+                         อัตโนมัติตามแม่แบบนั้น ลดเวลาคีย์ซ้ำสำหรับลูกค้า/สินค้าที่คุ้นเคยกัน — see
+                         renderSpecTemplateOptions()/applySpecTemplate()/saveCurrentAsSpecTemplate() below. -->
+                    <div class="flex items-center gap-1.5 bg-white border border-emerald-200 rounded-lg p-1.5">
+                        <i class="fa-solid fa-bookmark text-emerald-500 text-xs ml-1"></i>
+                        <select id="newOrderSpecTemplateSelect" onchange="applySpecTemplate(this.value)" class="flex-grow px-2 py-1.5 bg-transparent text-xs focus:outline-none">
+                            <option value="">-- เลือกแม่แบบ (ลูกค้า/สินค้า) --</option>
+                        </select>
+                        <button type="button" onclick="saveCurrentAsSpecTemplate()" title="บันทึกรายการที่ติ๊กไว้เป็นแม่แบบใหม่" class="shrink-0 px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-medium rounded-lg transition flex items-center gap-1">
+                            <i class="fa-solid fa-floppy-disk"></i> บันทึกแม่แบบ
+                        </button>
+                        <button type="button" onclick="deleteSelectedSpecTemplate()" title="ลบแม่แบบที่เลือก" class="shrink-0 px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] rounded-lg transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div id="newOrderSpecPanel" class="space-y-2"></div>
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
@@ -806,6 +870,15 @@
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
                             <input type="text" id="salesReportSearchInput" oninput="renderSalesReportTables()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
+                    </div>
+
+                    <!-- NEW (2026-09-12): ยอดตร.ม. รับเข้า/ส่งออกทั้งหมด — ตามคำขอของแผนกขาย เพื่อดูยอดรวม
+                         ตร.ม. ที่รับเข้าสายการผลิต (ทุก M/O, S/O ที่เคยเปิด) และยอดที่ส่งออกไปแล้วได้จากหน้านี้
+                         โดยตรง (ยอดคงเหลือในไลน์ผลิต ไม่รวมรอส่ง ไปแสดงที่การ์ด "สรุปภาพรวมทั้งบริษัท" ในแท็บ
+                         ภาพรวมการผลิตแทน — ดู computeOverviewSummaryStats()). ตัวเลขนี้ตามช่องค้นหาด้านบนด้วย
+                         (พิมพ์ค้นหาแล้วยอดจะกรองตาม) — see renderSalesReportTotals(). -->
+                    <div id="salesReportTotalsPanel" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- injected via JS -->
                     </div>
 
                     <!-- NEW (2026-09-11): M/O and S/O each split into their own ต่างประเทศ/ในประเทศ table
@@ -1566,6 +1639,11 @@
                     <!-- NEW (2026-09e): contextual "แจ้งปัญหา" — pre-fills the M/O so reporting a
                          problem while already looking at this order's detail doesn't require re-typing
                          its number. See openReportIssueModal(). -->
+                    <!-- NEW: ใบสั่งเปิดงานผลิต — พิมพ์/บันทึกเป็น PDF พร้อมรูปดีไซน์ในตัว — see
+                         buildProductionWorkOrderPrintHTML()/printProductionWorkOrder(). -->
+                    <button onclick="printProductionWorkOrder(currentDetailOrderIndex)" title="พิมพ์ใบสั่งเปิดงานผลิต (PDF)" class="text-indigo-200 hover:text-white transition text-sm">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
                     <button onclick="openReportIssueModal(productionOrders[currentDetailOrderIndex] ? productionOrders[currentDetailOrderIndex].moSo : '')" title="แจ้งปัญหาสำหรับ M/O, S/O นี้" class="text-indigo-200 hover:text-rose-300 transition text-sm">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                     </button>
@@ -2108,6 +2186,11 @@
         // NEW (2026-09e): issue reports ("แจ้งปัญหา") — a separate flat list, same load/save/sync
         // convention as qcData/productionOrders above (own localStorage key, own Google Sheet tab).
         let issuesData = [];
+        // NEW (2026-09-12): "แม่แบบ (Template) ลูกค้า/สินค้า" สำหรับ SPECIFICATIONS — เก็บเป็นลิสต์แยก
+        // {id, name, specs, createdAt}, เพื่อให้ทุกเครื่อง/ทุกคนเห็นแม่แบบชุดเดียวกัน (own localStorage
+        // key + own Google Sheet tab, เหมือน issuesData ด้านบน) — see renderSpecTemplateOptions()/
+        // applySpecTemplate()/saveCurrentAsSpecTemplate() near resetNewOrderSpecState().
+        let specTemplates = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
 
         // =========================================================================================
@@ -2673,6 +2756,11 @@
             if (savedIssues) {
                 try { issuesData = JSON.parse(savedIssues); } catch(e) {}
             }
+            // NEW (2026-09-12): แม่แบบ SPECIFICATIONS — same load-then-refresh-from-Sheet pattern above.
+            const savedSpecTemplates = localStorage.getItem('qc_spec_templates_v1');
+            if (savedSpecTemplates) {
+                try { specTemplates = JSON.parse(savedSpecTemplates); } catch(e) {}
+            }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
@@ -2684,6 +2772,7 @@
                 fetchOrdersFromGoogleSheet(false);
                 fetchIssuesFromGoogleSheet(false);
                 fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
+                fetchSpecTemplatesFromGoogleSheet(false); // NEW (2026-09-12): shared SPECIFICATIONS templates
             } else {
                 updateSyncStatus(false, 'ยังไม่ได้ตั้งค่า Google Sheet URL (คลิก "ตั้งค่าลิงก์")');
                 openConfigModal();
@@ -2701,6 +2790,11 @@
         // NEW (2026-09e): persists issuesData locally, same convention as saveOrdersToLocal() above.
         function saveIssuesToLocal() {
             localStorage.setItem('qc_issues_v1', JSON.stringify(issuesData));
+        }
+
+        // NEW (2026-09-12): persists specTemplates locally, same convention as saveIssuesToLocal() above.
+        function saveSpecTemplatesToLocal() {
+            localStorage.setItem('qc_spec_templates_v1', JSON.stringify(specTemplates));
         }
 
         function initApp() {
@@ -3933,6 +4027,115 @@
         }
 
         // =========================================================================================
+        // NEW: ใบสั่งเปิดงานผลิต (Production Work Order) — one printable/PDF sheet that gathers
+        // everything แผนกขาย captured when opening the M/O, S/O (customer/PO/dates/spec/ข้อกำหนดสำหรับ
+        // ฝ่ายผลิต/รายการขนาด) PLUS the M/O's design image (order.designImageUrl — the exact same
+        // picture แผนกดีไซน์ uploads/sees in its own section, see renderDesignSectionHtml() /
+        // renderDesignImageBlock()) embedded directly in the page, so ฝ่ายผลิตไม่ต้องเปิดเว็บแยกดูรูป.
+        // Same print-sheet/window.print() convention as buildMarkNosPrintHTML/buildDyeingOrderPrintHTML
+        // above — reuses one shared #printArea + print-single-mode + window.print() flow.
+        // =========================================================================================
+        function buildProductionWorkOrderPrintHTML(order) {
+            const infoRow = (label, value) => value ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>` : '';
+            const marketLabel = order.market === 'export' ? 'ต่างประเทศ' : (order.market === 'domestic' ? 'ในประเทศ' : '-');
+            const sizeItems = Array.isArray(order.sizeItems) ? order.sizeItems : [];
+            const sizeRows = sizeItems.map((it, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td style="text-align:right;">${(Number(it.width) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td style="text-align:right;">${(Number(it.length) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td style="text-align:right;">${Number(it.qty) || 0}</td>
+                    <td style="text-align:right;">${(Number(it.voidPercent) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%</td>
+                    <td style="text-align:right;">${(Number(it.sqm) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('');
+
+            const productionReqRows = [
+                ['ชนิดไหม (Yarn type)', order.yarnType],
+                ['สเปกทอ (Tufting spec)', order.tuftingSpec],
+                ['ผิวงาน (Surface)', order.surface],
+                ['ผิวสัมผัส (Texture)', order.texture],
+                ['ตำแหน่งและรายละเอียดสี', order.colorPlacement],
+                ['แผนไหม/สีสำหรับผลิต', order.yarnPlan],
+                ['งานทากาว (Latexing)', order.latexing],
+                ['Tuft bind', order.tuftBind],
+                ['Sprouting / Label', order.sproutingLabel],
+                ['คำสั่งพิเศษถึงฝ่ายผลิต / QC', order.productionInstruction]
+            ].filter(([, v]) => v);
+
+            return `
+                <div class="print-sheet">
+                    <div class="print-header">
+                        <h1>ใบสั่งเปิดงานผลิต</h1>
+                        <p>Siam Carpets Manufacturing</p>
+                    </div>
+                    <table class="print-info-table">
+                        <tr><th>M/O, S/O</th><td>${escapeHtml(order.moSo || '-')} (${escapeHtml(order.orderType || detectOrderTypeFromMoSo(order.moSo) || '-')} • ${escapeHtml(marketLabel)})</td></tr>
+                        ${infoRow('ชื่อเซล', order.salesName)}
+                        ${infoRow('ลูกค้า', order.customerName)}
+                        ${infoRow('PO ลูกค้า / โปรเจกต์', order.customerPO)}
+                        ${infoRow('วันที่เปิด M/O', order.openDate)}
+                        ${infoRow('เลขที่/ชื่อสถานที่ติดตั้ง', order.locationName)}
+                        ${infoRow('คุณภาพ', order.quality)}
+                        ${infoRow('บรรจุภัณฑ์', order.packaging)}
+                        ${order.colorsCount ? infoRow('จำนวนสี', String(order.colorsCount)) : ''}
+                        ${infoRow('รหัสดีไซน์ (Design Ref.)', order.designRef)}
+                        ${infoRow('วันที่ส่งแบบให้แผนกดีไซน์', order.designSentDate)}
+                        ${infoRow('วันที่ได้รับแบบจากแผนกดีไซน์', order.designReceivedDate)}
+                        ${infoRow('วันกำหนดส่ง (Dispatch Date)', order.dueDate)}
+                        ${infoRow('วันเลื่อนส่ง', order.postponeDispatchDate)}
+                        ${infoRow('INCOTERMS', order.incoterms)}
+                        ${infoRow('อ้างอิง (REF.)', order.refNote)}
+                    </table>
+                    ${order.designImageUrl ? `
+                        <p class="print-section-title">รูปดีไซน์ (อ้างอิงจากแผนกดีไซน์)</p>
+                        <div class="print-design-image-wrap">
+                            <img src="${escapeHtml(order.designImageUrl)}" alt="รูปดีไซน์">
+                            <p class="print-design-image-caption">รูปนี้เป็นรูปเดียวกับที่แผนกดีไซน์อัปโหลด/เห็นในระบบ</p>
+                        </div>
+                    ` : ''}
+                    ${sizeItems.length > 0 ? `
+                        <p class="print-section-title">รายการขนาด (Size)</p>
+                        <table class="print-detail-table">
+                            <thead>
+                                <tr><th style="width:28px;">#</th><th>กว้าง (ม.)</th><th>ยาว (ม.)</th><th>จำนวน (ชิ้น)</th><th>% พื้นที่ว่าง</th><th>ตร.ม.</th></tr>
+                            </thead>
+                            <tbody>${sizeRows}</tbody>
+                            <tfoot>
+                                <tr><th colspan="5" style="text-align:right;">รวมทั้งหมด</th><th style="text-align:right;">${(Number(order.totalSqm) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ตร.ม. • ${Number(order.totalPieces) || 0} ชิ้น</th></tr>
+                            </tfoot>
+                        </table>
+                    ` : ''}
+                    ${order.carpetSizeNote ? `<p class="print-section-title">รายละเอียดขนาด</p><p class="print-remark">${escapeHtml(order.carpetSizeNote)}</p>` : ''}
+                    ${productionReqRows.length > 0 ? `
+                        <p class="print-section-title">ข้อกำหนดสำหรับฝ่ายผลิต</p>
+                        <table class="print-info-table">
+                            ${productionReqRows.map(([label, value]) => infoRow(label, value)).join('')}
+                        </table>
+                    ` : ''}
+                    ${buildSpecPrintHtml(order.specs)}
+                    ${order.orderRemark ? `<p class="print-section-title">หมายเหตุ (Remarks)</p><p class="print-remark">${escapeHtml(order.orderRemark)}</p>` : ''}
+                    <div class="print-signature-row">
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้เปิดงาน (แผนกขาย)</div>
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้อนุมัติ (แผนกวางแผน)</div>
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้รับงาน (ฝ่ายผลิต)</div>
+                    </div>
+                    <p class="print-footer-note">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
+                </div>
+            `;
+        }
+
+        function printProductionWorkOrder(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildProductionWorkOrderPrintHTML(order);
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบสั่งเปิดงานผลิต... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
+            setTimeout(() => window.print(), 150);
+        }
+
+        // =========================================================================================
         // NEW (2026-09-11): ใบสั่งย้อม (Dyeing Order) — printable as PDF via the same print-sheet/
         // window.print() convention as buildMarkNosPrintHTML/printMarkNos above. Two documents share one
         // template: ย้อมในบริษัทฯ → "ใบสั่งย้อมภายใน", สั่งย้อมนอกบริษัทฯ → "ใบสั่งจ้างย้อมนอกบริษัท" (adds a
@@ -4238,6 +4441,52 @@
                 }
             } catch(e) {
                 console.error("Fetch issues error (backend may not support issue tracking yet):", e);
+            }
+        }
+
+        // NEW (2026-09-12): mirrors fetchIssuesFromGoogleSheet() above for the shared SPECIFICATIONS
+        // templates ("แม่แบบลูกค้า/สินค้า") — same silent-fallback-to-localStorage behavior if the
+        // backend doesn't support this endpoint yet (older .gs deployment not yet redeployed).
+        async function fetchSpecTemplatesFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getSpecTemplates' : gasWebAppUrl + '?action=getSpecTemplates';
+                const response = await fetch(fetchUrl);
+                const text = await response.text();
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    return;
+                }
+                let result;
+                try { result = JSON.parse(text); } catch(e) { return; }
+                if (Array.isArray(result)) {
+                    specTemplates = result.map(t => ({
+                        id: t.id || '',
+                        name: t.name || '',
+                        specs: (function() { try { return typeof t.specs === 'string' ? JSON.parse(t.specs) : (t.specs || {}); } catch(e) { return {}; } })(),
+                        createdAt: t.createdAt || ''
+                    }));
+                    saveSpecTemplatesToLocal();
+                    renderSpecTemplateOptions();
+                    if (isManual) showToast(`ซิงค์แม่แบบ SPECIFICATIONS สำเร็จ (${specTemplates.length} แม่แบบ)`);
+                }
+            } catch(e) {
+                console.error("Fetch spec templates error (backend may not support this endpoint yet):", e);
+            }
+        }
+
+        // NEW (2026-09-12): mirrors syncIssueToSheet() above.
+        async function syncSpecTemplateToSheet(template) {
+            if (!gasWebAppUrl) return;
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=specTemplate' : gasWebAppUrl + '?type=specTemplate';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.assign({}, template, { specs: JSON.stringify(template.specs || {}) }))
+                });
+            } catch(err) {
+                console.error("Error syncing spec template to Google Sheet:", err);
             }
         }
 
@@ -4681,6 +4930,118 @@
             return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${hasUrgent ? 'bg-rose-600 text-white' : 'bg-rose-100 text-rose-700 border border-rose-200'} align-middle mr-1" title="มีปัญหาที่ยังไม่ได้แก้ไข"><i class="fa-solid fa-triangle-exclamation"></i> ${label}</span>`;
         }
 
+        // =========================================================================================
+        // NEW (2026-09-12): "SPECIFICATIONS" checklist — matches the physical M/O spec sheet (ทอมือ/
+        // ทอจักร, WO/WN/AB/NYLON, ขนตัด/ขนห่วง, แกะลาย/แต่งเรียบ, วัสดุรองหลัง, ขอบพรม, เจ้าของวัสดุ) so
+        // แผนกขายสามารถติ๊ก/คีย์ตอนเปิด M/O ใหม่ แล้วรายการที่ติ๊กไว้จะไปโผล่ในใบสั่งเปิดงานผลิต (PDF) โดยตรง.
+        // One config array drives 3 different renders (new-order form, order-detail edit block, print
+        // sheet) so the checkbox list only ever needs to change in one place. ส่งต่างประเทศ/ในประเทศ from
+        // the physical form is intentionally NOT duplicated here — the order already has a dedicated
+        // "ตลาด" field (order.market) for exactly that, shown separately in the print sheet's info table.
+        // =========================================================================================
+        const SPEC_FIELD_GROUPS = [
+            { key: 'tuftMethod', label: 'วิธีทอ', options: [
+                { key: 'handtufted', label: 'ทอมือ Handtufted' },
+                { key: 'passtufted', label: 'ทอจักร Passtufted' }
+            ]},
+            { key: 'material', label: 'เส้นด้าย/วัสดุ', options: [
+                { key: 'wo', label: 'WO' },
+                { key: 'wn', label: 'WN' },
+                { key: 'ab', label: 'AB' },
+                { key: 'nylon', label: 'NYLON' },
+                { key: 'other', label: 'อื่นๆ/Other', hasText: true }
+            ]},
+            { key: 'pileType', label: 'ลักษณะขน', options: [
+                { key: 'cut', label: 'ขนตัด/CUT' },
+                { key: 'loop', label: 'ขนห่วง/LOOP' },
+                { key: 'cutLoop', label: 'ขนตัด&ขนห่วง/CUT&LOOP' }
+            ]},
+            { key: 'carveStyle', label: 'ลวดลาย — แกะลาย/Carv เหมือน S/O • แต่งเรียบ/Uncarved', options: [
+                { key: 'hairline', label: 'A) Hairline' },
+                { key: 'carving', label: 'B) Carving' },
+                { key: 'carvingBeveling', label: 'C) Carving&Beveling' },
+                { key: 'embossing', label: 'D) Embossing' },
+                { key: 'embossingBeveling', label: 'E) Embossing&Beveling' },
+                { key: 'combination', label: 'F) Combination' }
+            ]},
+            { key: 'backing', label: 'วัสดุรองหลัง', options: [
+                { key: 'scrim', label: 'ประตาข่าย/Scrim' },
+                { key: 'hessian', label: 'ประกระสอบ/Hessian' },
+                { key: 'canvas', label: 'ประผ้าใบ/Canvas' }
+            ]},
+            { key: 'edge', label: 'ขอบพรม', options: [
+                { key: 'wallToWall', label: 'ปล่อยขอบ/Wall to Wall' },
+                { key: 'binding', label: 'พับขอบ/Binding' },
+                { key: 'whipping', label: 'เย็บขอบ/Whipping' },
+                { key: 'fringe', label: 'ชายครุย/Fringe' }
+            ]},
+            { key: 'ownership', label: 'เจ้าของวัสดุ/แบบ', options: [
+                { key: 'siamCarpets', label: 'ของบริษัท (Siam Carpets)' },
+                { key: 'customer', label: "ของลูกค้า (Customer's)" }
+            ]}
+        ];
+
+        // Builds a fresh, all-unchecked specs object shaped exactly like SPEC_FIELD_GROUPS (each group
+        // -> each option key -> false, plus an "...Text" string sibling for any option with hasText).
+        // Used both as the new-order form's blank starting state and as normalizeOrder()'s default so
+        // an order saved before this feature existed loads with every box simply unchecked.
+        function defaultSpecsState() {
+            const state = {};
+            SPEC_FIELD_GROUPS.forEach(g => {
+                state[g.key] = {};
+                g.options.forEach(o => {
+                    state[g.key][o.key] = false;
+                    if (o.hasText) state[g.key][o.key + 'Text'] = '';
+                });
+            });
+            return state;
+        }
+
+        // Interactive checklist markup shared by the new-order form and the order-detail "edit later"
+        // block — checkAttr(groupKey, optionKey) and textAttr(groupKey, optionKey) each return the full
+        // onchange="..." attribute string for one control, so the caller decides where a tick actually
+        // gets written (a plain JS variable before the order exists, vs updateOrderField() after).
+        function renderSpecCheckboxGroupsHtml(specs, checkAttr, textAttr) {
+            return SPEC_FIELD_GROUPS.map(g => {
+                const optionsHtml = g.options.map(o => {
+                    const checked = !!(specs[g.key] && specs[g.key][o.key]);
+                    const textHtml = o.hasText
+                        ? `<input type="text" placeholder="ระบุ" value="${escapeHtml((specs[g.key] && specs[g.key][o.key + 'Text']) || '')}" ${textAttr(g.key, o.key)} class="ml-1.5 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs w-28">`
+                        : '';
+                    return `
+                        <label class="inline-flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs cursor-pointer">
+                            <input type="checkbox" ${checked ? 'checked' : ''} ${checkAttr(g.key, o.key)} class="rounded">
+                            ${escapeHtml(o.label)}
+                        </label>${textHtml}
+                    `;
+                }).join('');
+                return `
+                    <div>
+                        <p class="text-[10px] font-semibold text-slate-500 uppercase mb-1">${escapeHtml(g.label)}</p>
+                        <div class="flex flex-wrap gap-1.5">${optionsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Read-only ☑/☐ checklist for the printable ใบสั่งเปิดงานผลิต — mirrors the physical spec
+        // sheet's checkbox style exactly (see buildProductionWorkOrderPrintHTML()).
+        function buildSpecPrintHtml(specs) {
+            if (!specs) return '';
+            const groupsHtml = SPEC_FIELD_GROUPS.map(g => {
+                const optionsHtml = g.options.map(o => {
+                    const checked = !!(specs[g.key] && specs[g.key][o.key]);
+                    const extraText = (o.hasText && specs[g.key] && specs[g.key][o.key + 'Text']) ? ` (${escapeHtml(specs[g.key][o.key + 'Text'])})` : '';
+                    return `<span style="display:inline-block; margin:0 10px 4px 0;">${checked ? '☑' : '☐'} ${escapeHtml(o.label)}${extraText}</span>`;
+                }).join('');
+                return `<div style="margin-bottom:4px;"><b>${escapeHtml(g.label)}:</b><br>${optionsHtml}</div>`;
+            }).join('');
+            return `
+                <p class="print-section-title">SPECIFICATIONS</p>
+                <div class="print-remark" style="line-height:1.7;">${groupsHtml}</div>
+            `;
+        }
+
         // Converts an order coming from localStorage/Google Sheets into the current item-list-based
         // shape. Older saved orders only had flat scalar fields per department (no "items" array) —
         // those are migrated into a single item so no historical data is ever lost, exactly like the
@@ -4737,6 +5098,17 @@
                 totalArea: 0, patternPercentage: 0, maxColors: 0, stitchingDensity: 'N',
                 hasCutAndLoop: false, isRepeat: false, isMachinePunch: false
             }, parseField(raw.productionCalc, {}));
+
+            // NEW (2026-09-12): "SPECIFICATIONS" checklist — see SPEC_FIELD_GROUPS/defaultSpecsState()
+            // above. Merged group-by-group (not a flat Object.assign) so an order saved before a NEW
+            // group/option was added still gets that group's full false-defaults instead of `undefined`.
+            const specsRaw = parseField(raw.specs, {});
+            const specs = defaultSpecsState();
+            SPEC_FIELD_GROUPS.forEach(g => {
+                if (specsRaw[g.key] && typeof specsRaw[g.key] === 'object') {
+                    Object.assign(specs[g.key], specsRaw[g.key]);
+                }
+            });
 
             // mode: 'internal' (ย้อมในบริษัท, default) or 'external' (ไหมสั่งย้อมนอกบริษัท) — a toggle
             // per M/O that switches which fields each dyeing item shows (see renderDyeingItemsHtml /
@@ -4881,6 +5253,23 @@
                 designRef: raw.designRef || '',                 // DESIGN (รหัสอ้างอิงดีไซน์)
                 refNote: raw.refNote || '',                     // REF.
                 orderRemark: raw.orderRemark || '',             // REMARKS (หมายเหตุระดับ M/O)
+                // NEW: วันที่ส่งแบบที่ลูกค้าให้ไปแผนกดีไซน์ / วันที่ได้รับแบบกลับจากแผนกดีไซน์ — see
+                // submitNewOrder() and renderDesignSectionHtml() (same fields, editable from both).
+                designSentDate: normalizeDateString(raw.designSentDate) || '',
+                designReceivedDate: normalizeDateString(raw.designReceivedDate) || '',
+                // NEW (FIX 2026-09): "ข้อกำหนดสำหรับฝ่ายผลิต" — these existed as form fields already but
+                // were never read/saved anywhere before now; defaulting to '' keeps every order saved
+                // before this fix loading exactly as it did (no data invented for old orders).
+                yarnType: raw.yarnType || '',
+                tuftingSpec: raw.tuftingSpec || '',
+                surface: raw.surface || '',
+                texture: raw.texture || '',
+                colorPlacement: raw.colorPlacement || '',
+                yarnPlan: raw.yarnPlan || '',
+                latexing: raw.latexing || '',
+                tuftBind: raw.tuftBind || '',
+                sproutingLabel: raw.sproutingLabel || '',
+                productionInstruction: raw.productionInstruction || '',
                 // NEW (2026-09c): market (ตลาด) — 'export' (ต่างประเทศ) or 'domestic' (ในประเทศ), plus
                 // the salesperson's name for this order. '' means not yet tagged (orders saved before
                 // this feature existed) — see marketFilter/matchesMarketFilter for how that's handled.
@@ -4916,6 +5305,8 @@
                 },
                 // NEW (2026-09-10): production calc engine inputs — see comment above.
                 productionCalc,
+                // NEW (2026-09-12): "SPECIFICATIONS" checklist — see comment above.
+                specs,
                 // NEW (2026-09-10): whether "แผนกวางแผน ต้องเสร็จวันที่" currently auto-follows the last
                 // scheduled department's finish date (true, the default for every order incl. legacy
                 // ones) or was frozen by the user picking a date directly (false) — see
@@ -5494,15 +5885,180 @@
             });
         }
 
+        // FIX (2026-09): the old check (`!file.type.startsWith('image/')`) rejected any file whose
+        // browser-reported MIME type was missing or unrecognized — which happens often in practice for
+        // photos straight off a phone (HEIC/HEIF from iPhones in particular frequently report an empty
+        // or generic file.type in some browsers/OS combinations) even though the file genuinely is a
+        // photo. "เพิ่มรูปภาพที่แสดงหน้าเว็บได้ทุกไฟล์" — accept by file EXTENSION as a fallback whenever
+        // the MIME type isn't a clean "image/..." match, instead of flatly refusing the upload.
+        const ACCEPTABLE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif', 'svg', 'tif', 'tiff', 'avif'];
+        function isAcceptableImageFile(file) {
+            if (!file) return false;
+            if (file.type && file.type.startsWith('image/')) return true;
+            const nameParts = String(file.name || '').split('.');
+            const ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : '';
+            return ACCEPTABLE_IMAGE_EXTENSIONS.indexOf(ext) !== -1;
+        }
+
         function handleDesignImageInputChange(event, orderIndex, target, itemIndex) {
             const file = event.target.files && event.target.files[0];
             event.target.value = ''; // reset so choosing the same file again still fires onchange
             if (!file) return;
-            if (!file.type || !file.type.startsWith('image/')) {
+            if (!isAcceptableImageFile(file)) {
                 showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'fa-circle-exclamation', 'text-amber-400');
                 return;
             }
             uploadDesignImage(orderIndex, target, itemIndex, file);
+        }
+
+        // NEW: attaching a design image right when opening a brand-new M/O, S/O (before the order even
+        // exists yet, so there's no orderIndex to upload against) — the chosen File is held here and
+        // actually uploaded by submitNewOrder() right after the order is created (see there). Cleared
+        // by openNewOrderModal()/closeNewOrderModal() so a leftover file never attaches to the NEXT
+        // order someone opens after cancelling this one.
+        let newOrderPendingDesignImageFile = null;
+
+        function handleNewOrderDesignImageChange(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!isAcceptableImageFile(file)) {
+                showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'fa-circle-exclamation', 'text-amber-400');
+                event.target.value = '';
+                return;
+            }
+            newOrderPendingDesignImageFile = file;
+            const nameEl = document.getElementById('newOrderDesignImageFileName');
+            if (nameEl) nameEl.textContent = `แนบแล้ว: ${file.name} (จะอัปโหลดหลังกด "เพิ่มรายการ")`;
+            const previewWrap = document.getElementById('newOrderDesignImagePreviewWrap');
+            if (previewWrap && file.type && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => { previewWrap.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`; };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function resetNewOrderDesignImagePicker() {
+            newOrderPendingDesignImageFile = null;
+            const input = document.getElementById('newOrderDesignImageInput');
+            if (input) input.value = '';
+            const nameEl = document.getElementById('newOrderDesignImageFileName');
+            if (nameEl) nameEl.textContent = 'ยังไม่ได้แนบรูป — จะอัปโหลดให้อัตโนมัติหลังกด "เพิ่มรายการ"';
+            const previewWrap = document.getElementById('newOrderDesignImagePreviewWrap');
+            if (previewWrap) previewWrap.innerHTML = '<i class="fa-solid fa-image"></i>';
+        }
+
+        // NEW (2026-09-12): "SPECIFICATIONS" checklist state for the not-yet-created new-order form —
+        // mirrors the pattern used for productionRequirement fields above, but as one nested object
+        // (matching order.specs / SPEC_FIELD_GROUPS) instead of flat input ids, since renderSpecCheckboxGroupsHtml()
+        // already knows how to draw/rebind an arbitrary specs object either way.
+        let newOrderSpecState = null;
+        function resetNewOrderSpecState() {
+            newOrderSpecState = defaultSpecsState();
+            renderNewOrderSpecPanel();
+            renderSpecTemplateOptions();
+            const templateSelect = document.getElementById('newOrderSpecTemplateSelect');
+            if (templateSelect) templateSelect.value = '';
+        }
+        function updateNewOrderSpecCheck(groupKey, optionKey, checked) {
+            if (!newOrderSpecState) newOrderSpecState = defaultSpecsState();
+            if (!newOrderSpecState[groupKey]) newOrderSpecState[groupKey] = {};
+            newOrderSpecState[groupKey][optionKey] = checked;
+        }
+        function updateNewOrderSpecText(groupKey, optionKey, value) {
+            if (!newOrderSpecState) newOrderSpecState = defaultSpecsState();
+            if (!newOrderSpecState[groupKey]) newOrderSpecState[groupKey] = {};
+            newOrderSpecState[groupKey][optionKey + 'Text'] = value;
+        }
+        function renderNewOrderSpecPanel() {
+            const panel = document.getElementById('newOrderSpecPanel');
+            if (!panel) return;
+            if (!newOrderSpecState) newOrderSpecState = defaultSpecsState();
+            panel.innerHTML = renderSpecCheckboxGroupsHtml(
+                newOrderSpecState,
+                (g, o) => `onchange="updateNewOrderSpecCheck('${g}','${o}',this.checked)"`,
+                (g, o) => `onchange="updateNewOrderSpecText('${g}','${o}',this.value)"`
+            );
+        }
+
+        // NEW (2026-09-12): "แม่แบบ (Template) ลูกค้า/สินค้า" — ให้แผนกขายบันทึกชุดติ๊ก SPECIFICATIONS ที่
+        // ใช้บ่อยไว้เป็นแม่แบบ (เช่น "ลูกค้า A แบบพรมทอมือ") แล้วเลือกจาก dropdown ครั้งต่อไปเพื่อติ๊กให้
+        // อัตโนมัติทั้งชุด แทนที่จะต้องไล่ติ๊กใหม่ทุกครั้ง — เก็บ/ซิงค์ผ่าน specTemplates
+        // (fetchSpecTemplatesFromGoogleSheet()/syncSpecTemplateToSheet() ด้านบน) เหมือน issuesData ทุก
+        // ประการ ยกเว้นว่านี่เป็นแค่ "แม่แบบ" ไม่ใช่ข้อมูล M/O จริง จึงไม่ผูกกับ order ใดๆ
+        function renderSpecTemplateOptions() {
+            const select = document.getElementById('newOrderSpecTemplateSelect');
+            if (!select) return;
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">-- เลือกแม่แบบ (ลูกค้า/สินค้า) --</option>' +
+                specTemplates.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name || '(ไม่มีชื่อ)')}</option>`).join('');
+            // Keep the previously-selected template highlighted after a re-render (e.g. right after
+            // saving a new one) instead of always snapping back to "-- เลือกแม่แบบ --".
+            if (currentValue && specTemplates.some(t => t.id === currentValue)) select.value = currentValue;
+        }
+
+        // Applying a template REPLACES newOrderSpecState wholesale (not merged on top of whatever was
+        // already ticked) — matching how someone reading a dropdown labeled "แม่แบบ" would expect it to
+        // behave: pick a template, see exactly that template's checklist, nothing left over from before.
+        function applySpecTemplate(templateId) {
+            if (!templateId) return;
+            const template = specTemplates.find(t => t.id === templateId);
+            if (!template) return;
+            newOrderSpecState = defaultSpecsState();
+            SPEC_FIELD_GROUPS.forEach(g => {
+                if (template.specs && template.specs[g.key] && typeof template.specs[g.key] === 'object') {
+                    Object.assign(newOrderSpecState[g.key], template.specs[g.key]);
+                }
+            });
+            renderNewOrderSpecPanel();
+            showToast(`ติ๊ก SPECIFICATIONS ตามแม่แบบ "${template.name}" ให้แล้ว`, 'fa-bookmark', 'text-emerald-400');
+        }
+
+        // Saves whatever is CURRENTLY ticked on the new-order form's SPECIFICATIONS panel as a brand-new
+        // named template — does not overwrite an existing one (คีย์/ติ๊กแล้วอยากได้แม่แบบใหม่ ก็ตั้งชื่อใหม่
+        // ได้เสมอ; ลบแม่แบบเก่าที่ไม่ใช้แล้วผ่านปุ่มถังขยะข้างๆ dropdown).
+        function saveCurrentAsSpecTemplate() {
+            const name = window.prompt('ตั้งชื่อแม่แบบนี้ (เช่น ชื่อลูกค้า หรือชนิดสินค้า):', '');
+            if (name === null) return; // cancelled
+            const trimmedName = name.trim();
+            if (!trimmedName) {
+                showToast('กรุณาตั้งชื่อแม่แบบ', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (!newOrderSpecState) newOrderSpecState = defaultSpecsState();
+            const template = {
+                id: 'tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                name: trimmedName,
+                specs: JSON.parse(JSON.stringify(newOrderSpecState)),
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+            specTemplates.push(template);
+            saveSpecTemplatesToLocal();
+            syncSpecTemplateToSheet(template);
+            renderSpecTemplateOptions();
+            document.getElementById('newOrderSpecTemplateSelect').value = template.id;
+            showToast(`บันทึกแม่แบบ "${trimmedName}" แล้ว`, 'fa-floppy-disk', 'text-emerald-400');
+        }
+
+        // Deletes whichever template is currently selected in the dropdown — confirms first since this
+        // can't be undone, same convention as deleteIssueRow()/every other destructive action here.
+        function deleteSelectedSpecTemplate() {
+            const select = document.getElementById('newOrderSpecTemplateSelect');
+            const templateId = select ? select.value : '';
+            if (!templateId) {
+                showToast('กรุณาเลือกแม่แบบที่ต้องการลบก่อน', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const template = specTemplates.find(t => t.id === templateId);
+            if (!template) return;
+            if (!window.confirm(`ลบแม่แบบ "${template.name}" ถาวรหรือไม่?`)) return;
+            specTemplates = specTemplates.filter(t => t.id !== templateId);
+            saveSpecTemplatesToLocal();
+            renderSpecTemplateOptions();
+            showToast(`ลบแม่แบบ "${template.name}" แล้ว`, 'fa-circle-xmark', 'text-rose-400');
+            if (gasWebAppUrl) {
+                const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteSpecTemplate&id=' + encodeURIComponent(templateId);
+                fetch(deleteUrl).catch(err => console.error("Error deleting spec template from Google Sheet:", err));
+            }
         }
 
         // Uploads a design image via the Apps Script backend (?type=uploadImage) and, on success,
@@ -5701,7 +6257,7 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-medium px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1">
                                 <i class="fa-solid fa-upload"></i> ${url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
-                                <input type="file" accept="image/*" class="hidden" onchange="handleDesignImageInputChange(event, ${orderIndex}, '${target}', ${itemIndexArg})">
+                                <input type="file" accept="image/*,.heic,.heif" class="hidden" onchange="handleDesignImageInputChange(event, ${orderIndex}, '${target}', ${itemIndexArg})">
                             </label>
                             ${url ? `<button type="button" onclick="removeDesignImage(${orderIndex}, '${target}', ${itemIndexArg})" class="text-rose-500 hover:text-rose-700 text-[11px] px-2 py-1 rounded transition"><i class="fa-solid fa-trash"></i> ลบรูป</button>` : ''}
                         </div>
@@ -5757,6 +6313,16 @@
                             <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">REF.</label>
                             <input type="text" value="${escapeHtml(order.refNote || '')}" onchange="${f('refNote')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
                         </div>
+                        <!-- NEW: same fields shown/editable in the แผนกดีไซน์ section (renderDesignSectionHtml())
+                             — one order field, updates together wherever it's edited. -->
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">วันที่ส่งแบบให้แผนกดีไซน์</label>
+                            <input type="date" value="${order.designSentDate || ''}" onchange="${f('designSentDate')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">วันที่ได้รับแบบจากแผนกดีไซน์</label>
+                            <input type="date" value="${order.designReceivedDate || ''}" onchange="${f('designReceivedDate')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ขนาดพรม (Carpet Size, ข้อความอิสระ)</label>
@@ -5766,6 +6332,78 @@
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">หมายเหตุ (Remarks)</label>
                         <textarea rows="2" onchange="${f('orderRemark')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.orderRemark || '')}</textarea>
                     </div>
+                </div>
+            `;
+        }
+
+        // NEW (FIX 2026-09): "ข้อกำหนดสำหรับฝ่ายผลิต" — editable view of the fields collected on the
+        // "เพิ่ม M/O, S/O ใหม่" form's production-requirements panel (see submitNewOrder()/normalizeOrder()).
+        // Shown in the order detail modal so these can still be corrected/filled in later, and reused
+        // as-is by buildProductionWorkOrderPrintHTML() for the printable ใบสั่งเปิดงานผลิต.
+        function renderProductionRequirementsBlock(order, orderIndex) {
+            const f = field => `updateOrderField(${orderIndex}, '${field}', this.value)`;
+            return `
+                <div class="bg-indigo-50/40 border border-indigo-100 rounded-xl p-3.5 space-y-2.5">
+                    <span class="text-xs font-bold text-indigo-800"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชนิดไหม (Yarn type)</label>
+                            <input type="text" value="${escapeHtml(order.yarnType || '')}" onchange="${f('yarnType')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">สเปกทอ (Tufting spec)</label>
+                            <input type="text" value="${escapeHtml(order.tuftingSpec || '')}" onchange="${f('tuftingSpec')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวงาน (Surface)</label>
+                            <input type="text" value="${escapeHtml(order.surface || '')}" onchange="${f('surface')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวสัมผัส (Texture)</label>
+                            <input type="text" value="${escapeHtml(order.texture || '')}" onchange="${f('texture')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตำแหน่งและรายละเอียดสี</label>
+                        <textarea rows="2" onchange="${f('colorPlacement')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.colorPlacement || '')}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">แผนไหม/สีสำหรับผลิต</label>
+                        <textarea rows="3" onchange="${f('yarnPlan')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.yarnPlan || '')}</textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">งานทากาว (Latexing)</label>
+                            <input type="text" value="${escapeHtml(order.latexing || '')}" onchange="${f('latexing')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Tuft bind</label>
+                            <input type="text" value="${escapeHtml(order.tuftBind || '')}" onchange="${f('tuftBind')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Sprouting / Label</label>
+                            <input type="text" value="${escapeHtml(order.sproutingLabel || '')}" onchange="${f('sproutingLabel')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">คำสั่งพิเศษถึงฝ่ายผลิต / QC</label>
+                        <textarea rows="2" onchange="${f('productionInstruction')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.productionInstruction || '')}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        // NEW (2026-09-12): "SPECIFICATIONS" checklist — editable view of order.specs (see
+        // SPEC_FIELD_GROUPS/defaultSpecsState()/renderSpecCheckboxGroupsHtml() near normalizeOrder(),
+        // and buildSpecPrintHtml() for how this prints on the Production Work Order).
+        function renderSpecificationsBlock(order, orderIndex) {
+            const specs = order.specs || defaultSpecsState();
+            const checkAttr = (g, o) => `onchange="updateOrderField(${orderIndex}, 'specs.${g}.${o}', this.checked)"`;
+            const textAttr = (g, o) => `onchange="updateOrderField(${orderIndex}, 'specs.${g}.${o}Text', this.value)"`;
+            return `
+                <div class="bg-emerald-50/40 border border-emerald-100 rounded-xl p-3.5 space-y-2.5">
+                    <span class="text-xs font-bold text-emerald-800"><i class="fa-solid fa-list-check mr-1"></i> SPECIFICATIONS</span>
+                    ${renderSpecCheckboxGroupsHtml(specs, checkAttr, textAttr)}
                 </div>
             `;
         }
@@ -5923,7 +6561,11 @@
         // so it's always in sync with the current productionOrders / localStorage state.
         function computeOverviewSummaryStats() {
             const stageCounts = { planning: 0, dyeing: 0, weaving: 0, finishing: 0, ready_to_ship: 0, shipped: 0 };
-            let totalSqmReceived = 0;
+            // FIX (2026-09-12): "ตร.ม. คงเหลือในไลน์ผลิต" ต้องไม่รวมทั้งที่ส่งแล้ว (shipped) และที่รอส่ง
+            // (ready_to_ship) — ก่อนหน้านี้หักแค่ shipped ออก ทำให้ยอด ตร.ม. ของสินค้าที่ผลิตเสร็จแล้ว
+            // "รอส่ง" ปนอยู่ในยอด "คงเหลือในไลน์" ด้วย ทั้งที่งานฝ่ายผลิตทำเสร็จแล้ว ไม่ได้ค้างอยู่ในไลน์
+            // ผลิตอีกต่อไป — see renderOverviewSummaryPanel()'s ตร.ม. tile below.
+            let totalSqmRemainingInLine = 0;
             // NEW (2026-09-16): ดีไซน์/ขยายลาย — not one of the mutually-exclusive currentStage buckets
             // above (see STAGE_LABELS.design's comment), so counted separately: every still-active order
             // (not yet shipped) whose design checklist isn't marked done yet. Same definition as the
@@ -5932,15 +6574,14 @@
             productionOrders.forEach(o => {
                 const stage = getEffectiveStage(o);
                 if (stageCounts.hasOwnProperty(stage)) stageCounts[stage]++;
-                // FIXED (2026-09-10): only count ตร.ม. still in the production line — an order that's
-                // ส่งแล้ว (shipped) has left the line, so it should no longer add to this total. Was
-                // previously summing every order ever entered (shipped or not), which kept growing
-                // forever instead of reflecting what's currently in production.
-                if (stage !== 'shipped') totalSqmReceived += Number(o.totalSqm) || 0;
+                // FIXED (2026-09-10, extended 2026-09-12): only count ตร.ม. still ACTIVELY in the
+                // production line — an order that's ส่งแล้ว (shipped) OR รอส่ง (ready_to_ship, production
+                // work already finished) has left the line, so neither should add to this total.
+                if (stage !== 'shipped' && stage !== 'ready_to_ship') totalSqmRemainingInLine += Number(o.totalSqm) || 0;
                 if (stage !== 'shipped' && !(o.design && o.design.done)) designNotDoneCount++;
             });
             return {
-                totalSqmReceived,
+                totalSqmRemainingInLine,
                 stageCounts,
                 designNotDoneCount,
                 dyeingColorsPerDay: getDyeingColorsPerDayTotal(),
@@ -6153,7 +6794,7 @@
                     <span class="text-[11px] text-slate-400">อัปเดตอัตโนมัติตามข้อมูลปัจจุบัน</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
-                    ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. อยู่ในไลน์ผลิต (ยังไม่ส่ง)', `${s.totalSqmReceived.toLocaleString('th-TH')} ตร.ม.`)}
+                    ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. คงเหลือในไลน์ผลิต (ไม่รวมรอส่ง)', `${s.totalSqmRemainingInLine.toLocaleString('th-TH')} ตร.ม.`)}
                     ${overviewStatTileHtml('fa-droplet', 'text-violet-500', 'ย้อมได้/วัน (ที่กำลังย้อม)', `${s.dyeingColorsPerDay.toLocaleString('th-TH')} สี/วัน`)}
                     ${overviewStatTileHtml('fa-hand-holding-heart', 'text-teal-500', 'ทอได้/วัน (ที่กำลังทอ)', `${s.weavingSqmPerDay.toLocaleString('th-TH')} ตร.ม./วัน`)}
                     ${overviewStatTileHtml('fa-box-archive', 'text-fuchsia-500', 'แต่งได้/วัน (ตั้งค่ากำลังผลิต)', `
@@ -7667,6 +8308,20 @@
             document.getElementById('newOrderIncoterms').value = '';
             document.getElementById('newOrderRefNote').value = '';
             document.getElementById('newOrderRemark').value = '';
+            // NEW: วันที่ส่งแบบ/ได้รับแบบ (แผนกดีไซน์) + รูปดีไซน์แนบ — see submitNewOrder().
+            document.getElementById('newOrderDesignSentDate').value = '';
+            document.getElementById('newOrderDesignReceivedDate').value = '';
+            resetNewOrderDesignImagePicker();
+            // NEW: "ข้อกำหนดสำหรับฝ่ายผลิต" — see submitNewOrder()/normalizeOrder(). These fields existed
+            // on the form already but were never actually read/saved anywhere until now (FIX 2026-09).
+            ['newOrderYarnType', 'newOrderTuftingSpec', 'newOrderSurface', 'newOrderTexture',
+             'newOrderColorPlacement', 'newOrderYarnPlan', 'newOrderLatexing', 'newOrderTuftBind',
+             'newOrderSproutingLabel', 'newOrderProductionInstruction'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            // NEW (2026-09-12): "SPECIFICATIONS" checklist — see resetNewOrderSpecState()/submitNewOrder().
+            resetNewOrderSpecState();
             document.getElementById('newOrderTypeMo').checked = true;
             updateNewOrderTypeStyle();
             // NEW (2026-09c): market has no default (must be explicitly chosen — see submitNewOrder()'s
@@ -7736,8 +8391,9 @@
                     <td class="border border-slate-300 px-2 py-1.5 text-right whitespace-nowrap">${escapeHtml(String(order.totalSqm || 0))}</td>
                     <td class="border border-slate-300 px-2 py-1.5 text-right whitespace-nowrap">${escapeHtml(String(order.totalPieces || 0))}</td>
                     <td class="border border-slate-300 px-2 py-1.5 text-center whitespace-nowrap">${escapeHtml(statusLabel)}</td>
-                    <td class="border border-slate-300 px-2 py-1.5 text-center">
+                    <td class="border border-slate-300 px-2 py-1.5 text-center whitespace-nowrap">
                         <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-[11px] font-medium"><i class="fa-solid fa-eye"></i> ดู</button>
+                        <button onclick="printProductionWorkOrder(${orderIndex})" title="พิมพ์ใบสั่งเปิดงานผลิต (PDF)" class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium ml-2"><i class="fa-solid fa-print"></i> พิมพ์</button>
                     </td>
                 </tr>
             `;
@@ -7788,6 +8444,31 @@
                 const fallbackWrap = document.getElementById(`salesReportFallbackWrap-${type}`);
                 if (fallbackWrap) fallbackWrap.classList.toggle('hidden', noneList.length === 0);
             });
+
+            // NEW (2026-09-12): ยอดตร.ม. รับเข้า/ส่งออกทั้งหมด — ใช้ตัวกรองค้นหาเดียวกับตารางด้านล่าง
+            // (matchesSearch) ทั้งหมด (ไม่แยก M/O, S/O) ตามที่แผนกขายขอมาว่า "แสดงในแท็บแผนกขาย".
+            renderSalesReportTotals(matchesSearch);
+        }
+
+        // "ยอดตารางเมตรที่รับเข้าทั้งหมด" = ผลรวม ตร.ม. ของทุก M/O, S/O ที่เคยเปิดเข้าสายการผลิต (นับทุก
+        // สถานะ รวมที่ส่งไปแล้วด้วย — คือยอดสะสมทั้งหมดที่เคยรับเข้ามา ไม่ใช่ยอดที่ยังค้างอยู่);
+        // "ยอดตารางเมตรที่ส่งออกไปทั้งหมด" = ผลรวมเฉพาะรายการที่สถานะ = ส่งแล้ว (shipped). ตัวเลข "คงเหลือใน
+        // ไลน์ผลิต ไม่รวมรอส่ง" (รับเข้า - ส่งแล้ว - รอส่ง) ไปแสดงที่การ์ด "สรุปภาพรวมทั้งบริษัท" ในแท็บ
+        // ภาพรวมการผลิตแทน ตามที่ขอ — ดู computeOverviewSummaryStats()/renderOverviewSummaryPanel().
+        function renderSalesReportTotals(matchesSearch) {
+            const panel = document.getElementById('salesReportTotalsPanel');
+            if (!panel) return;
+            let totalSqmAllReceived = 0;
+            let totalSqmShipped = 0;
+            productionOrders.forEach(o => {
+                if (!matchesSearch(o)) return;
+                const sqm = Number(o.totalSqm) || 0;
+                totalSqmAllReceived += sqm;
+                if (getEffectiveStage(o) === 'shipped') totalSqmShipped += sqm;
+            });
+            panel.innerHTML =
+                overviewStatTileHtml('fa-truck-ramp-box', 'text-indigo-500', 'ยอดตร.ม. ที่รับเข้าทั้งหมด (ทุก M/O, S/O)', `${totalSqmAllReceived.toLocaleString('th-TH')} ตร.ม.`) +
+                overviewStatTileHtml('fa-plane-departure', 'text-emerald-500', 'ยอดตร.ม. ที่ส่งออกไปทั้งหมด', `${totalSqmShipped.toLocaleString('th-TH')} ตร.ม.`);
         }
 
         // Shared formula for every size line item, new-order modal and order-detail modal alike:
@@ -8007,6 +8688,24 @@
             const incoterms = document.getElementById('newOrderIncoterms').value.trim();
             const refNote = document.getElementById('newOrderRefNote').value.trim();
             const orderRemark = document.getElementById('newOrderRemark').value.trim();
+            // NEW: วันที่ส่งแบบที่ลูกค้าให้ไปแผนกดีไซน์ / วันที่ได้รับแบบกลับจากแผนกดีไซน์ — see
+            // normalizeOrder() and renderDesignSectionHtml() (same order fields, editable in both places).
+            const designSentDate = document.getElementById('newOrderDesignSentDate').value;
+            const designReceivedDate = document.getElementById('newOrderDesignReceivedDate').value;
+            // NEW (FIX 2026-09): "ข้อกำหนดสำหรับฝ่ายผลิต" — these inputs already existed on the form but
+            // were never read here, so anything typed into them was silently discarded on submit. Now
+            // captured and carried onto the order (see normalizeOrder() defaults + the production work
+            // order print sheet, buildProductionWorkOrderPrintHTML()).
+            const yarnType = document.getElementById('newOrderYarnType').value.trim();
+            const tuftingSpec = document.getElementById('newOrderTuftingSpec').value.trim();
+            const surface = document.getElementById('newOrderSurface').value.trim();
+            const texture = document.getElementById('newOrderTexture').value.trim();
+            const colorPlacement = document.getElementById('newOrderColorPlacement').value.trim();
+            const yarnPlan = document.getElementById('newOrderYarnPlan').value.trim();
+            const latexing = document.getElementById('newOrderLatexing').value.trim();
+            const tuftBind = document.getElementById('newOrderTuftBind').value.trim();
+            const sproutingLabel = document.getElementById('newOrderSproutingLabel').value.trim();
+            const productionInstruction = document.getElementById('newOrderProductionInstruction').value.trim();
             if (!moSo) {
                 showToast('กรุณาระบุเลขที่ M/O, S/O', 'fa-circle-exclamation', 'text-amber-400');
                 return;
@@ -8054,6 +8753,19 @@
                 designRef: designRef,
                 refNote: refNote,
                 orderRemark: orderRemark,
+                // NEW: see the field collection above.
+                designSentDate: designSentDate,
+                designReceivedDate: designReceivedDate,
+                yarnType: yarnType,
+                tuftingSpec: tuftingSpec,
+                surface: surface,
+                texture: texture,
+                colorPlacement: colorPlacement,
+                yarnPlan: yarnPlan,
+                latexing: latexing,
+                tuftBind: tuftBind,
+                sproutingLabel: sproutingLabel,
+                productionInstruction: productionInstruction,
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
                 // NEW: "แผนกดีไซน์/ขยายลาย" — a simple done/who/note checklist, not part of the
@@ -8076,11 +8788,22 @@
                 planDurations: { design: '', dyeing: '', weaving: '', finishing: '' },
                 // NEW (2026-09-10): production calc engine inputs — see normalizeOrder()'s comment.
                 productionCalc: { totalArea: 0, patternPercentage: 0, maxColors: 0, stitchingDensity: 'N', hasCutAndLoop: false, isRepeat: false, isMachinePunch: false },
-                planningDeadlineAuto: true
+                planningDeadlineAuto: true,
+                // NEW (2026-09-12): "SPECIFICATIONS" checklist — see SPEC_FIELD_GROUPS/renderNewOrderSpecPanel()
+                // above and buildProductionWorkOrderPrintHTML() for how this prints.
+                specs: newOrderSpecState ? JSON.parse(JSON.stringify(newOrderSpecState)) : defaultSpecsState()
             };
             productionOrders.push(order);
+            const newOrderIndex = productionOrders.length - 1;
             saveOrdersToLocal();
             syncOrderToSheet(order);
+            // NEW: a design image was attached on the "เพิ่ม M/O, S/O ใหม่" form itself — upload it now
+            // that the order (and its moSo) actually exists. Best-effort: uploadDesignImage() already
+            // shows its own toast on success/failure and never blocks the rest of order creation.
+            if (newOrderPendingDesignImageFile) {
+                uploadDesignImage(newOrderIndex, 'order', null, newOrderPendingDesignImageFile);
+                resetNewOrderDesignImagePicker();
+            }
             // NEW (2026-09-11): "ถ้า Sale เปิด M/O,S/O ให้แจ้งเตือนแผนกวางแผน" — see notifyLineNewOrder().
             notifyLineNewOrder(order);
             // NEW: a brand-new M/O, S/O joins the queue for design/weaving/finishing capacity right
@@ -8483,6 +9206,23 @@
                 </div>
             `;
 
+            // NEW: same designSentDate/designReceivedDate order fields as "ข้อมูลเพิ่มเติม (จากใบเปิด M/O)"
+            // above — shown here too ("ต้องลิงค์กับแผนกดีไซน์ด้วย") so แผนกดีไซน์ sees exactly when Sales
+            // sent the customer's reference over, and can confirm the date they sent the finished
+            // design/ขยายลายกลับไป, without needing to scroll up to the Sales-entered fields.
+            const designDatesHtml = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white p-2.5 rounded-xl border border-slate-200 mb-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">วันที่ส่งแบบให้แผนกดีไซน์</label>
+                        <input type="date" value="${order.designSentDate || ''}" onchange="updateOrderField(${orderIndex}, 'designSentDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">วันที่ได้รับแบบจากแผนกดีไซน์</label>
+                        <input type="date" value="${order.designReceivedDate || ''}" onchange="updateOrderField(${orderIndex}, 'designReceivedDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                </div>
+            `;
+
             return `
                 <div id="orderDetailSection-design" class="border border-slate-200 rounded-2xl overflow-hidden">
                     <div class="bg-slate-50 p-3 flex flex-wrap justify-between items-center gap-2 border-b border-slate-200">
@@ -8495,6 +9235,7 @@
                     <div class="p-3 space-y-2">
                         ${planDateBadgeHtml}
                         ${designRefHtml}
+                        ${designDatesHtml}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
                             <label class="flex items-center gap-2 text-xs text-slate-600 sm:col-span-2">
                                 <input type="checkbox" ${design.done ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'design.done', this.checked)" class="rounded">
@@ -8742,6 +9483,8 @@
             const orderSizeItemsHtml = renderOrderSizeItemsBlock(order, orderIndex);
             const orderDesignImageHtml = renderDesignImageBlock(order, orderIndex, 'order', null, 'รูปดีไซน์ของ M/O นี้ (ถ้ามี)');
             const orderExtraInfoHtml = renderOrderExtraInfoBlock(order, orderIndex);
+            const orderProductionRequirementsHtml = renderProductionRequirementsBlock(order, orderIndex);
+            const orderSpecificationsHtml = renderSpecificationsBlock(order, orderIndex);
             // "แผนกดีไซน์/ขยายลาย" is inserted right after "แผนกวางแผน" (ต่อจากแผนกวางแผน per the request),
             // not appended to ORDER_STAGES — see renderDesignSectionHtml()'s comment for why.
             const stageSectionsHtml = ORDER_STAGES.map(stage => {
@@ -8753,7 +9496,7 @@
             // user isn't วางแผน/Admin — everything here (size items, design image, PO/customer/due date
             // etc.) is master M/O info, not any one department's working data.
             document.getElementById('orderDetailBody').innerHTML =
-                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}</div>` + stageSectionsHtml;
+                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}${orderProductionRequirementsHtml}${orderSpecificationsHtml}</div>` + stageSectionsHtml;
             applyDeptPermissionGating();
         }
 
