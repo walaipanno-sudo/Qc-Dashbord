@@ -142,6 +142,39 @@
            read the way an actual carton/crate marking would. */
         .mark-nos-box { border: 3px solid #1e293b; border-radius: 6px; padding: 18px; font-size: 18px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; text-align: center; letter-spacing: 0.02em; }
 
+        /* NEW (2026-09-14): "ใบ Sample Order (S/O)" print form — 2-page A4 replica of the company's
+           existing paper "SAMPLE ORDER" form (see buildSampleOrderPrintHTML()/printSampleOrder()).
+           Reuses the same #printArea/print-single-mode/window.print() mechanism as the other print
+           sheets, but uses its own black-bordered grid styling (matching the original form's look)
+           rather than the softer gray .print-info-table style used elsewhere in this file. */
+        .so-print-sheet { font-family: 'Prompt', sans-serif; color: #000; }
+        .so-page { padding: 4mm 2mm; position: relative; }
+        .so-page + .so-page { page-break-before: always; }
+        .so-page-number { text-align: right; font-size: 10px; margin-bottom: 3px; }
+        .so-header-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 2px; }
+        .so-header-row img { height: 42px; }
+        .so-header-row h1 { font-size: 24px; font-weight: 800; letter-spacing: 0.03em; margin: 0; }
+        .so-company-name { text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        table.so-grid { width: 100%; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
+        table.so-grid td, table.so-grid th { border: 1px solid #000; padding: 3px 6px; vertical-align: top; font-size: 11px; overflow-wrap: break-word; }
+        table.so-grid th.so-section-header, table.so-grid td.so-section-header { text-align: center; font-weight: 700; font-size: 12px; }
+        table.so-grid.so-no-outer-gap { margin-bottom: 2px; }
+        .so-fill { font-weight: 600; }
+        .so-checkbox { display: inline-block; width: 10px; height: 10px; border: 1.3px solid #000; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+        .so-note-block { font-size: 11px; margin: 2px 0 6px; }
+        .so-note-block .so-note-lines { border-bottom: 1px solid #000; display: block; height: 15px; }
+        .so-footer-code { text-align: right; font-size: 9.5px; margin-top: 6px; }
+        /* NEW (2026-09-14 rev.2): page-2-specific spacing tweaks per feedback — "หน้า 2 ให้เต็มกระดาษ
+           A4" (page 2 read as too compressed into the upper portion, leaving a big empty gap at the
+           bottom — the original Excel's "รายละเอียดเพิ่มเติม" row alone was set to ~4x a normal row's
+           height, which is most of what made it fill the page) — bigger table gaps, taller boxed note
+           areas, and a lower/larger signature block bring it back in line with the original's proportions. */
+        .so-page2 table.so-grid { margin-bottom: 10px; }
+        .so-page2 table.so-grid td, .so-page2 table.so-grid th { padding: 4px 6px; line-height: 1.4; }
+        .so-notes-cell { height: 68px; }
+        .so-finishing-subrow td { height: 22px; }
+        .so-signature-row { display: flex; justify-content: space-between; margin-top: 22px; font-size: 11px; gap: 20px; line-height: 1.9; }
+
         /* NEW: ใบสั่งเปิดงานผลิต (Production Work Order) print sheet — embeds the M/O's design image
            (order.designImageUrl, the same picture the Design department uploads/sees — see
            buildProductionWorkOrderPrintHTML()) directly in the printed/PDF page. break-inside: avoid
@@ -1818,6 +1851,13 @@
                          buildProductionWorkOrderPrintHTML()/printProductionWorkOrder(). -->
                     <button onclick="printProductionWorkOrder(currentDetailOrderIndex)" title="พิมพ์ใบสั่งเปิดงานผลิต (PDF)" class="text-indigo-200 hover:text-white transition text-sm">
                         <i class="fa-solid fa-print"></i>
+                    </button>
+                    <!-- NEW (2026-09-14): "ใบ Sample Order (S/O)" — 2-page A4 form replica of the
+                         company's paper form (see buildSampleOrderPrintHTML()/printSampleOrder()).
+                         Hidden by default; renderOrderDetailModalBody() shows it only when this
+                         order's type is S/O ("Sample Order"), since the form makes no sense for M/O. -->
+                    <button onclick="printSampleOrder(currentDetailOrderIndex)" id="printSampleOrderBtn" title="พิมพ์ใบ Sample Order (S/O) (PDF)" class="text-indigo-200 hover:text-white transition text-sm hidden">
+                        <i class="fa-solid fa-file-lines"></i>
                     </button>
                     <button onclick="openReportIssueModal(productionOrders[currentDetailOrderIndex] ? productionOrders[currentDetailOrderIndex].moSo : '')" title="แจ้งปัญหาสำหรับ M/O, S/O นี้" class="text-indigo-200 hover:text-rose-300 transition text-sm">
                         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -4334,6 +4374,138 @@
             printArea.innerHTML = buildProductionWorkOrderPrintHTML(order);
             document.body.classList.add('print-single-mode');
             showToast('กำลังเปิดหน้าต่างพิมพ์ใบสั่งเปิดงานผลิต... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
+            setTimeout(() => window.print(), 150);
+        }
+
+        // =========================================================================================
+        // NEW (2026-09-14): "ใบ Sample Order (S/O)" — 2-page A4 print form replicating the company's
+        // existing paper "SAMPLE ORDER" form (uploaded as ฟอร์มใบ SO_ok.xlsx). Header fields that map
+        // 1:1 onto data already captured elsewhere in this dashboard (S/O number, customer, PO/Project,
+        // quality, dates, yarn/tufting/finishing spec fields — same fields buildProductionWorkOrderPrintHTML()
+        // above already echoes back) are pre-filled here too, so QC/production staff can compare the
+        // spec against the physical sample instead of retyping it by hand. Everything the ORIGINAL form
+        // only ever filled in by hand at the time of production (color/dye breakdown, ก้าว/แถว/ความสูง
+        // measurements, department sign-offs, QC approvals) is left blank on purpose — there is no
+        // matching field for it anywhere in the order data model, and it genuinely happens on paper,
+        // in real time, department by department. Reuses the same #printArea/print-single-mode/
+        // window.print() flow as every other print sheet in this file — see printSampleOrder() below.
+        // =========================================================================================
+        const SIAM_LOGO_JPEG_B64 = "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";
+
+        function buildSampleOrderPrintHTML(order) {
+            const v = (val) => val ? escapeHtml(val) : '';
+
+            const page1 = `
+                <div class="so-page">
+                    <div class="so-header-row">
+                        <img src="data:image/jpeg;base64,${SIAM_LOGO_JPEG_B64}" alt="Siam Carpets">
+                        <h1>SAMPLE ORDER</h1>
+                    </div>
+                    <div class="so-company-name">SIAM CARPETS MANUFACTURING CO., LTD./บริษัท อุตสาหกรรมพรมสยาม จำกัด</div>
+                    <table class="so-grid">
+                        <tr>
+                            <td style="width:62%;"><b>S/O:</b> ${v(order.moSo)}</td>
+                            <td>จำนวนชิ้นทั้งหมด......<span class="so-fill">${v(String(order.totalPieces || ''))}</span>......ชิ้น/Pcs.<br>ลูกค้าแนบมา/Enclosed:</td>
+                        </tr>
+                        <tr><td>ลูกค้า/Customer: <span class="so-fill">${v(order.customerName)}</span></td><td rowspan="4"></td></tr>
+                        <tr><td>Project: <span class="so-fill">${v(order.customerPO)}</span></td></tr>
+                        <tr><td>คุณภาพ/Quality: <span class="so-fill">${v(order.quality)}</span></td></tr>
+                        <tr><td>&nbsp;</td></tr>
+                        <tr><td>Received Date: <span class="so-fill">${v(order.openDate)}</span></td><td></td></tr>
+                        <tr><td>กำหนดส่งของ/Delivery: <span class="so-fill">${v(order.dueDate)}</span></td><td></td></tr>
+                    </table>
+                    <table class="so-grid">
+                        <tr><td colspan="2" class="so-section-header">แผนกย้อม และแผนกกรอ/Dyeing &amp; Winding Department</td></tr>
+                        <tr><td>ชนิดไหม/Yarn: <span class="so-fill">${v(order.yarnType)}</span></td><td>สิ่งที่แนบให้</td></tr>
+                        <tr><td>จำนวนสี/No. Of Colours......<span class="so-fill">${v(order.colorsCount ? String(order.colorsCount) : '')}</span>......สี</td><td>อ้างถึง/As per: <span class="so-fill">${v(order.refNote)}</span></td></tr>
+                    </table>
+                    <table class="so-grid so-color-table">
+                        <thead>
+                            <tr>
+                                <th style="width:13%;">รหัสสี/Code:</th><th style="width:8%;">No.</th><th style="width:9%;">กก./Kgs.</th>
+                                <th style="width:13%;">ตัวอย่างไหม</th><th style="width:13%;">Matching</th><th style="width:11%;">ย้อม</th>
+                                <th style="width:12%;">Surplus</th><th>กรอ/ตีเกลียว</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            `;
+
+            const page2 = `
+                <div class="so-page so-page2">
+                    <div class="so-page-number">หน้าที่ 2/2</div>
+                    <table class="so-grid">
+                        <tr><td colspan="3" class="so-section-header">แผนกศิลป์/Design Department</td></tr>
+                        <tr><td style="width:55%;">อ้างถึง/As Per: <span class="so-fill">${v(order.designRef)}</span></td><td colspan="2" style="width:22.5%;">ผู้ปฎิบัติ</td></tr>
+                        <tr><td>สิ่งที่แนบมาให้</td><td style="width:22.5%;">ขยายแบบ</td><td></td></tr>
+                        <tr><td rowspan="3">รายละเอียดพิเศษ:</td><td>วาดจอ/ปั๊มแบบ</td><td></td></tr>
+                        <tr><td>ใส่เบอร์สี</td><td></td></tr>
+                        <tr><td>ตรวจสอบ</td><td></td></tr>
+                    </table>
+                    <table class="so-grid">
+                        <tr><td colspan="7" class="so-section-header">แผนกทอ/Tufting Department</td></tr>
+                        <tr>
+                            <th style="width:10%;">ทอ</th><th style="width:10%;">ก้าว</th><th style="width:10%;">แถว</th>
+                            <th style="width:20%;">ความสูง หลัง/ก่อน เจียร(มม.)</th><th style="width:6%;">&nbsp;</th>
+                            <th style="width:22%;">ผู้ทอ/Tufter</th><th style="width:11%;">เริ่มทอ</th><th style="width:11%;">ทอเสร็จ</th>
+                        </tr>
+                        <tr><td>Cut</td><td></td><td></td><td></td><td>1</td><td></td><td></td><td></td></tr>
+                        <tr><td>Loop</td><td></td><td></td><td></td><td>2</td><td></td><td></td><td></td></tr>
+                        <tr><td></td><td></td><td></td><td></td><td>3</td><td></td><td></td><td></td></tr>
+                        <tr><td colspan="8" class="so-notes-cell">รายละเอียดเพิ่มเติม</td></tr>
+                    </table>
+                    <table class="so-grid">
+                        <tr><td colspan="4" class="so-section-header">แผนกตกแต่ง/Finishing Department</td></tr>
+                        <tr>
+                            <td style="width:30%;"><span class="so-checkbox"></span>พับขอบ/Dinding</td>
+                            <td style="width:30%;"><span class="so-checkbox"></span>ปล่อยขอบ/Wall to Wall</td>
+                            <td colspan="2">%เจียร/Tip Shear</td>
+                        </tr>
+                        <tr>
+                            <td><span class="so-checkbox"></span>แต่งเรียบ/Uncarved</td>
+                            <td><span class="so-checkbox"></span>แกะลาย/Carved</td>
+                            <td colspan="2">Label: <span class="so-checkbox"></span>SIAM CARPETS &nbsp; <span class="so-checkbox"></span>OTHERS</td>
+                        </tr>
+                        <tr class="so-finishing-subrow"><td colspan="2"></td><td colspan="2">คนตกแต่ง</td></tr>
+                        <tr class="so-finishing-subrow"><td colspan="2"></td><td colspan="2">วันแต่ง</td></tr>
+                    </table>
+                    <table class="so-grid">
+                        <tr>
+                            <td>CUSTOMER: <span class="so-fill">${v(order.customerName)}</span></td>
+                            <td>Project#: <span class="so-fill">${v(order.customerPO)}</span></td>
+                            <td>S/O#: <span class="so-fill">${v(order.moSo)}</span></td>
+                        </tr>
+                    </table>
+                    <table class="so-grid">
+                        <tr><td colspan="3" class="so-section-header">QUALITY CONTROL</td></tr>
+                        <tr>
+                            <td style="width:38%;">1.วัตถุดิบ/Raw Material<br>&nbsp;&nbsp;Yarn Type: <span class="so-fill">${v(order.yarnType)}</span></td>
+                            <td rowspan="2" style="width:24%;">APPROVED BY</td>
+                            <td style="width:38%;">3. Latexing: <span class="so-fill">${v(order.latexing)}</span></td>
+                        </tr>
+                        <tr>
+                            <td>2.ทอ/Tufting<br>&nbsp;&nbsp;Design: <span class="so-fill">${v(order.designRef)}</span><br>&nbsp;&nbsp;Tufting Spec: <span class="so-fill">${v(order.tuftingSpec)}</span><br>&nbsp;&nbsp;Surface: <span class="so-fill">${v(order.surface)}</span><br>&nbsp;&nbsp;Texture: <span class="so-fill">${v(order.texture)}</span><br>&nbsp;&nbsp;Color&amp; Color Placement: <span class="so-fill">${v(order.colorPlacement)}</span></td>
+                            <td>4. ตกแต่ง/Finishing<br>&nbsp;&nbsp;Size<br>&nbsp;&nbsp;Tuft Bind: <span class="so-fill">${v(order.tuftBind)}</span><br>&nbsp;&nbsp;Sprounting:<br>&nbsp;&nbsp;Label: <span class="so-fill">${v(order.sproutingLabel)}</span></td>
+                        </tr>
+                    </table>
+                    <div class="so-signature-row">
+                        <div>ผู้เปิด Sample Order:……………………………………<br>วันที่............./…...…./……….</div>
+                        <div>ผู้รับผิดชอบ Sample Order:………………………..……………………<br>วันที่............./…...…./……….</div>
+                    </div>
+                    <div class="so-footer-code">FM-QP-SL-001/04</div>
+                </div>
+            `;
+
+            return `<div class="so-print-sheet">${page1}${page2}</div>`;
+        }
+
+        function printSampleOrder(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildSampleOrderPrintHTML(order);
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบ Sample Order (S/O)... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
             setTimeout(() => window.print(), 150);
         }
 
@@ -9271,6 +9443,7 @@
                     <td class="border border-slate-300 px-2 py-1.5 text-center whitespace-nowrap">
                         <button onclick="openOrderDetailModal(${orderIndex})" class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-[11px] font-medium"><i class="fa-solid fa-eye"></i> ดู</button>
                         <button onclick="printProductionWorkOrder(${orderIndex})" title="พิมพ์ใบสั่งเปิดงานผลิต (PDF)" class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium ml-2"><i class="fa-solid fa-print"></i> พิมพ์</button>
+                        ${(order.orderType || detectOrderTypeFromMoSo(order.moSo)) === 'SO' ? `<button onclick="printSampleOrder(${orderIndex})" title="พิมพ์ใบ Sample Order (S/O) (PDF)" class="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-[11px] font-medium ml-2"><i class="fa-solid fa-file-lines"></i> Sample Order</button>` : ''}
                     </td>
                 </tr>
             `;
@@ -10328,6 +10501,10 @@
             document.getElementById('orderDetailTitle').textContent = `รายละเอียด M/O, S/O: ${order.moSo}`;
             document.getElementById('orderDetailMoSoLabel').textContent = order.moSo || '-';
             document.getElementById('orderDetailOrderType').value = order.orderType === 'SO' ? 'SO' : 'MO';
+            // NEW (2026-09-14): "พิมพ์ใบ Sample Order (S/O)" icon only makes sense for S/O-type orders
+            // — see buildSampleOrderPrintHTML()/printSampleOrder().
+            const printSampleOrderBtnEl = document.getElementById('printSampleOrderBtn');
+            if (printSampleOrderBtnEl) printSampleOrderBtnEl.classList.toggle('hidden', (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO');
             document.getElementById('orderDetailMarket').value = order.market || '';
             document.getElementById('orderDetailSalesName').value = order.salesName || '';
             document.getElementById('orderDetailCustomerName').value = order.customerName || '';
