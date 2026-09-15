@@ -730,6 +730,44 @@
                 </button>
             </div>
 
+            <!-- NEW (2026-09-16): "บอร์ด" / "รายงาน KPI" sub-tab bars for 4 departments — same
+                 board/log swap pattern as weavingSubTabBar above, one per department, each shown only
+                 while that department's board pill is selected (see setDeptKpiSubTab()/
+                 updateBoardColumnVisibility()). Moved here from a separate top-level "รายงานวางแผน (KPI)"
+                 tab per the user's request that KPI reports live inside their own department instead. -->
+            <div id="planningKpiSubTabBar" class="hidden flex items-center gap-2 mb-4">
+                <button onclick="setDeptKpiSubTab('planning', 'board')" id="planningKpiSubTabBtn-board" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> บอร์ดวางแผน
+                </button>
+                <button onclick="setDeptKpiSubTab('planning', 'kpi')" id="planningKpiSubTabBtn-kpi" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-scroll"></i> รายงานวางแผน (KPI)
+                </button>
+            </div>
+            <div id="designKpiSubTabBar" class="hidden flex items-center gap-2 mb-4">
+                <button onclick="setDeptKpiSubTab('design', 'board')" id="designKpiSubTabBtn-board" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> บอร์ดดีไซน์/ขยายลาย
+                </button>
+                <button onclick="setDeptKpiSubTab('design', 'kpi')" id="designKpiSubTabBtn-kpi" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-scroll"></i> แผนกดีไซน์/ขยายลาย (KPI)
+                </button>
+            </div>
+            <div id="dyeingKpiSubTabBar" class="hidden flex items-center gap-2 mb-4">
+                <button onclick="setDeptKpiSubTab('dyeing', 'board')" id="dyeingKpiSubTabBtn-board" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> บอร์ดย้อม
+                </button>
+                <button onclick="setDeptKpiSubTab('dyeing', 'kpi')" id="dyeingKpiSubTabBtn-kpi" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-scroll"></i> แผนกย้อม (KPI)
+                </button>
+            </div>
+            <div id="finishingKpiSubTabBar" class="hidden flex items-center gap-2 mb-4">
+                <button onclick="setDeptKpiSubTab('finishing', 'board')" id="finishingKpiSubTabBtn-board" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> บอร์ดตกแต่ง/บรรจุภัณฑ์
+                </button>
+                <button onclick="setDeptKpiSubTab('finishing', 'kpi')" id="finishingKpiSubTabBtn-kpi" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-scroll"></i> แผนกทากาวตกแต่ง (KPI)
+                </button>
+            </div>
+
             <div id="boardSearchCard" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
                 <div class="relative w-full sm:w-80">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
@@ -1248,12 +1286,19 @@
                         </div>
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">จอทอ</label>
-                            <select id="weavingLogLoom" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <!-- CHANGED (2026-09-16): "จอทอ สามารถคีย์เลขเพิ่มเองได้" — was a fixed
+                                 <select> (จอ 1-4 only), now a free-text input with the same 4 numbers as
+                                 quick-pick suggestions via <datalist>, same list/datalist pattern as
+                                 weavingLogMoSo above. .value reads/writes identically to the old <select>
+                                 either way, so saveWeavingLogEntry()/loadWeavingLogEntryForEdit() etc. below
+                                 (lines ~7032/7050/7125) needed no changes. -->
+                            <input type="text" id="weavingLogLoom" list="weavingLogLoomOptions" value="1" placeholder="เช่น 1, 2, 5..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <datalist id="weavingLogLoomOptions">
                                 <option value="1">จอ 1</option>
                                 <option value="2">จอ 2</option>
                                 <option value="3">จอ 3</option>
                                 <option value="4">จอ 4</option>
-                            </select>
+                            </datalist>
                         </div>
                         <div class="col-span-2 sm:col-span-1">
                             <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">เลขที่ M/O</label>
@@ -1365,6 +1410,508 @@
                             </thead>
                             <tbody id="weavingLogTableBody"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOVED (2026-09-16): "รายงานวางแผน (KPI)" — was a separate top-level nav tab, now nested
+                 here inside the board's "แผนกวางแผน" pill per the user's request that department KPI
+                 reports live inside their own department instead of as their own tabs. Shown only when
+                 boardDepartmentFilter === 'planning' AND deptKpiActiveSubTab.planning === 'kpi' — see
+                 setDeptKpiSubTab()/updateBoardColumnVisibility() and planningKpiSubTabBar above. The 4
+                 sub-reports and every render/update function below are otherwise UNCHANGED from the
+                 original top-level-tab version — only the id (planningKpiViewContainer ->
+                 planningKpiContainer) and this wrapping location moved. -->
+            <div id="planningKpiContainer" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
+                <p class="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5"><i class="fa-solid fa-file-excel mr-1"></i> อ้างอิงจากไฟล์ Excel รายงาน KPI แผนกวางแผนที่แนบมา — แก้ไขตัวเลขในตารางได้โดยตรงเหมือนเปิดไฟล์ Excel</p>
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+                    <button onclick="setPlanningKpiTab('due')" id="kpiTabDueBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                        <i class="fa-solid fa-truck-ramp-box"></i> 1. ส่งมอบทั้งหมด
+                    </button>
+                    <button onclick="setPlanningKpiTab('yarn')" id="kpiTabYarnBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-scale-balanced"></i> ไหมเหลือจากการทอ + Surplus
+                    </button>
+                    <button onclick="setPlanningKpiTab('surplus')" id="kpiTabSurplusBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-warehouse"></i> ไหม Surplus คงเหลือ (รายเดือน)
+                    </button>
+                    <button onclick="setPlanningKpiTab('extraDye')" id="kpiTabExtraDyeBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-droplet-slash"></i> ไหมสั่งย้อมเพิ่ม
+                    </button>
+                </div>
+            </div>
+
+            <div id="kpiDueDateSection">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-truck-ramp-box mr-2 text-indigo-600"></i> รายงาน M/O, S/O กำหนดส่งตามแผนไหม</h3>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <input type="text" id="kpiDueSearchInput" oninput="renderKpiDueDateReport()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO..." class="text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg w-full sm:w-56">
+                            <button onclick="exportKpiDueDateReport()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importKpiDueDateReport(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                <tr>
+                                    <th class="px-2 py-2 text-left">วันรับ</th>
+                                    <th class="px-2 py-2 text-left">M/O, S/O</th>
+                                    <th class="px-2 py-2 text-left">ลูกค้า</th>
+                                    <th class="px-2 py-2 text-left">PROJECT/PO</th>
+                                    <th class="px-2 py-2 text-left">คุณภาพ</th>
+                                    <th class="px-2 py-2 text-left">กำหนดส่ง</th>
+                                    <th class="px-2 py-2 text-right">จำนวนชิ้น</th>
+                                    <th class="px-2 py-2 text-right">จำนวนสี</th>
+                                    <th class="px-2 py-2 text-right">M2</th>
+                                    <th class="px-2 py-2 text-left">GRADE</th>
+                                    <th class="px-2 py-2 text-left">สถานที่ทอ</th>
+                                    <th class="px-2 py-2 text-left">เริ่มทอ</th>
+                                    <th class="px-2 py-2 text-left">ทอเสร็จ</th>
+                                    <th class="px-2 py-2 text-right">ค้างทอ</th>
+                                    <th class="px-2 py-2 text-left">วันที่โอน</th>
+                                    <th class="px-2 py-2 text-left">เลขที่ใบส่ง</th>
+                                    <th class="px-2 py-2 text-left">วันส่งพรม</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiDueDateTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="kpiDueDateEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ไม่มีรายการ</div>
+                </div>
+            </div>
+
+            <div id="kpiYarnSection" class="hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-scale-balanced mr-2 text-indigo-600"></i> ปริมาณไหมเหลือจากการทอแต่ละ M/O, S/O</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">กรอกตัวเลข (กก.) ตามใบสรุปย้อม/ทอของแต่ละ M/O — %ไหมเหลือคำนวณให้อัตโนมัติจากยอดเข้าทอกับไหมเหลือ (แก้ไขเองได้ถ้าต้องการ) กด "รายละเอียดแต่ละสี" เพื่อกรอกน้ำหนักแยกตามรหัสสี (ไม่รวมรายละเอียดแยกสีในไฟล์ Excel)</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button onclick="exportKpiYarnRemainingReport()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importKpiYarnRemainingReport(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                <tr>
+                                    <th class="px-2 py-2 text-left">M/O, S/O</th>
+                                    <th class="px-2 py-2 text-left">ลูกค้า / PROJECT</th>
+                                    <th class="px-2 py-2 text-right">จำนวนสี</th>
+                                    <th class="px-2 py-2 text-right">M2</th>
+                                    <th class="px-2 py-2 text-right">ยอดเข้าทอทั้งหมด (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">เฉพาะไหมลูกค้า (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">ยอดใช้จริง (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">Kg./M2</th>
+                                    <th class="px-2 py-2 text-right">ไหมเหลือจากทอ (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">%ไหมเหลือ</th>
+                                    <th class="px-2 py-2 text-right">รับเข้าคลัง Surplus (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">สูญเสีย (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">%สูญเสีย</th>
+                                    <th class="px-2 py-2 text-left">หมายเหตุ</th>
+                                    <th class="px-2 py-2 text-center">รายละเอียดสี</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiYarnTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="kpiYarnEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ไม่มีรายการ</div>
+                </div>
+            </div>
+
+            <div id="kpiSurplusSection" class="hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-warehouse mr-2 text-indigo-600"></i> ไหม Surplus คงเหลือ (สรุปรายเดือน)</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">ยอดรวมทั้งบริษัท ไม่ผูกกับ M/O ใดโดยเฉพาะ — บันทึกลงเครื่องนี้ (ยังไม่ซิงค์ Google Sheet)</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button onclick="addSurplusLedgerEntry()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus-circle"></i> เพิ่มเดือน
+                            </button>
+                            <button onclick="exportKpiSurplusLedger()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importKpiSurplusLedger(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                <tr>
+                                    <th class="px-2 py-2 text-left">เดือน</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักไหมเข้า Surplus (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักเบิกออกจาก Surplus (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักไหมใน Surplus ทั้งหมดในคลัง (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">จำนวนสีไหมที่มีในคลัง</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักรวมที่ย้อมทับ (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">จำนวนรายการสีที่ย้อมทับ</th>
+                                    <th class="px-2 py-2 text-right">เข้าทอ,ขอเพิ่ม และอื่นๆ (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">จำนวนรายการเข้าทอ,ขอเพิ่ม</th>
+                                    <th class="px-2 py-2 text-left">หมายเหตุ</th>
+                                    <th class="px-2 py-2 text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiSurplusTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="kpiSurplusEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีข้อมูล — กด "เพิ่มเดือน" เพื่อเริ่มบันทึก</div>
+                </div>
+            </div>
+
+            <div id="kpiExtraDyeSection" class="hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-droplet-slash mr-2 text-indigo-600"></i> รายงานไหมสั่งย้อมเพิ่ม</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">รวมทุก M/O — ระบุเหตุผลที่ต้องย้อมเพิ่มในช่อง "หมายเหตุ" เสมอ</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <select id="kpiExtraDyeMoSoSelect" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"></select>
+                            <button onclick="addExtraDyeingLogItemFromSelect()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                            </button>
+                            <button onclick="exportKpiExtraDyeingLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importKpiExtraDyeingLog(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                <tr>
+                                    <th class="px-2 py-2 text-left">วันที่ส่งย้อมเพิ่ม</th>
+                                    <th class="px-2 py-2 text-left">สถานที่ทอ</th>
+                                    <th class="px-2 py-2 text-left">M/O</th>
+                                    <th class="px-2 py-2 text-right">No.</th>
+                                    <th class="px-2 py-2 text-left">CODE</th>
+                                    <th class="px-2 py-2 text-left">ชนิดไหม</th>
+                                    <th class="px-2 py-2 text-right">ยอดย้อมเพิ่ม (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักก่อนย้อม (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">น้ำหนักหลังย้อม (Kg.)</th>
+                                    <th class="px-2 py-2 text-left">วันที่ย้อม</th>
+                                    <th class="px-2 py-2 text-right">Surplus (Kg.)</th>
+                                    <th class="px-2 py-2 text-left">หมายเหตุ (เพราะอะไร)</th>
+                                    <th class="px-2 py-2 text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiExtraDyeTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="kpiExtraDyeEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการย้อมเพิ่ม</div>
+                </div>
+            </div>
+            </div>
+
+            <!-- "แผนกดีไซน์/ขยายลาย (KPI)" — modeled on Siam_Carpets_Design_KPI.xlsx (Data_Logs +
+                 KPI_Dashboard) and Siam_Carpets_ขยายลาย_KPI.xlsx ("ใบโอน เดือน..."). Same shown-only-
+                 while-selected pattern as planningKpiContainer above (see designKpiSubTabBar). Design job
+                 entries often exist before any M/O is opened for them (per the Excel, a Design No. isn't
+                 always a real M/O yet), so designJobLogs is a standalone list — localStorage-only for now,
+                 same convention as surplusYarnLedger; the pattern-enlargement transfer log DOES key off a
+                 real M/O per row, so it lives in order.design.patternTransferLog (existing JSON-blob field
+                 → syncs to Sheets for free, no backend change). -->
+            <div id="designKpiContainer" class="hidden space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
+                    <p class="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5"><i class="fa-solid fa-file-excel mr-1"></i> อ้างอิงจากไฟล์ Excel KPI แผนกดีไซน์/ขยายลายที่แนบมา</p>
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+                        <button onclick="setDesignKpiTab('jobs')" id="designKpiTabJobsBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                            <i class="fa-solid fa-pen-ruler"></i> งานดีไซน์ (Data Logs)
+                        </button>
+                        <button onclick="setDesignKpiTab('transfer')" id="designKpiTabTransferBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i> ใบโอนขยายลาย
+                        </button>
+                    </div>
+                </div>
+
+                <div id="designKpiJobsSection">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+                        <div class="p-4 bg-indigo-50/50 border-b border-slate-100">
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-chart-column mr-2 text-indigo-600"></i> ประสิทธิภาพรายบุคคล (คำนวณอัตโนมัติจากตารางด้านล่าง)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">ดีไซเนอร์</th>
+                                        <th class="px-2 py-2 text-right">จำนวนงานสำเร็จ</th>
+                                        <th class="px-2 py-2 text-right">เวลาจัดทำเฉลี่ย (วัน)</th>
+                                        <th class="px-2 py-2 text-right">จำนวนครั้งที่แก้แบบ</th>
+                                        <th class="px-2 py-2 text-right">% ส่งงานตรงเวลา</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="designKpiSummaryTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="designKpiSummaryEmptyState" class="hidden py-6 text-center text-slate-400 text-sm">ยังไม่มีข้อมูล</div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list mr-2 text-indigo-600"></i> Data Logs — งานดีไซน์รายชิ้น</h3>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <button onclick="addDesignJobLog()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus-circle"></i> เพิ่มงาน
+                                </button>
+                                <button onclick="exportDesignKpiJobsLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                                </button>
+                                <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                    <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importDesignKpiJobsLog(this)">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">วันที่รับงาน</th>
+                                        <th class="px-2 py-2 text-left">กำหนดส่งงาน</th>
+                                        <th class="px-2 py-2 text-left">เกรด</th>
+                                        <th class="px-2 py-2 text-left">Design No.</th>
+                                        <th class="px-2 py-2 text-left">Description</th>
+                                        <th class="px-2 py-2 text-left">Customer</th>
+                                        <th class="px-2 py-2 text-left">Project</th>
+                                        <th class="px-2 py-2 text-left">Designer</th>
+                                        <th class="px-2 py-2 text-left">วันที่ส่งงาน</th>
+                                        <th class="px-2 py-2 text-right">เวลาจัดทำจริง (วัน)</th>
+                                        <th class="px-2 py-2 text-right">จำนวนแก้ไข (ครั้ง)</th>
+                                        <th class="px-2 py-2 text-left">สถานะจัดส่ง</th>
+                                        <th class="px-2 py-2 text-left">หมายเหตุ</th>
+                                        <th class="px-2 py-2 text-center">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="designKpiJobsTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="designKpiJobsEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ — กด "เพิ่มงาน" เพื่อเริ่มบันทึก</div>
+                    </div>
+                </div>
+
+                <div id="designKpiTransferSection" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-4 bg-indigo-50/50 border-b border-slate-100">
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-arrow-right-arrow-left mr-2 text-indigo-600"></i> ใบโอนขยายลาย</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">เลือก M/O จากดรอปดาวน์แล้วกด "เพิ่มรายการ" — เศษผ้าคำนวณอัตโนมัติจาก พ.ท − ใช้จริง (แก้ไขเองได้)</p>
+                        </div>
+                        <div class="p-3 flex flex-wrap items-center gap-1.5 border-b border-slate-100">
+                            <select id="designKpiTransferMoSoSelect" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"></select>
+                            <button onclick="addPatternTransferLogFromSelect()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                            </button>
+                            <button onclick="exportDesignKpiTransferLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importDesignKpiTransferLog(this)">
+                            </label>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">วันที่รับ</th>
+                                        <th class="px-2 py-2 text-left">M/O, S/O</th>
+                                        <th class="px-2 py-2 text-left">ชิ้นที่</th>
+                                        <th class="px-2 py-2 text-right">พ.ท / ตร.ม.</th>
+                                        <th class="px-2 py-2 text-right">ใช้จริง / ตร.ม.</th>
+                                        <th class="px-2 py-2 text-right">เศษผ้า / ตร.ม.</th>
+                                        <th class="px-2 py-2 text-right">จำนวน</th>
+                                        <th class="px-2 py-2 text-left">หน่วย</th>
+                                        <th class="px-2 py-2 text-left">วันที่โอน</th>
+                                        <th class="px-2 py-2 text-left">หมายเหตุ</th>
+                                        <th class="px-2 py-2 text-center">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="designKpiTransferTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="designKpiTransferEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- "แผนกย้อม (KPI)" — modeled on Siam_Carpets_Dye_KPI.xlsx sheets "MO" (regular dye orders)
+                 and " ย้อมเพิ่ม " (extra dye orders — nearly identical columns to "MO", so both share the
+                 same order.dyeing.dyeOrderLog array with an isExtra flag rather than two parallel
+                 structures; the sub-tab pills below just filter which ones show). "สรุปตามแผน" (on-time)
+                 computes automatically from วันที่กำหนดเสร็จตามแผน vs วันที่ย้อมเสร็จจริง. Deliberately does
+                 NOT try to reconcile against Dye_KPI.xlsx's much larger historical "Sheet1" (2779 rows,
+                 a different/older raw export) — flagged to the user as a scope note. -->
+            <div id="dyeingKpiContainer" class="hidden space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
+                    <p class="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5"><i class="fa-solid fa-file-excel mr-1"></i> อ้างอิงจากไฟล์ Excel KPI แผนกย้อมที่แนบมา (ชีต "MO" + "ย้อมเพิ่ม")</p>
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+                        <button onclick="setDyeingKpiTab('regular')" id="dyeingKpiTabRegularBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                            <i class="fa-solid fa-droplet"></i> บันทึกสั่งย้อม
+                        </button>
+                        <button onclick="setDyeingKpiTab('extra')" id="dyeingKpiTabExtraBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                            <i class="fa-solid fa-droplet-slash"></i> ย้อมเพิ่ม
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <h3 id="dyeingKpiSectionTitle" class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-droplet mr-2 text-indigo-600"></i> บันทึกสั่งย้อม</h3>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <select id="dyeingKpiMoSoSelect" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"></select>
+                            <button onclick="addDyeOrderLogFromSelect()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                            </button>
+                            <button onclick="exportDyeingKpiOrderLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                            </button>
+                            <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importDyeingKpiOrderLog(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                <tr>
+                                    <th class="px-2 py-2 text-left">วันที่รับ order สั่งย้อม</th>
+                                    <th class="px-2 py-2 text-left">M/O</th>
+                                    <th class="px-2 py-2 text-right">เบอร์สี</th>
+                                    <th class="px-2 py-2 text-left">code สี</th>
+                                    <th class="px-2 py-2 text-left">ชนิดไหม</th>
+                                    <th class="px-2 py-2 text-left">LOT ไหม</th>
+                                    <th class="px-2 py-2 text-right">นน.ในใบสั่งย้อม (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">หมายเลขตู้ย้อม</th>
+                                    <th class="px-2 py-2 text-right">นน.โอนจากใบเบิก (Kg.)</th>
+                                    <th class="px-2 py-2 text-right">นน.โอนจริง (Kg.)</th>
+                                    <th class="px-2 py-2 text-left">วันที่กำหนดเสร็จตามแผน</th>
+                                    <th class="px-2 py-2 text-left">วันที่ย้อมเสร็จจริง</th>
+                                    <th class="px-2 py-2 text-center">สรุปตามแผน</th>
+                                    <th class="px-2 py-2 text-left">วันที่กำหนดส่ง</th>
+                                    <th class="px-2 py-2 text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dyeingKpiTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="dyeingKpiEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                </div>
+            </div>
+
+            <!-- "แผนกทากาวตกแต่ง (KPI)" — combines Siam_Carpets_Finishing_KPI.xlsx ("รายงาน %
+                 ประสิทธิภาพการตกแต่งพรมโดยรวม", grouped by grade) and Siam_Carpets_ทากาว_KPI.xlsx
+                 ("การเบิกใช้กาว") into one department tab per the user's request, as two sub-reports.
+                 Productivity (m2/hr) and %การเบิกกาวจริง both compute automatically. -->
+            <div id="finishingKpiContainer" class="hidden space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
+                    <p class="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5"><i class="fa-solid fa-file-excel mr-1"></i> อ้างอิงจากไฟล์ Excel KPI แผนกตกแต่ง + ทากาวที่แนบมา</p>
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+                        <button onclick="setFinishingKpiTab('efficiency')" id="finishingKpiTabEfficiencyBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                            <i class="fa-solid fa-gauge-high"></i> ประสิทธิภาพการตกแต่ง
+                        </button>
+                        <button onclick="setFinishingKpiTab('glue')" id="finishingKpiTabGlueBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                            <i class="fa-solid fa-bottle-droplet"></i> การเบิกใช้กาว
+                        </button>
+                    </div>
+                </div>
+
+                <div id="finishingKpiEfficiencySection">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-gauge-high mr-2 text-indigo-600"></i> % ประสิทธิภาพการตกแต่งพรมโดยรวม</h3>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <select id="finishingKpiMoSoSelect" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"></select>
+                                <button onclick="addFinishingEfficiencyLogFromSelect()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                                </button>
+                                <button onclick="exportFinishingKpiEfficiencyLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                                </button>
+                                <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                    <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importFinishingKpiEfficiencyLog(this)">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">M/O</th>
+                                        <th class="px-2 py-2 text-left">เกรด</th>
+                                        <th class="px-2 py-2 text-right">พ.ท แต่งได้ (ตร.ม.)</th>
+                                        <th class="px-2 py-2 text-right">เวลา (ชม.)</th>
+                                        <th class="px-2 py-2 text-right">Productivity (m2/hr)</th>
+                                        <th class="px-2 py-2 text-left">หมายเหตุ</th>
+                                        <th class="px-2 py-2 text-center">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finishingKpiEfficiencyTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="finishingKpiEfficiencyEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                    </div>
+                </div>
+
+                <div id="finishingKpiGlueSection" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div>
+                                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-bottle-droplet mr-2 text-indigo-600"></i> การเบิกใช้กาว</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">ห้ามเบิกกาวเกินมาตรฐานที่กำหนด 100% — % คำนวณอัตโนมัติจากยอดเบิกจริงเทียบมาตรฐาน</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <select id="finishingKpiGlueMoSoSelect" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"></select>
+                                <button onclick="addGlueUsageLogFromSelect()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                                </button>
+                                <button onclick="exportFinishingKpiGlueLog()" type="button" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-file-export"></i> ส่งออก Excel
+                                </button>
+                                <label class="shrink-0 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-file-import"></i> นำเข้า Excel
+                                    <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importFinishingKpiGlueLog(this)">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">ว.ด.ป.</th>
+                                        <th class="px-2 py-2 text-left">M/O</th>
+                                        <th class="px-2 py-2 text-right">พื้นที่ (ตร.ม.)</th>
+                                        <th class="px-2 py-2 text-right">เบิกตามมาตรฐาน (Kg.)</th>
+                                        <th class="px-2 py-2 text-right">กาว EUR178 (Kg.)</th>
+                                        <th class="px-2 py-2 text-right">กาว 66012 (Kg.)</th>
+                                        <th class="px-2 py-2 text-right">กาว TH31 (Kg.)</th>
+                                        <th class="px-2 py-2 text-right">รวมเบิกกาว (Kg.)</th>
+                                        <th class="px-2 py-2 text-right">% การเบิกกาวจริง</th>
+                                        <th class="px-2 py-2 text-center">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finishingKpiGlueTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="finishingKpiGlueEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
                     </div>
                 </div>
             </div>
@@ -1732,6 +2279,17 @@
                     </table>
                 </div>
                 <p id="centralUrgentEmpty" class="hidden text-xs text-slate-400 text-center py-6">ไม่มี M/O, S/O ที่ใกล้หรือเลยกำหนดส่งในขณะนี้ 🎉</p>
+            </div>
+
+            <!-- NEW (2026-09): KPI ทุกแผนกให้ไปอยู่ใน Dashboard กลาง — สรุปตัวเลข KPI หลักของแต่ละแผนก
+                 (วางแผน/ดีไซน์-ขยายลาย/ย้อม/ทากาวตกแต่ง) ไว้ในที่เดียวเพื่อดูภาพรวมได้ทันที โดยไม่ทำซ้ำตาราง
+                 แก้ไขข้อมูลแบบละเอียด (ซึ่งยังอยู่ที่แท็บ KPI ของแต่ละแผนกในหน้า "แผนผังการผลิต" เหมือนเดิม
+                 เพื่อไม่ให้มีจุดแก้ไขข้อมูลชุดเดียวกันซ้ำกันสองที่) — กดปุ่ม "ดูรายละเอียด" ในแต่ละการ์ดเพื่อไปยัง
+                 แท็บ KPI เต็มรูปแบบของแผนกนั้นได้ทันที (ดู goToDeptKpiFromCentral()). -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-chart-line mr-2 text-violet-600"></i> KPI แผนกวางแผน / ดีไซน์-ขยายลาย / ย้อม / ทากาวตกแต่ง</h3>
+                <p class="text-[11px] text-slate-400 mb-3">สรุปตัวเลข KPI หลักของแต่ละแผนก — กด "ดูรายละเอียด" เพื่อไปยังหน้ารายงาน KPI เต็มรูปแบบของแผนกนั้น</p>
+                <div id="centralDeptKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
             </div>
         </div>
 
@@ -2513,6 +3071,20 @@
         // own-Google-Sheet-tab convention as specTemplates/issuesData above — see
         // fetchWeavingStaffFromGoogleSheet()/renderWeavingStaffManagerHtml() near the weaving log code.
         let weavingStaffList = [];
+        // NEW (2026-09-16): "รายงาน KPI แผนกวางแผน" — monthly ไหม Surplus warehouse ledger (ใบ "5.ไหม
+        // Surplusคงเหลือ" ในไฟล์ Excel ที่แนบมา). This one is company-wide per MONTH, not tied to any one
+        // M/O, S/O, so — unlike the per-order KPI fields added under order.weaving/order.dyeing/
+        // order.finishing below (which ride the existing order-sync pipeline for free) — it currently
+        // only persists to this browser's localStorage (see saveSurplusLedgerToLocal()). If this needs to
+        // sync across devices/users later, it can get its own Google Sheet tab + GET/POST actions the same
+        // way weavingStaffList does (fetchWeavingStaffFromGoogleSheet() above is the template) — deliberately
+        // left as a local-only v1 for now rather than shipping untested backend changes.
+        let surplusYarnLedger = [];
+        // NEW (2026-09-16): "แผนกดีไซน์/ขยายลาย (KPI)" — designJobLogs mirrors Design_KPI.xlsx's
+        // Data_Logs sheet. Local-only for the same reason as surplusYarnLedger: a design job's Design No.
+        // often isn't a real M/O in this system yet (per-design-variant tasks, ones that never became an
+        // order, etc.), so there's no natural order.* JSON blob to ride on.
+        let designJobLogs = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
 
         // NEW (2026-09-16): "แจ้งเตือนผ่านไลน์ แจ้งแค่ปัญหาพอ ถ้ามีรายการอื่นด้วย limit จะเต็ม" — the LINE
@@ -3097,6 +3669,16 @@
             if (savedWeavingStaff) {
                 try { weavingStaffList = JSON.parse(savedWeavingStaff); } catch(e) {}
             }
+            // NEW (2026-09-16): ไหม Surplus ledger รายเดือน — local-only for now, see the declaration comment above.
+            const savedSurplusLedger = localStorage.getItem('qc_surplus_ledger_v1');
+            if (savedSurplusLedger) {
+                try { surplusYarnLedger = JSON.parse(savedSurplusLedger); } catch(e) {}
+            }
+            // NEW (2026-09-16): งานดีไซน์ log — local-only for now, see the declaration comment above.
+            const savedDesignJobLogs = localStorage.getItem('qc_design_job_logs_v1');
+            if (savedDesignJobLogs) {
+                try { designJobLogs = JSON.parse(savedDesignJobLogs); } catch(e) {}
+            }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
             initApp();
@@ -3137,6 +3719,17 @@
         // NEW (2026-09-12): persists weavingStaffList locally, same convention as saveSpecTemplatesToLocal() above.
         function saveWeavingStaffToLocal() {
             localStorage.setItem('qc_weaving_staff_v1', JSON.stringify(weavingStaffList));
+        }
+
+        // NEW (2026-09-16): persists surplusYarnLedger locally — same convention as saveWeavingStaffToLocal()
+        // above, minus the Google Sheet sync (see the surplusYarnLedger declaration comment for why).
+        function saveSurplusLedgerToLocal() {
+            localStorage.setItem('qc_surplus_ledger_v1', JSON.stringify(surplusYarnLedger));
+        }
+
+        // NEW (2026-09-16): persists designJobLogs locally — same convention as saveSurplusLedgerToLocal().
+        function saveDesignJobLogsToLocal() {
+            localStorage.setItem('qc_design_job_logs_v1', JSON.stringify(designJobLogs));
         }
 
         function initApp() {
@@ -3867,6 +4460,101 @@
                 label: STAGE_LABELS[stage], value: activeOrders.filter(o => o.currentStage === stage).length
             })).filter(it => it.value > 0 || true), 'bg-indigo-500');
             renderCentralUrgentTable(activeOrders);
+            renderCentralDeptKpiGrid(activeOrders);
+        }
+
+        // NEW (2026-09): จาก Dashboard กลาง กดเข้าไปดูรายงาน KPI เต็มรูปแบบของแผนกนั้น ๆ ได้ทันที —
+        // ใช้กลไกเดิมที่มีอยู่แล้ว (สลับไปแท็บ "แผนผังการผลิต" -> เลือกแผนก -> เปิดแท็บย่อย KPI ของแผนกนั้น)
+        // จุดเดียวกับที่ setDeptKpiSubTab() ใช้อยู่แล้ว จึงไม่มีโค้ด/ตารางซ้ำซ้อนกับของเดิม
+        function goToDeptKpiFromCentral(dept) {
+            switchView('board');
+            setBoardDepartmentTab(dept);
+            setDeptKpiSubTab(dept, 'kpi');
+        }
+
+        // สรุปตัวเลข KPI หลักของ 4 แผนก (วางแผน/ดีไซน์-ขยายลาย/ย้อม/ทากาวตกแต่ง) มาแสดงเป็นการ์ดใน
+        // Dashboard กลาง — คำนวณจากข้อมูลเดิมที่มีอยู่แล้วทั้งหมด (order.dyeing/design/finishing และ
+        // surplusYarnLedger/designJobLogs) ไม่สร้างข้อมูลซ้ำ เป็นแค่มุมมองสรุปเพื่อดูภาพรวมทุกแผนกในที่เดียว
+        function renderCentralDeptKpiGrid(activeOrders) {
+            const grid = document.getElementById('centralDeptKpiGrid');
+            if (!grid) return;
+            const orders = activeOrders || productionOrders;
+
+            // --- วางแผน: จำนวน M/O,S/O ที่ยังไม่ส่ง + ปริมาณไหม Surplus คงเหลือรวมล่าสุด ---
+            const planningDueCount = orders.filter(o => o.dueDate).length;
+            const surplusTotalKg = (typeof surplusYarnLedger !== 'undefined' ? surplusYarnLedger : [])
+                .reduce((sum, r) => sum + (Number(r.weightInKg) || 0), 0);
+
+            // --- ดีไซน์/ขยายลาย: จำนวนงานออกแบบที่บันทึก + % ตรงเวลา, จำนวนรายการขยายลายทั้งหมด ---
+            const designJobs = (typeof designJobLogs !== 'undefined' ? designJobLogs : []);
+            let designOnTimeCount = 0, designOnTimeTotal = 0;
+            designJobs.forEach(job => {
+                const { onTime } = computeDesignJobDerived(job);
+                if (onTime !== null) { designOnTimeTotal++; if (onTime) designOnTimeCount++; }
+            });
+            const designOnTimePct = designOnTimeTotal > 0 ? Math.round((designOnTimeCount / designOnTimeTotal) * 100) : null;
+            let transferCount = 0;
+            productionOrders.forEach(o => { transferCount += ((o.design && o.design.patternTransferLog) || []).length; });
+
+            // --- ย้อม: จำนวนคำสั่งย้อมทั้งหมด (ปกติ+เพิ่ม) และจำนวนที่ย้อมเพิ่ม ---
+            let dyeRegularCount = 0, dyeExtraCount = 0;
+            productionOrders.forEach(o => {
+                ((o.dyeing && o.dyeing.dyeOrderLog) || []).forEach(item => item.isExtra ? dyeExtraCount++ : dyeRegularCount++);
+            });
+
+            // --- ทากาวตกแต่ง: ประสิทธิภาพเฉลี่ย (ตร.ม./ชม.) + จำนวนรายการใช้กาวเกินมาตรฐาน ---
+            let effTotalSqm = 0, effTotalHours = 0, glueOverStandardCount = 0, glueTotalCount = 0;
+            productionOrders.forEach(o => {
+                ((o.finishing && o.finishing.efficiencyLog) || []).forEach(item => {
+                    effTotalSqm += Number(item.areaSqm) || 0;
+                    effTotalHours += Number(item.hours) || 0;
+                });
+                ((o.finishing && o.finishing.glueUsageLog) || []).forEach(item => {
+                    glueTotalCount++;
+                    const total = (Number(item.eur178Kg) || 0) + (Number(item.kg66012) || 0) + (Number(item.th31Kg) || 0);
+                    const std = Number(item.standardKg) || 0;
+                    if (std > 0 && total > std) glueOverStandardCount++;
+                });
+            });
+            const avgProductivity = effTotalHours > 0 ? (effTotalSqm / effTotalHours).toFixed(2) : null;
+
+            const card = (icon, color, title, rows, dept) => `
+                <div class="border border-slate-100 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-semibold text-slate-800 text-xs mb-2"><i class="fa-solid ${icon} mr-1.5 text-${color}-600"></i> ${escapeHtml(title)}</h4>
+                        <div class="space-y-1.5">
+                            ${rows.map(r => `
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="text-slate-400">${escapeHtml(r.label)}</span>
+                                    <span class="font-bold text-slate-700">${escapeHtml(r.value)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button type="button" onclick="goToDeptKpiFromCentral('${dept}')" class="mt-3 w-full text-center text-[11px] font-semibold text-${color}-700 bg-${color}-50 hover:bg-${color}-100 rounded-lg py-1.5 transition">
+                        ดูรายละเอียด <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            `;
+
+            grid.innerHTML =
+                card('fa-clipboard-list', 'indigo', 'แผนกวางแผน', [
+                    { label: 'M/O, S/O ที่มีกำหนดส่ง', value: String(planningDueCount) },
+                    { label: 'ไหม Surplus คงเหลือรวม', value: surplusTotalKg > 0 ? `${surplusTotalKg.toLocaleString('th-TH')} กก.` : '-' }
+                ], 'planning') +
+                card('fa-palette', 'fuchsia', 'ดีไซน์/ขยายลาย', [
+                    { label: 'งานออกแบบที่บันทึก', value: String(designJobs.length) },
+                    { label: '% ตรงเวลา', value: designOnTimePct === null ? '-' : `${designOnTimePct}%` },
+                    { label: 'รายการขยายลายทั้งหมด', value: String(transferCount) }
+                ], 'design') +
+                card('fa-flask', 'sky', 'แผนกย้อม', [
+                    { label: 'คำสั่งย้อมปกติ', value: String(dyeRegularCount) },
+                    { label: 'คำสั่งย้อมเพิ่ม', value: String(dyeExtraCount) }
+                ], 'dyeing') +
+                card('fa-layer-group', 'amber', 'ทากาวตกแต่ง', [
+                    { label: 'ประสิทธิภาพเฉลี่ย (ตร.ม./ชม.)', value: avgProductivity === null ? '-' : avgProductivity },
+                    { label: 'ใช้กาวเกินมาตรฐาน', value: glueTotalCount > 0 ? `${glueOverStandardCount}/${glueTotalCount} รายการ` : '-' }
+                ], 'finishing');
         }
 
         // เทียบ "จำนวนงานที่กำลังอยู่ในคิวของแผนกนี้ตอนนี้" (นับจาก currentStage) กับ "กำลังการผลิตจริง"
@@ -8629,13 +9317,30 @@
             const weavingSubTabBar = document.getElementById('weavingSubTabBar');
             const weavingLogContainer = document.getElementById('weavingLogContainer');
             if (salesContainer) salesContainer.classList.toggle('hidden', !isSales);
-            if (searchCard) searchCard.classList.toggle('hidden', isSales || isWeavingLog);
             if (weavingSubTabBar) weavingSubTabBar.classList.toggle('hidden', !isWeaving);
             if (weavingLogContainer) weavingLogContainer.classList.toggle('hidden', !isWeavingLog);
 
+            // NEW (2026-09-16): same idea for the 4 department KPI report tabs (see setDeptKpiSubTab()
+            // above) — each shows its own sub-tab-bar only while its department is the selected board
+            // tab, and swaps the Kanban column out for the KPI report container while that pill is on
+            // 'kpi'. isAnyDeptKpi feeds into the same "hide the shared grid/search bar" logic isWeavingLog
+            // already does, so all 5 of these swap-outs (แผนกขาย/บันทึกการทอรายวัน/4×KPI) compose correctly.
+            let isAnyDeptKpi = false;
+            Object.keys(DEPT_KPI_CONTAINER_IDS).forEach(dept => {
+                const isDept = boardDepartmentFilter === dept;
+                const isDeptKpi = isDept && deptKpiActiveSubTab[dept] === 'kpi';
+                if (isDeptKpi) isAnyDeptKpi = true;
+                const subTabBar = document.getElementById(DEPT_KPI_SUBTAB_BAR_IDS[dept]);
+                const kpiContainer = document.getElementById(DEPT_KPI_CONTAINER_IDS[dept]);
+                if (subTabBar) subTabBar.classList.toggle('hidden', !isDept);
+                if (kpiContainer) kpiContainer.classList.toggle('hidden', !isDeptKpi);
+            });
+
+            if (searchCard) searchCard.classList.toggle('hidden', isSales || isWeavingLog || isAnyDeptKpi);
+
             const grid = document.getElementById('boardColumnsGrid');
             if (grid) {
-                grid.classList.toggle('hidden', isSales || isWeavingLog);
+                grid.classList.toggle('hidden', isSales || isWeavingLog || isAnyDeptKpi);
                 if (boardDepartmentFilter === '') {
                     grid.classList.remove('md:grid-cols-1');
                     grid.classList.add('md:grid-cols-6');
@@ -8647,7 +9352,7 @@
             BOARD_TABS.forEach(stage => {
                 const wrap = document.getElementById(`boardColWrap-${stage}`);
                 if (!wrap) return;
-                const shouldShow = !isSales && !isWeavingLog && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
+                const shouldShow = !isSales && !isWeavingLog && !isAnyDeptKpi && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
                 wrap.classList.toggle('hidden', !shouldShow);
             });
         }
@@ -9929,6 +10634,44 @@
                 // away and back.
                 populateWeavingLogMoSoOptions();
                 renderWeavingLogTable();
+            }
+        }
+
+        // NEW (2026-09-16): generic version of the "แผนกทอ" board/log sub-tab switcher above, reused for
+        // the 4 department KPI report tabs the user asked to move onto the board itself: "บอร์ด" (the
+        // pre-existing Kanban column for that department) vs "รายงาน KPI" (the new report, one per dept,
+        // built from that department's Excel workbook). Kept as its own function rather than merged into
+        // setWeavingSubTab() so the already-working "บันทึกการทอรายวัน" logic above is never touched.
+        // See updateBoardColumnVisibility() for how DEPT_KPI_ACTIVE_SUBTAB actually shows/hides things.
+        const DEPT_KPI_CONTAINER_IDS = { planning: 'planningKpiContainer', design: 'designKpiContainer', dyeing: 'dyeingKpiContainer', finishing: 'finishingKpiContainer' };
+        const DEPT_KPI_SUBTAB_BAR_IDS = { planning: 'planningKpiSubTabBar', design: 'designKpiSubTabBar', dyeing: 'dyeingKpiSubTabBar', finishing: 'finishingKpiSubTabBar' };
+        let deptKpiActiveSubTab = { planning: 'board', design: 'board', dyeing: 'board', finishing: 'board' };
+
+        function setDeptKpiSubTab(dept, tab) {
+            deptKpiActiveSubTab[dept] = (tab === 'kpi') ? 'kpi' : 'board';
+            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            [
+                { el: document.getElementById(`${dept}KpiSubTabBtn-board`), isActive: deptKpiActiveSubTab[dept] === 'board' },
+                { el: document.getElementById(`${dept}KpiSubTabBtn-kpi`), isActive: deptKpiActiveSubTab[dept] === 'kpi' }
+            ].forEach(({ el, isActive }) => {
+                if (!el) return;
+                if (isActive) { el.classList.remove(...inactiveClasses); el.classList.add(...activeClasses); }
+                else { el.classList.remove(...activeClasses); el.classList.add(...inactiveClasses); }
+            });
+            // Same "make sure this department is actually the selected board tab" guard as
+            // setWeavingSubTab() above, for the same reason (a KPI report can be opened from elsewhere,
+            // e.g. a future "ดู KPI" shortcut on an order card, not only from this pill bar).
+            if (boardDepartmentFilter !== dept) {
+                setBoardDepartmentTab(dept);
+                return; // re-enters via updateBoardColumnVisibility() with the new sub-tab already set
+            }
+            updateBoardColumnVisibility();
+            if (deptKpiActiveSubTab[dept] === 'kpi') {
+                if (dept === 'planning') renderPlanningKpiReports();
+                if (dept === 'design') renderDesignKpiReports();
+                if (dept === 'dyeing') renderDyeingKpiReports();
+                if (dept === 'finishing') renderFinishingKpiReports();
             }
         }
 
@@ -11815,6 +12558,1351 @@
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.classList.add('hidden'), 300);
             }, 3000);
+        }
+
+        // ============================================================================================
+        // "รายงานวางแผน (KPI)" — 4 sub-reports modeled on the แผนกวางแผน Excel workbook the user
+        // attached (Siam_Carpets_Planning_KPI.xlsx, sheets "1.ส่งมอบทั้งหมด", "3-4 ปริมาณไหมหลือ+ไหม
+        // surplus", "5.ไหมSurplusคงเหลือ", "6.ย้อมเพิ่ม"). New per-order fields all live inside the
+        // existing order.weaving / order.dyeing / order.finishing JSON-blob objects (same fields already
+        // synced to Google Sheets by upsertOrderIntoSheets_() as a whole object per department — see the
+        // .gs file), so none of this needed any backend/.gs changes. The one exception is
+        // surplusYarnLedger (the monthly warehouse ledger, not tied to any single M/O) — see its own
+        // declaration comment for why that one is local-only for now.
+        //
+        // Scope note (told to the user at delivery): the source Excel's "3-4" sheet also carries a very
+        // granular internal/external dyeing weight reconciliation (ordered vs. invoice vs. actual-weighed,
+        // ~40 columns) per color. This report keeps the headline KPI numbers per M/O (into weaving, used,
+        // remaining, %remaining, surplus received, loss) plus a per-color weight breakdown, rather than
+        // reproducing every one of those reconciliation columns — flagged as a possible follow-up.
+        // ============================================================================================
+
+        let currentPlanningKpiTab = 'due'; // 'due' | 'yarn' | 'surplus' | 'extraDye'
+        let kpiYarnExpandedOrderIndex = null; // which row's per-color breakdown is expanded, if any
+
+        function renderPlanningKpiReports() {
+            renderKpiDueDateReport();
+            renderKpiYarnRemainingReport();
+            renderKpiSurplusLedger();
+            renderKpiExtraDyeingLog();
+        }
+
+        function setPlanningKpiTab(tab) {
+            currentPlanningKpiTab = tab;
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            const tabs = { due: 'kpiTabDueBtn', yarn: 'kpiTabYarnBtn', surplus: 'kpiTabSurplusBtn', extraDye: 'kpiTabExtraDyeBtn' };
+            const sections = { due: 'kpiDueDateSection', yarn: 'kpiYarnSection', surplus: 'kpiSurplusSection', extraDye: 'kpiExtraDyeSection' };
+            Object.keys(tabs).forEach(key => {
+                const btnEl = document.getElementById(tabs[key]);
+                const secEl = document.getElementById(sections[key]);
+                if (btnEl) btnEl.className = key === tab ? activeCls : inactiveCls;
+                if (secEl) secEl.classList.toggle('hidden', key !== tab);
+            });
+        }
+
+        // ---- 1. ส่งมอบทั้งหมด (due dates per weaving plan) --------------------------------------------
+        function renderKpiDueDateReport() {
+            const tbody = document.getElementById('kpiDueDateTableBody');
+            const emptyState = document.getElementById('kpiDueDateEmptyState');
+            if (!tbody) return;
+            const searchEl = document.getElementById('kpiDueSearchInput');
+            const searchTerm = (searchEl ? searchEl.value : '').trim().toLowerCase();
+
+            let list = productionOrders.map((order, orderIndex) => ({ order, orderIndex }));
+            if (searchTerm) {
+                list = list.filter(({ order }) => [order.moSo, order.customerName, order.customerPO]
+                    .map(v => String(v || '').toLowerCase()).join(' ').includes(searchTerm));
+            }
+            list.sort((a, b) => String(a.order.dueDate || '9999').localeCompare(String(b.order.dueDate || '9999')));
+
+            if (list.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const f = (orderIndex, path) => `updateOrderField(${orderIndex}, '${path}', this.value)`;
+            tbody.innerHTML = list.map(({ order, orderIndex }) => {
+                const w = order.weaving || {};
+                const fin = order.finishing || {};
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.openDate || '-')}</td>
+                        <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</td>
+                        <td class="px-2 py-1.5">${escapeHtml(order.customerName || '-')}</td>
+                        <td class="px-2 py-1.5">${escapeHtml(order.customerPO || '-')}</td>
+                        <td class="px-2 py-1.5">${escapeHtml(order.quality || '-')}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.dueDate || '-')}</td>
+                        <td class="px-2 py-1.5 text-right">${order.totalPieces || 0}</td>
+                        <td class="px-2 py-1.5 text-right">${order.colorsCount || 0}</td>
+                        <td class="px-2 py-1.5 text-right">${(Number(order.totalSqm) || 0).toFixed(2)}</td>
+                        <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(w.grade || '')}" onchange="${f(orderIndex, 'weaving.grade')}" class="w-16 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(w.location || '')}" onchange="${f(orderIndex, 'weaving.location')}" class="w-20 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5"><input type="date" value="${w.startDate || ''}" onchange="${f(orderIndex, 'weaving.startDate')}" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5"><input type="date" value="${w.finishDate || ''}" onchange="${f(orderIndex, 'weaving.finishDate')}" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5"><input type="number" step="1" value="${w.pendingQty || ''}" onchange="updateOrderField(${orderIndex}, 'weaving.pendingQty', Number(this.value))" class="w-14 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right"></td>
+                        <td class="px-2 py-1.5"><input type="date" value="${w.transferDate || ''}" onchange="${f(orderIndex, 'weaving.transferDate')}" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(fin.deliveryNoteNo || '')}" onchange="${f(orderIndex, 'finishing.deliveryNoteNo')}" class="w-20 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.shippedDate || '-')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ---- 3-4. ปริมาณไหมเหลือจากการทอ + Surplus ต่อ M/O -------------------------------------------
+        function renderKpiYarnRemainingReport() {
+            const tbody = document.getElementById('kpiYarnTableBody');
+            const emptyState = document.getElementById('kpiYarnEmptyState');
+            if (!tbody) return;
+            const list = productionOrders.map((order, orderIndex) => ({ order, orderIndex }));
+
+            if (list.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const numField = (orderIndex, path, val, width = 'w-16') =>
+                `<input type="number" step="0.01" value="${val || ''}" onchange="updateOrderField(${orderIndex}, '${path}', Number(this.value)); recomputeKpiYarnRow(${orderIndex})" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = list.map(({ order, orderIndex }) => {
+                const d = order.dyeing || {};
+                const isExpanded = kpiYarnExpandedOrderIndex === orderIndex;
+                const colorRows = renderKpiColorBreakdownRows(order, orderIndex);
+                return `
+                    <tr class="hover:bg-slate-50/80 align-top">
+                        <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${orderTypeBadgeHtml(order.orderType)}${escapeHtml(order.moSo)}</td>
+                        <td class="px-2 py-1.5">${escapeHtml(order.customerName || '-')}<br><span class="text-slate-400">${escapeHtml(order.customerPO || '')}</span></td>
+                        <td class="px-2 py-1.5 text-right">${order.colorsCount || 0}</td>
+                        <td class="px-2 py-1.5 text-right">${(Number(order.totalSqm) || 0).toFixed(2)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.totalIntoWeavingKg', d.totalIntoWeavingKg)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.totalIntoWeavingCustomerKg', d.totalIntoWeavingCustomerKg)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.actualUsedKg', d.actualUsedKg)}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500">${((Number(d.actualUsedKg) || 0) / ((Number(order.totalSqm) || 0) || 1)).toFixed(2)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.remainingKg', d.remainingKg)}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500" id="kpiRemainPct-${orderIndex}">${computeKpiRemainPercent(d)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.surplusReceivedKg', d.surplusReceivedKg)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.lossKg', d.lossKg)}</td>
+                        <td class="px-2 py-1.5">${numField(orderIndex, 'dyeing.lossPercent', d.lossPercent)}</td>
+                        <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(d.remainingNote || '')}" onchange="updateOrderField(${orderIndex}, 'dyeing.remainingNote', this.value)" class="w-24 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
+                        <td class="px-2 py-1.5 text-center">
+                            <button type="button" onclick="toggleKpiColorBreakdown(${orderIndex})" class="text-indigo-600 hover:text-indigo-800 text-[11px] underline whitespace-nowrap">${isExpanded ? 'ซ่อน' : `รายละเอียดสี (${(d.colorBreakdown || []).length})`}</button>
+                        </td>
+                    </tr>
+                    ${isExpanded ? `<tr><td colspan="15" class="px-2 pb-3 bg-slate-50/60">${colorRows}</td></tr>` : ''}
+                `;
+            }).join('');
+        }
+
+        function computeKpiRemainPercent(d) {
+            const into = Number(d.totalIntoWeavingKg) || 0;
+            const remain = Number(d.remainingKg) || 0;
+            if (into <= 0) return (Number(d.remainingPercent) || 0).toFixed(1) + '%';
+            return ((remain / into) * 100).toFixed(1) + '%';
+        }
+
+        // Live-updates just the %ไหมเหลือ cell after an into/remaining kg field changes, without a full
+        // table re-render (keeps focus in the input the user is still typing in).
+        function recomputeKpiYarnRow(orderIndex) {
+            const order = productionOrders[orderIndex];
+            const cell = document.getElementById(`kpiRemainPct-${orderIndex}`);
+            if (order && cell) cell.textContent = computeKpiRemainPercent(order.dyeing || {});
+        }
+
+        function renderKpiColorBreakdownRows(order, orderIndex) {
+            const items = Array.isArray((order.dyeing || {}).colorBreakdown) ? order.dyeing.colorBreakdown : [];
+            const rows = items.map((item, itemIndex) => `
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] text-slate-400 w-5 text-right">${itemIndex + 1}</span>
+                    <input type="text" value="${escapeHtml(item.colorCode || '')}" placeholder="รหัสสี" onchange="updateKpiColorBreakdownField(${orderIndex}, ${itemIndex}, 'colorCode', this.value)" class="w-24 px-1.5 py-1 bg-white border border-slate-200 rounded text-xs">
+                    <input type="number" step="0.01" value="${item.qtyKg || ''}" placeholder="กก." onchange="updateKpiColorBreakdownField(${orderIndex}, ${itemIndex}, 'qtyKg', Number(this.value))" class="w-20 px-1.5 py-1 bg-white border border-slate-200 rounded text-xs text-right">
+                    <span class="text-[10px] text-slate-400">กก.</span>
+                    <button type="button" onclick="removeKpiColorBreakdownItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `).join('');
+            const totalKg = items.reduce((acc, it) => acc + (Number(it.qtyKg) || 0), 0);
+            return `
+                <div class="flex flex-wrap gap-2 items-start">
+                    ${rows || '<p class="text-[11px] text-slate-400">ยังไม่มีรายละเอียดสี</p>'}
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <button type="button" onclick="addKpiColorBreakdownItem(${orderIndex})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 border border-dashed border-indigo-200 rounded-lg px-2.5 py-1"><i class="fa-solid fa-plus"></i> เพิ่มสี</button>
+                    ${items.length > 0 ? `<span class="text-[11px] font-bold text-indigo-700">รวม ${totalKg.toFixed(2)} กก.</span>` : ''}
+                </div>
+            `;
+        }
+
+        function toggleKpiColorBreakdown(orderIndex) {
+            kpiYarnExpandedOrderIndex = kpiYarnExpandedOrderIndex === orderIndex ? null : orderIndex;
+            renderKpiYarnRemainingReport();
+        }
+
+        function addKpiColorBreakdownItem(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!order.dyeing) order.dyeing = {};
+            if (!Array.isArray(order.dyeing.colorBreakdown)) order.dyeing.colorBreakdown = [];
+            order.dyeing.colorBreakdown.push({ colorCode: '', qtyKg: 0 });
+            persistOrderChange(order);
+            renderKpiYarnRemainingReport();
+        }
+
+        function removeKpiColorBreakdownItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.colorBreakdown)) return;
+            order.dyeing.colorBreakdown.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderKpiYarnRemainingReport();
+        }
+
+        function updateKpiColorBreakdownField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.colorBreakdown) || !order.dyeing.colorBreakdown[itemIndex]) return;
+            order.dyeing.colorBreakdown[itemIndex][field] = value;
+            persistOrderChange(order);
+        }
+
+        // ---- 5. ไหม Surplus คงเหลือ (monthly warehouse ledger, company-wide) ---------------------------
+        function renderKpiSurplusLedger() {
+            const tbody = document.getElementById('kpiSurplusTableBody');
+            const emptyState = document.getElementById('kpiSurplusEmptyState');
+            if (!tbody) return;
+            if (!Array.isArray(surplusYarnLedger) || surplusYarnLedger.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const t = (id, field, val, width = 'w-24') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateSurplusLedgerField('${id}', '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (id, field, val, width = 'w-20') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateSurplusLedgerField('${id}', '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = surplusYarnLedger.map(entry => `
+                <tr class="hover:bg-slate-50/80">
+                    <td class="px-2 py-1.5">${t(entry.id, 'monthLabel', entry.monthLabel, 'w-28')}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'weightInKg', entry.weightInKg)}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'weightOutKg', entry.weightOutKg)}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'warehouseTotalKg', entry.warehouseTotalKg)}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'colorCountInStock', entry.colorCountInStock, 'w-16')}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'overlayDyedKg', entry.overlayDyedKg)}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'overlayDyedCount', entry.overlayDyedCount, 'w-16')}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'intoWeavingOrExtraKg', entry.intoWeavingOrExtraKg)}</td>
+                    <td class="px-2 py-1.5">${n(entry.id, 'intoWeavingOrExtraCount', entry.intoWeavingOrExtraCount, 'w-16')}</td>
+                    <td class="px-2 py-1.5">${t(entry.id, 'note', entry.note, 'w-28')}</td>
+                    <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeSurplusLedgerEntry('${entry.id}')" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addSurplusLedgerEntry() {
+            const prev = surplusYarnLedger[surplusYarnLedger.length - 1];
+            surplusYarnLedger.push({
+                id: 'surplus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                monthLabel: '', weightInKg: 0, weightOutKg: 0,
+                // Carries the previous month's warehouse total forward as a starting suggestion, same as
+                // the Excel's own "ยอดยกมา" convention — still a plain editable number, not locked.
+                warehouseTotalKg: prev ? (Number(prev.warehouseTotalKg) || 0) : 0,
+                colorCountInStock: 0, overlayDyedKg: 0, overlayDyedCount: 0,
+                intoWeavingOrExtraKg: 0, intoWeavingOrExtraCount: 0, note: ''
+            });
+            saveSurplusLedgerToLocal();
+            renderKpiSurplusLedger();
+        }
+
+        function removeSurplusLedgerEntry(id) {
+            surplusYarnLedger = surplusYarnLedger.filter(e => e.id !== id);
+            saveSurplusLedgerToLocal();
+            renderKpiSurplusLedger();
+        }
+
+        function updateSurplusLedgerField(id, field, value) {
+            const entry = surplusYarnLedger.find(e => e.id === id);
+            if (!entry) return;
+            entry[field] = value;
+            saveSurplusLedgerToLocal();
+        }
+
+        // ---- 6. ไหมสั่งย้อมเพิ่ม (extra dyeing log, flattened across every order) ----------------------
+        function renderKpiExtraDyeingLog() {
+            const tbody = document.getElementById('kpiExtraDyeTableBody');
+            const emptyState = document.getElementById('kpiExtraDyeEmptyState');
+            const select = document.getElementById('kpiExtraDyeMoSoSelect');
+            if (!tbody) return;
+
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
+                if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
+            }
+
+            let flatRows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const log = Array.isArray((order.dyeing || {}).extraDyeingLog) ? order.dyeing.extraDyeingLog : [];
+                log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
+            });
+
+            if (flatRows.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            flatRows.sort((a, b) => String(b.item.date || '').localeCompare(String(a.item.date || '')));
+
+            const t = (orderIndex, itemIndex, field, val, width = 'w-20') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const dt = (orderIndex, itemIndex, field, val) => `<input type="date" value="${val || ''}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (orderIndex, itemIndex, field, val, width = 'w-16') => `<input type="number" step="0.001" value="${val || ''}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => `
+                <tr class="hover:bg-slate-50/80">
+                    <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'location', item.location, 'w-16')}</td>
+                    <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
+                    <td class="px-2 py-1.5 text-right">${n(orderIndex, itemIndex, 'no', item.no, 'w-10')}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'code', item.code, 'w-14')}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'yarnType', item.yarnType, 'w-24')}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'orderedKg', item.orderedKg)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'beforeKg', item.beforeKg)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'afterKg', item.afterKg)}</td>
+                    <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'dyedDate', item.dyedDate)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'surplusKg', item.surplusKg)}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-32')}</td>
+                    <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeExtraDyeingLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addExtraDyeingLogItemFromSelect() {
+            const select = document.getElementById('kpiExtraDyeMoSoSelect');
+            const moSo = select ? select.value : '';
+            const orderIndex = productionOrders.findIndex(o => o.moSo === moSo);
+            if (orderIndex === -1) { showToast('เลือก M/O ก่อนเพิ่มรายการย้อมเพิ่ม', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            const order = productionOrders[orderIndex];
+            if (!order.dyeing) order.dyeing = {};
+            if (!Array.isArray(order.dyeing.extraDyeingLog)) order.dyeing.extraDyeingLog = [];
+            const nextNo = order.dyeing.extraDyeingLog.length + 1;
+            order.dyeing.extraDyeingLog.push({
+                date: '', location: 'สยาม', no: nextNo, code: '', yarnType: '',
+                orderedKg: 0, beforeKg: 0, afterKg: 0, dyedDate: '', surplusKg: 0, note: 'ย้อมเพิ่ม'
+            });
+            persistOrderChange(order);
+            renderKpiExtraDyeingLog();
+        }
+
+        function removeExtraDyeingLogItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.extraDyeingLog)) return;
+            order.dyeing.extraDyeingLog.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderKpiExtraDyeingLog();
+        }
+
+        function updateExtraDyeingLogItemField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.extraDyeingLog) || !order.dyeing.extraDyeingLog[itemIndex]) return;
+            order.dyeing.extraDyeingLog[itemIndex][field] = value;
+            persistOrderChange(order);
+        }
+
+        // ============================================================================================
+        // "แผนกดีไซน์/ขยายลาย (KPI)" — see designKpiContainer's HTML comment above for the source files
+        // and the per-array persistence decisions (designJobLogs local-only; patternTransferLog rides
+        // order.design's existing JSON blob).
+        // ============================================================================================
+
+        let currentDesignKpiTab = 'jobs'; // 'jobs' | 'transfer'
+
+        function renderDesignKpiReports() {
+            renderDesignKpiSummary();
+            renderDesignKpiJobsTable();
+            renderPatternTransferLog();
+        }
+
+        function setDesignKpiTab(tab) {
+            currentDesignKpiTab = tab === 'transfer' ? 'transfer' : 'jobs';
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            document.getElementById('designKpiTabJobsBtn').className = currentDesignKpiTab === 'jobs' ? activeCls : inactiveCls;
+            document.getElementById('designKpiTabTransferBtn').className = currentDesignKpiTab === 'transfer' ? activeCls : inactiveCls;
+            document.getElementById('designKpiJobsSection').classList.toggle('hidden', currentDesignKpiTab !== 'jobs');
+            document.getElementById('designKpiTransferSection').classList.toggle('hidden', currentDesignKpiTab !== 'transfer');
+        }
+
+        // A job "counts" once it has both a received and a sent date — เวลาจัดทำจริง/สถานะจัดส่ง both
+        // derive from those two dates, same as the Excel's own formula columns (K/M in Data_Logs).
+        function computeDesignJobDerived(job) {
+            const received = job.receivedDate ? new Date(job.receivedDate) : null;
+            const due = job.dueDate ? new Date(job.dueDate) : null;
+            const sent = job.sentDate ? new Date(job.sentDate) : null;
+            const daysTaken = (received && sent) ? Math.max(0, Math.round((sent - received) / 86400000)) : null;
+            const onTime = (due && sent) ? (sent <= due) : null;
+            return { daysTaken, onTime };
+        }
+
+        function renderDesignKpiJobsTable() {
+            const tbody = document.getElementById('designKpiJobsTableBody');
+            const emptyState = document.getElementById('designKpiJobsEmptyState');
+            if (!tbody) return;
+            if (designJobLogs.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const t = (id, field, val, width = 'w-24') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateDesignJobLogField('${id}', '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const dt = (id, field, val) => `<input type="date" value="${val || ''}" onchange="updateDesignJobLogField('${id}', '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (id, field, val, width = 'w-14') => `<input type="number" step="1" value="${val || ''}" onchange="updateDesignJobLogField('${id}', '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = designJobLogs.map(job => {
+                const { daysTaken, onTime } = computeDesignJobDerived(job);
+                const statusHtml = onTime === null ? '<span class="text-slate-400">-</span>' : (onTime ? '<span class="text-emerald-600">🟢 ตรงเวลา</span>' : '<span class="text-rose-600">🔴 ล่าช้า</span>');
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5">${dt(job.id, 'receivedDate', job.receivedDate)}</td>
+                        <td class="px-2 py-1.5">${dt(job.id, 'dueDate', job.dueDate)}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'grade', job.grade, 'w-12')}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'designNo', job.designNo, 'w-28')}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'description', job.description, 'w-24')}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'customer', job.customer, 'w-28')}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'project', job.project, 'w-24')}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'designer', job.designer, 'w-16')}</td>
+                        <td class="px-2 py-1.5">${dt(job.id, 'sentDate', job.sentDate)}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500">${daysTaken === null ? '-' : daysTaken}</td>
+                        <td class="px-2 py-1.5">${n(job.id, 'revisionCount', job.revisionCount)}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">${statusHtml}</td>
+                        <td class="px-2 py-1.5">${t(job.id, 'note', job.note, 'w-24')}</td>
+                        <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeDesignJobLog('${job.id}')" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderDesignKpiSummary() {
+            const tbody = document.getElementById('designKpiSummaryTableBody');
+            const emptyState = document.getElementById('designKpiSummaryEmptyState');
+            if (!tbody) return;
+            const byDesigner = {};
+            designJobLogs.forEach(job => {
+                const name = (job.designer || '').trim();
+                if (!name) return;
+                if (!byDesigner[name]) byDesigner[name] = { completed: 0, totalDays: 0, daysCount: 0, revisions: 0, onTimeCount: 0, onTimeTotal: 0 };
+                const bucket = byDesigner[name];
+                const { daysTaken, onTime } = computeDesignJobDerived(job);
+                if (job.sentDate) bucket.completed += 1;
+                if (daysTaken !== null) { bucket.totalDays += daysTaken; bucket.daysCount += 1; }
+                bucket.revisions += Number(job.revisionCount) || 0;
+                if (onTime !== null) { bucket.onTimeTotal += 1; if (onTime) bucket.onTimeCount += 1; }
+            });
+            const names = Object.keys(byDesigner);
+            if (names.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = names.map(name => {
+                const b = byDesigner[name];
+                const avgDays = b.daysCount > 0 ? (b.totalDays / b.daysCount).toFixed(2) : '-';
+                const onTimePct = b.onTimeTotal > 0 ? ((b.onTimeCount / b.onTimeTotal) * 100).toFixed(1) + '%' : '-';
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5 font-semibold text-indigo-700">${escapeHtml(name)}</td>
+                        <td class="px-2 py-1.5 text-right">${b.completed}</td>
+                        <td class="px-2 py-1.5 text-right">${avgDays}</td>
+                        <td class="px-2 py-1.5 text-right">${b.revisions}</td>
+                        <td class="px-2 py-1.5 text-right">${onTimePct}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addDesignJobLog() {
+            designJobLogs.push({
+                id: 'design_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                receivedDate: '', dueDate: '', grade: '', designNo: '', description: 'ทำแบบ',
+                customer: '', project: '', designer: '', sentDate: '', revisionCount: 0, note: ''
+            });
+            saveDesignJobLogsToLocal();
+            renderDesignKpiReports();
+        }
+
+        function removeDesignJobLog(id) {
+            designJobLogs = designJobLogs.filter(j => j.id !== id);
+            saveDesignJobLogsToLocal();
+            renderDesignKpiReports();
+        }
+
+        function updateDesignJobLogField(id, field, value) {
+            const job = designJobLogs.find(j => j.id === id);
+            if (!job) return;
+            job[field] = value;
+            saveDesignJobLogsToLocal();
+            // Only the summary panel and this row's own derived cells depend on dates/designer/revisions —
+            // a light re-render of just those (not the whole table, which would lose input focus) is
+            // enough; simplest correct option is to re-render the summary panel + this specific row's
+            // derived cells stay correct on next full render (matches the same convention used elsewhere
+            // in this file, e.g. updateExtraDyeingLogItemField()).
+            renderDesignKpiSummary();
+        }
+
+        // ---- ใบโอนขยายลาย (pattern-enlargement transfer log, per order.design.patternTransferLog) ------
+        function renderPatternTransferLog() {
+            const tbody = document.getElementById('designKpiTransferTableBody');
+            const emptyState = document.getElementById('designKpiTransferEmptyState');
+            const select = document.getElementById('designKpiTransferMoSoSelect');
+            if (!tbody) return;
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
+                if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
+            }
+            let flatRows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const log = Array.isArray((order.design || {}).patternTransferLog) ? order.design.patternTransferLog : [];
+                log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
+            });
+            if (flatRows.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            flatRows.sort((a, b) => String(b.item.receivedDate || '').localeCompare(String(a.item.receivedDate || '')));
+
+            const t = (oi, ii, field, val, width = 'w-16') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (oi, ii, field, val, width = 'w-16', recompute = false) => `<input type="number" step="0.01" value="${val || ''}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', Number(this.value)${recompute ? ', true' : ''})" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => `
+                <tr class="hover:bg-slate-50/80">
+                    <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'receivedDate', item.receivedDate)}</td>
+                    <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'pieceNo', item.pieceNo, 'w-14')}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm, 'w-16', true)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'actualSqm', item.actualSqm, 'w-16', true)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'scrapSqm', item.scrapSqm)}</td>
+                    <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'qty', item.qty, 'w-12')}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'unit', item.unit, 'w-14')}</td>
+                    <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'transferDate', item.transferDate)}</td>
+                    <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-24')}</td>
+                    <td class="px-2 py-1.5 text-center"><button type="button" onclick="removePatternTransferLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addPatternTransferLogFromSelect() {
+            const select = document.getElementById('designKpiTransferMoSoSelect');
+            const moSo = select ? select.value : '';
+            const orderIndex = productionOrders.findIndex(o => o.moSo === moSo);
+            if (orderIndex === -1) { showToast('เลือก M/O ก่อนเพิ่มรายการใบโอนขยายลาย', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            const order = productionOrders[orderIndex];
+            if (!order.design) order.design = {};
+            if (!Array.isArray(order.design.patternTransferLog)) order.design.patternTransferLog = [];
+            order.design.patternTransferLog.push({ receivedDate: '', pieceNo: '1', areaSqm: 0, actualSqm: 0, scrapSqm: 0, qty: 1, unit: 'ผืน', transferDate: '', note: '' });
+            persistOrderChange(order);
+            renderPatternTransferLog();
+        }
+
+        function removePatternTransferLogItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.design || !Array.isArray(order.design.patternTransferLog)) return;
+            order.design.patternTransferLog.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderPatternTransferLog();
+        }
+
+        function updatePatternTransferLogItemField(orderIndex, itemIndex, field, value, recompute) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.design || !Array.isArray(order.design.patternTransferLog) || !order.design.patternTransferLog[itemIndex]) return;
+            const item = order.design.patternTransferLog[itemIndex];
+            item[field] = value;
+            // เศษผ้า = พ.ท − ใช้จริง, auto-recomputed when either of those two changes — same
+            // computed-but-overridable convention as recomputeOrderSizeTotals()'s sqm field.
+            if (recompute) {
+                item.scrapSqm = Math.max(0, (Number(item.areaSqm) || 0) - (Number(item.actualSqm) || 0));
+            }
+            persistOrderChange(order);
+            renderPatternTransferLog();
+        }
+
+        // ============================================================================================
+        // "แผนกย้อม (KPI)" — see dyeingKpiContainer's HTML comment above.
+        // ============================================================================================
+
+        let currentDyeingKpiTab = 'regular'; // 'regular' | 'extra'
+
+        function renderDyeingKpiReports() {
+            renderDyeOrderLogTable();
+        }
+
+        function setDyeingKpiTab(tab) {
+            currentDyeingKpiTab = tab === 'extra' ? 'extra' : 'regular';
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            document.getElementById('dyeingKpiTabRegularBtn').className = currentDyeingKpiTab === 'regular' ? activeCls : inactiveCls;
+            document.getElementById('dyeingKpiTabExtraBtn').className = currentDyeingKpiTab === 'extra' ? activeCls : inactiveCls;
+            const titleEl = document.getElementById('dyeingKpiSectionTitle');
+            titleEl.innerHTML = currentDyeingKpiTab === 'extra'
+                ? '<i class="fa-solid fa-droplet-slash mr-2 text-indigo-600"></i> ย้อมเพิ่ม'
+                : '<i class="fa-solid fa-droplet mr-2 text-indigo-600"></i> บันทึกสั่งย้อม';
+            renderDyeOrderLogTable();
+        }
+
+        function renderDyeOrderLogTable() {
+            const tbody = document.getElementById('dyeingKpiTableBody');
+            const emptyState = document.getElementById('dyeingKpiEmptyState');
+            const select = document.getElementById('dyeingKpiMoSoSelect');
+            if (!tbody) return;
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
+                if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
+            }
+            const wantExtra = currentDyeingKpiTab === 'extra';
+            let flatRows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const log = Array.isArray((order.dyeing || {}).dyeOrderLog) ? order.dyeing.dyeOrderLog : [];
+                log.forEach((item, itemIndex) => { if (!!item.isExtra === wantExtra) flatRows.push({ order, orderIndex, item, itemIndex }); });
+            });
+            if (flatRows.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            flatRows.sort((a, b) => String(b.item.orderDate || '').localeCompare(String(a.item.orderDate || '')));
+
+            const t = (oi, ii, field, val, width = 'w-16') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (oi, ii, field, val, width = 'w-14') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+                const planned = item.plannedDate ? new Date(item.plannedDate) : null;
+                const actual = item.actualDate ? new Date(item.actualDate) : null;
+                const onTimeHtml = (!planned || !actual) ? '<span class="text-slate-400">-</span>' : (actual <= planned ? '<span class="text-emerald-600">🟢</span>' : '<span class="text-rose-600">🔴</span>');
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'orderDate', item.orderDate)}</td>
+                        <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'colorNo', item.colorNo, 'w-10')}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'colorCode', item.colorCode, 'w-16')}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'yarnType', item.yarnType, 'w-20')}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'lotNo', item.lotNo, 'w-16')}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'orderKg', item.orderKg)}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'dyeTubNo', item.dyeTubNo, 'w-10')}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'requisitionKg', item.requisitionKg)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'actualTransferKg', item.actualTransferKg)}</td>
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'plannedDate', item.plannedDate)}</td>
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'actualDate', item.actualDate)}</td>
+                        <td class="px-2 py-1.5 text-center">${onTimeHtml}</td>
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'dueDate', item.dueDate)}</td>
+                        <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeDyeOrderLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addDyeOrderLogFromSelect() {
+            const select = document.getElementById('dyeingKpiMoSoSelect');
+            const moSo = select ? select.value : '';
+            const orderIndex = productionOrders.findIndex(o => o.moSo === moSo);
+            if (orderIndex === -1) { showToast('เลือก M/O ก่อนเพิ่มรายการสั่งย้อม', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            const order = productionOrders[orderIndex];
+            if (!order.dyeing) order.dyeing = {};
+            if (!Array.isArray(order.dyeing.dyeOrderLog)) order.dyeing.dyeOrderLog = [];
+            order.dyeing.dyeOrderLog.push({
+                isExtra: currentDyeingKpiTab === 'extra', orderDate: '', colorNo: '', colorCode: '', yarnType: '', lotNo: '',
+                orderKg: 0, dyeTubNo: '', requisitionKg: 0, actualTransferKg: 0, plannedDate: '', actualDate: '', dueDate: ''
+            });
+            persistOrderChange(order);
+            renderDyeOrderLogTable();
+        }
+
+        function removeDyeOrderLogItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.dyeOrderLog)) return;
+            order.dyeing.dyeOrderLog.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderDyeOrderLogTable();
+        }
+
+        function updateDyeOrderLogItemField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.dyeing || !Array.isArray(order.dyeing.dyeOrderLog) || !order.dyeing.dyeOrderLog[itemIndex]) return;
+            order.dyeing.dyeOrderLog[itemIndex][field] = value;
+            persistOrderChange(order);
+        }
+
+        // ============================================================================================
+        // "แผนกทากาวตกแต่ง (KPI)" — see finishingKpiContainer's HTML comment above.
+        // ============================================================================================
+
+        let currentFinishingKpiTab = 'efficiency'; // 'efficiency' | 'glue'
+
+        function renderFinishingKpiReports() {
+            renderFinishingEfficiencyTable();
+            renderGlueUsageTable();
+        }
+
+        function setFinishingKpiTab(tab) {
+            currentFinishingKpiTab = tab === 'glue' ? 'glue' : 'efficiency';
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            document.getElementById('finishingKpiTabEfficiencyBtn').className = currentFinishingKpiTab === 'efficiency' ? activeCls : inactiveCls;
+            document.getElementById('finishingKpiTabGlueBtn').className = currentFinishingKpiTab === 'glue' ? activeCls : inactiveCls;
+            document.getElementById('finishingKpiEfficiencySection').classList.toggle('hidden', currentFinishingKpiTab !== 'efficiency');
+            document.getElementById('finishingKpiGlueSection').classList.toggle('hidden', currentFinishingKpiTab !== 'glue');
+        }
+
+        function renderFinishingEfficiencyTable() {
+            const tbody = document.getElementById('finishingKpiEfficiencyTableBody');
+            const emptyState = document.getElementById('finishingKpiEfficiencyEmptyState');
+            const select = document.getElementById('finishingKpiMoSoSelect');
+            if (!tbody) return;
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
+                if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
+            }
+            let flatRows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const log = Array.isArray((order.finishing || {}).efficiencyLog) ? order.finishing.efficiencyLog : [];
+                log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
+            });
+            if (flatRows.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const t = (oi, ii, field, val, width = 'w-14') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+                const productivity = (Number(item.hours) || 0) > 0 ? ((Number(item.areaSqm) || 0) / (Number(item.hours) || 1)).toFixed(2) : '-';
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'grade', item.grade, 'w-10')}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'hours', item.hours)}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500">${productivity}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-24')}</td>
+                        <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeFinishingEfficiencyLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addFinishingEfficiencyLogFromSelect() {
+            const select = document.getElementById('finishingKpiMoSoSelect');
+            const moSo = select ? select.value : '';
+            const orderIndex = productionOrders.findIndex(o => o.moSo === moSo);
+            if (orderIndex === -1) { showToast('เลือก M/O ก่อนเพิ่มรายการ', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            const order = productionOrders[orderIndex];
+            if (!order.finishing) order.finishing = {};
+            if (!Array.isArray(order.finishing.efficiencyLog)) order.finishing.efficiencyLog = [];
+            order.finishing.efficiencyLog.push({ grade: 'A', areaSqm: 0, hours: 0, note: '' });
+            persistOrderChange(order);
+            renderFinishingEfficiencyTable();
+        }
+
+        function removeFinishingEfficiencyLogItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.finishing || !Array.isArray(order.finishing.efficiencyLog)) return;
+            order.finishing.efficiencyLog.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderFinishingEfficiencyTable();
+        }
+
+        function updateFinishingEfficiencyLogItemField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.finishing || !Array.isArray(order.finishing.efficiencyLog) || !order.finishing.efficiencyLog[itemIndex]) return;
+            order.finishing.efficiencyLog[itemIndex][field] = value;
+            persistOrderChange(order);
+            renderFinishingEfficiencyTable();
+        }
+
+        // ---- การเบิกใช้กาว (glue usage) -----------------------------------------------------------------
+        function renderGlueUsageTable() {
+            const tbody = document.getElementById('finishingKpiGlueTableBody');
+            const emptyState = document.getElementById('finishingKpiGlueEmptyState');
+            const select = document.getElementById('finishingKpiGlueMoSoSelect');
+            if (!tbody) return;
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
+                if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
+            }
+            let flatRows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                const log = Array.isArray((order.finishing || {}).glueUsageLog) ? order.finishing.glueUsageLog : [];
+                log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
+            });
+            if (flatRows.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            flatRows.sort((a, b) => String(b.item.date || '').localeCompare(String(a.item.date || '')));
+
+            const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateGlueUsageLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateGlueUsageLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
+
+            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+                const totalKg = (Number(item.eur178Kg) || 0) + (Number(item.kg66012) || 0) + (Number(item.th31Kg) || 0);
+                const standard = Number(item.standardKg) || 0;
+                const percent = standard > 0 ? ((totalKg / standard) * 100).toFixed(1) + '%' : '-';
+                const percentCls = standard > 0 && totalKg > standard ? 'text-rose-600 font-bold' : 'text-slate-500';
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
+                        <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'standardKg', item.standardKg)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'eur178Kg', item.eur178Kg)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'kg66012', item.kg66012)}</td>
+                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'th31Kg', item.th31Kg)}</td>
+                        <td class="px-2 py-1.5 text-right font-semibold">${totalKg.toFixed(2)}</td>
+                        <td class="px-2 py-1.5 text-right ${percentCls}">${percent}</td>
+                        <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeGlueUsageLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addGlueUsageLogFromSelect() {
+            const select = document.getElementById('finishingKpiGlueMoSoSelect');
+            const moSo = select ? select.value : '';
+            const orderIndex = productionOrders.findIndex(o => o.moSo === moSo);
+            if (orderIndex === -1) { showToast('เลือก M/O ก่อนเพิ่มรายการเบิกกาว', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            const order = productionOrders[orderIndex];
+            if (!order.finishing) order.finishing = {};
+            if (!Array.isArray(order.finishing.glueUsageLog)) order.finishing.glueUsageLog = [];
+            order.finishing.glueUsageLog.push({ date: '', areaSqm: 0, standardKg: 0, eur178Kg: 0, kg66012: 0, th31Kg: 0 });
+            persistOrderChange(order);
+            renderGlueUsageTable();
+        }
+
+        function removeGlueUsageLogItem(orderIndex, itemIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.finishing || !Array.isArray(order.finishing.glueUsageLog)) return;
+            order.finishing.glueUsageLog.splice(itemIndex, 1);
+            persistOrderChange(order);
+            renderGlueUsageTable();
+        }
+
+        function updateGlueUsageLogItemField(orderIndex, itemIndex, field, value) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.finishing || !Array.isArray(order.finishing.glueUsageLog) || !order.finishing.glueUsageLog[itemIndex]) return;
+            order.finishing.glueUsageLog[itemIndex][field] = value;
+            persistOrderChange(order);
+            renderGlueUsageTable();
+        }
+
+        // ============================================================================================
+        // นำเข้า/ส่งออกไฟล์ Excel — ใช้ได้ทุกแผนก (วางแผน/ดีไซน์-ขยายลาย/ย้อม/ทากาวตกแต่ง)
+        // ใช้ SheetJS ตัวเดียวกับที่โหลดไว้แล้วสำหรับ "นำเข้าข้อมูลทอ" ด้านบน — ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์
+        // ใดๆ อ่าน/เขียนไฟล์ทั้งหมดอยู่ในเบราว์เซอร์ของผู้ใช้เอง
+        //
+        // วิธีใช้: กด "ส่งออก Excel" ก่อนเพื่อได้ไฟล์ที่มีหัวคอลัมน์ถูกต้อง แก้ไข/เพิ่มแถวในไฟล์นั้นแล้วกด
+        // "นำเข้า Excel" กลับเข้ามา — คอลัมน์ที่มีค่าว่างจะไม่ไปเขียนทับข้อมูลเดิม (ยกเว้นตารางที่เป็นการ
+        // "เพิ่มแถวใหม่" เช่น รายการย้อมเพิ่ม/ใบโอนขยายลาย/บันทึกสั่งย้อม/ประสิทธิภาพ/การเบิกกาว ซึ่งนำเข้า
+        // แล้วจะเพิ่มเป็นแถวใหม่ต่อท้ายเสมอ ไม่ใช่แก้แถวเดิม) ตารางที่อ้างอิงกับ M/O, S/O ต้องมีคอลัมน์ M/O
+        // ตรงกับที่มีอยู่ในระบบอยู่แล้วจึงจะนำเข้าได้ (แถวที่หา M/O ไม่เจอจะถูกข้าม และแจ้งจำนวนให้ทราบ)
+        // ============================================================================================
+
+        function downloadExcelFromAoa(filename, sheetName, aoa) {
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, String(sheetName || 'Sheet1').slice(0, 31));
+            XLSX.writeFile(wb, filename);
+        }
+
+        function readExcelAoaFromFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+                    callback(null, aoa);
+                } catch (err) {
+                    callback(err, null);
+                }
+            };
+            reader.onerror = () => callback(new Error('อ่านไฟล์ไม่สำเร็จ'), null);
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportFlatRowsToExcel(filename, sheetName, columns, flatRows) {
+            const aoa = [columns.map(c => c.label)];
+            flatRows.forEach(row => aoa.push(columns.map(c => {
+                const v = row[c.key];
+                if (v === undefined || v === null) return '';
+                if (c.type === 'bool') return v ? 'TRUE' : 'FALSE';
+                return v;
+            })));
+            downloadExcelFromAoa(filename, sheetName, aoa);
+        }
+
+        function coerceImportedValue(raw, type) {
+            if (raw === undefined || raw === null || raw === '') return '';
+            if (type === 'number') { const n = Number(raw); return isNaN(n) ? '' : n; }
+            if (type === 'date') return normalizeDateString(raw);
+            if (type === 'bool') {
+                const s = String(raw).trim().toLowerCase();
+                return ['true', '1', 'yes', 'y', 'ใช่', 'จริง'].includes(s);
+            }
+            return String(raw).trim();
+        }
+
+        // aoa -> array of flat objects keyed by column.key, matched by exact header-label text (row 1)
+        function parseFlatRowsFromAoa(aoa, columns) {
+            if (!aoa || aoa.length === 0) return [];
+            const headerRow = aoa[0].map(h => String(h || '').trim());
+            const colIndexByKey = {};
+            columns.forEach(c => {
+                const idx = headerRow.findIndex(h => h === c.label);
+                if (idx !== -1) colIndexByKey[c.key] = idx;
+            });
+            const rows = [];
+            for (let i = 1; i < aoa.length; i++) {
+                const raw = aoa[i];
+                if (!raw || raw.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+                const obj = {};
+                columns.forEach(c => {
+                    const idx = colIndexByKey[c.key];
+                    obj[c.key] = coerceImportedValue(idx !== undefined ? raw[idx] : '', c.type);
+                });
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        // ---- 1. วางแผน: กำหนดส่งตามแผน (แก้ไขฟิลด์ของ M/O ที่มีอยู่แล้ว ไม่สร้างแถวใหม่) -----------------
+        const PLANNING_DUE_COLUMNS = [
+            { key: 'moSo', label: 'M/O, S/O' },
+            { key: 'customerName', label: 'ลูกค้า' },
+            { key: 'customerPO', label: 'PROJECT/PO' },
+            { key: 'quality', label: 'คุณภาพ' },
+            { key: 'dueDate', label: 'กำหนดส่ง' },
+            { key: 'totalPieces', label: 'จำนวนชิ้น', type: 'number' },
+            { key: 'colorsCount', label: 'จำนวนสี', type: 'number' },
+            { key: 'totalSqm', label: 'M2', type: 'number' },
+            { key: 'grade', label: 'GRADE' },
+            { key: 'location', label: 'สถานที่ทอ' },
+            { key: 'startDate', label: 'เริ่มทอ', type: 'date' },
+            { key: 'finishDate', label: 'ทอเสร็จ', type: 'date' },
+            { key: 'pendingQty', label: 'ค้างทอ', type: 'number' },
+            { key: 'transferDate', label: 'วันที่โอน', type: 'date' },
+            { key: 'deliveryNoteNo', label: 'เลขที่ใบส่ง' },
+            { key: 'shippedDate', label: 'วันส่งพรม' }
+        ];
+
+        function exportKpiDueDateReport() {
+            const flatRows = productionOrders.map(order => {
+                const w = order.weaving || {}, fin = order.finishing || {};
+                return {
+                    moSo: order.moSo, customerName: order.customerName, customerPO: order.customerPO,
+                    quality: order.quality, dueDate: order.dueDate, totalPieces: order.totalPieces,
+                    colorsCount: order.colorsCount, totalSqm: order.totalSqm,
+                    grade: w.grade, location: w.location, startDate: w.startDate, finishDate: w.finishDate,
+                    pendingQty: w.pendingQty, transferDate: w.transferDate, deliveryNoteNo: fin.deliveryNoteNo,
+                    shippedDate: order.shippedDate
+                };
+            });
+            exportFlatRowsToExcel('รายงานกำหนดส่งตามแผน.xlsx', 'กำหนดส่ง', PLANNING_DUE_COLUMNS, flatRows);
+        }
+
+        function importKpiDueDateReport(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, PLANNING_DUE_COLUMNS);
+                let matched = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.weaving) order.weaving = {};
+                    if (!order.finishing) order.finishing = {};
+                    if (r.grade !== '') order.weaving.grade = r.grade;
+                    if (r.location !== '') order.weaving.location = r.location;
+                    if (r.startDate !== '') order.weaving.startDate = r.startDate;
+                    if (r.finishDate !== '') order.weaving.finishDate = r.finishDate;
+                    if (r.pendingQty !== '') order.weaving.pendingQty = r.pendingQty;
+                    if (r.transferDate !== '') order.weaving.transferDate = r.transferDate;
+                    if (r.deliveryNoteNo !== '') order.finishing.deliveryNoteNo = r.deliveryNoteNo;
+                    persistOrderChange(order);
+                    matched++;
+                });
+                renderKpiDueDateReport();
+                showToast(`นำเข้าสำเร็จ ${matched} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 2. วางแผน: ไหมเหลือจากการทอ + Surplus (ไม่รวมรายละเอียดแยกสี) --------------------------------
+        const PLANNING_YARN_COLUMNS = [
+            { key: 'moSo', label: 'M/O, S/O' },
+            { key: 'customerName', label: 'ลูกค้า' },
+            { key: 'customerPO', label: 'PO/Project' },
+            { key: 'colorsCount', label: 'จำนวนสี', type: 'number' },
+            { key: 'totalSqm', label: 'M2', type: 'number' },
+            { key: 'totalIntoWeavingKg', label: 'ยอดเข้าทอทั้งหมด (Kg.)', type: 'number' },
+            { key: 'totalIntoWeavingCustomerKg', label: 'เฉพาะไหมลูกค้า (Kg.)', type: 'number' },
+            { key: 'actualUsedKg', label: 'ยอดใช้จริง (Kg.)', type: 'number' },
+            { key: 'remainingKg', label: 'ไหมเหลือจากทอ (Kg.)', type: 'number' },
+            { key: 'surplusReceivedKg', label: 'รับเข้าคลัง Surplus (Kg.)', type: 'number' },
+            { key: 'lossKg', label: 'สูญเสีย (Kg.)', type: 'number' },
+            { key: 'lossPercent', label: '%สูญเสีย', type: 'number' },
+            { key: 'remainingNote', label: 'หมายเหตุ' }
+        ];
+
+        function exportKpiYarnRemainingReport() {
+            const flatRows = productionOrders.map(order => {
+                const d = order.dyeing || {};
+                return {
+                    moSo: order.moSo, customerName: order.customerName, customerPO: order.customerPO,
+                    colorsCount: order.colorsCount, totalSqm: order.totalSqm,
+                    totalIntoWeavingKg: d.totalIntoWeavingKg, totalIntoWeavingCustomerKg: d.totalIntoWeavingCustomerKg,
+                    actualUsedKg: d.actualUsedKg, remainingKg: d.remainingKg, surplusReceivedKg: d.surplusReceivedKg,
+                    lossKg: d.lossKg, lossPercent: d.lossPercent, remainingNote: d.remainingNote
+                };
+            });
+            exportFlatRowsToExcel('รายงานไหมเหลือจากการทอ.xlsx', 'ไหมเหลือ', PLANNING_YARN_COLUMNS, flatRows);
+        }
+
+        function importKpiYarnRemainingReport(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, PLANNING_YARN_COLUMNS);
+                let matched = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.dyeing) order.dyeing = {};
+                    ['totalIntoWeavingKg', 'totalIntoWeavingCustomerKg', 'actualUsedKg', 'remainingKg', 'surplusReceivedKg', 'lossKg', 'lossPercent', 'remainingNote'].forEach(f => {
+                        if (r[f] !== '') order.dyeing[f] = r[f];
+                    });
+                    persistOrderChange(order);
+                    matched++;
+                });
+                renderKpiYarnRemainingReport();
+                showToast(`นำเข้าสำเร็จ ${matched} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 3. วางแผน: ไหม Surplus คงเหลือรายเดือน (บริษัทรวม เพิ่มแถวใหม่เสมอ) --------------------------
+        const PLANNING_SURPLUS_COLUMNS = [
+            { key: 'monthLabel', label: 'เดือน' },
+            { key: 'weightInKg', label: 'น้ำหนักไหมเข้า Surplus (Kg.)', type: 'number' },
+            { key: 'weightOutKg', label: 'น้ำหนักเบิกออกจาก Surplus (Kg.)', type: 'number' },
+            { key: 'warehouseTotalKg', label: 'น้ำหนักไหมใน Surplus ทั้งหมดในคลัง (Kg.)', type: 'number' },
+            { key: 'colorCountInStock', label: 'จำนวนสีไหมที่มีในคลัง', type: 'number' },
+            { key: 'overlayDyedKg', label: 'น้ำหนักรวมที่ย้อมทับ (Kg.)', type: 'number' },
+            { key: 'overlayDyedCount', label: 'จำนวนรายการสีที่ย้อมทับ', type: 'number' },
+            { key: 'intoWeavingOrExtraKg', label: 'เข้าทอ,ขอเพิ่ม และอื่นๆ (Kg.)', type: 'number' },
+            { key: 'intoWeavingOrExtraCount', label: 'จำนวนรายการเข้าทอ,ขอเพิ่ม', type: 'number' },
+            { key: 'note', label: 'หมายเหตุ' }
+        ];
+
+        function exportKpiSurplusLedger() {
+            exportFlatRowsToExcel('ไหมSurplusคงเหลือรายเดือน.xlsx', 'Surplus', PLANNING_SURPLUS_COLUMNS, surplusYarnLedger);
+        }
+
+        function importKpiSurplusLedger(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, PLANNING_SURPLUS_COLUMNS);
+                rows.forEach(r => {
+                    surplusYarnLedger.push(Object.assign({ id: 'surplus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) }, r));
+                });
+                saveSurplusLedgerToLocal();
+                renderKpiSurplusLedger();
+                showToast(`นำเข้าสำเร็จ ${rows.length} เดือน`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 4. วางแผน: ไหมสั่งย้อมเพิ่ม (ผูกกับ M/O ต้องมีอยู่แล้ว เพิ่มแถวใหม่เสมอ) ----------------------
+        const PLANNING_EXTRADYE_COLUMNS = [
+            { key: 'moSo', label: 'M/O' },
+            { key: 'date', label: 'วันที่ส่งย้อมเพิ่ม', type: 'date' },
+            { key: 'location', label: 'สถานที่ทอ' },
+            { key: 'no', label: 'No.', type: 'number' },
+            { key: 'code', label: 'CODE' },
+            { key: 'yarnType', label: 'ชนิดไหม' },
+            { key: 'orderedKg', label: 'ยอดย้อมเพิ่ม (Kg.)', type: 'number' },
+            { key: 'beforeKg', label: 'น้ำหนักก่อนย้อม (Kg.)', type: 'number' },
+            { key: 'afterKg', label: 'น้ำหนักหลังย้อม (Kg.)', type: 'number' },
+            { key: 'dyedDate', label: 'วันที่ย้อม', type: 'date' },
+            { key: 'surplusKg', label: 'Surplus (Kg.)', type: 'number' },
+            { key: 'note', label: 'หมายเหตุ (เพราะอะไร)' }
+        ];
+
+        function exportKpiExtraDyeingLog() {
+            let flatRows = [];
+            productionOrders.forEach(order => {
+                (((order.dyeing || {}).extraDyeingLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
+            });
+            exportFlatRowsToExcel('รายงานไหมสั่งย้อมเพิ่ม.xlsx', 'ย้อมเพิ่ม', PLANNING_EXTRADYE_COLUMNS, flatRows);
+        }
+
+        function importKpiExtraDyeingLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, PLANNING_EXTRADYE_COLUMNS);
+                let added = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.dyeing) order.dyeing = {};
+                    if (!Array.isArray(order.dyeing.extraDyeingLog)) order.dyeing.extraDyeingLog = [];
+                    const item = Object.assign({}, r); delete item.moSo;
+                    order.dyeing.extraDyeingLog.push(item);
+                    persistOrderChange(order);
+                    added++;
+                });
+                renderKpiExtraDyeingLog();
+                showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 5. ดีไซน์: Data Logs (บริษัทรวม localStorage เพิ่มแถวใหม่เสมอ) --------------------------------
+        const DESIGN_JOBS_COLUMNS = [
+            { key: 'receivedDate', label: 'วันที่รับงาน', type: 'date' },
+            { key: 'dueDate', label: 'กำหนดส่งงาน', type: 'date' },
+            { key: 'grade', label: 'เกรด' },
+            { key: 'designNo', label: 'Design No.' },
+            { key: 'description', label: 'Description' },
+            { key: 'customer', label: 'Customer' },
+            { key: 'project', label: 'Project' },
+            { key: 'designer', label: 'Designer' },
+            { key: 'sentDate', label: 'วันที่ส่งงาน', type: 'date' },
+            { key: 'revisionCount', label: 'จำนวนแก้ไข (ครั้ง)', type: 'number' },
+            { key: 'note', label: 'หมายเหตุ' }
+        ];
+
+        function exportDesignKpiJobsLog() {
+            exportFlatRowsToExcel('งานดีไซน์DataLogs.xlsx', 'Data Logs', DESIGN_JOBS_COLUMNS, designJobLogs);
+        }
+
+        function importDesignKpiJobsLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, DESIGN_JOBS_COLUMNS);
+                rows.forEach(r => {
+                    designJobLogs.push(Object.assign({ id: 'design_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) }, r));
+                });
+                saveDesignJobLogsToLocal();
+                renderDesignKpiReports();
+                showToast(`นำเข้าสำเร็จ ${rows.length} งาน`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 6. ดีไซน์: ใบโอนขยายลาย (ผูกกับ M/O ต้องมีอยู่แล้ว เพิ่มแถวใหม่เสมอ) -----------------------
+        const DESIGN_TRANSFER_COLUMNS = [
+            { key: 'moSo', label: 'M/O, S/O' },
+            { key: 'receivedDate', label: 'วันที่รับ', type: 'date' },
+            { key: 'pieceNo', label: 'ชิ้นที่' },
+            { key: 'areaSqm', label: 'พ.ท / ตร.ม.', type: 'number' },
+            { key: 'actualSqm', label: 'ใช้จริง / ตร.ม.', type: 'number' },
+            { key: 'scrapSqm', label: 'เศษผ้า / ตร.ม.', type: 'number' },
+            { key: 'qty', label: 'จำนวน', type: 'number' },
+            { key: 'unit', label: 'หน่วย' },
+            { key: 'transferDate', label: 'วันที่โอน', type: 'date' },
+            { key: 'note', label: 'หมายเหตุ' }
+        ];
+
+        function exportDesignKpiTransferLog() {
+            let flatRows = [];
+            productionOrders.forEach(order => {
+                (((order.design || {}).patternTransferLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
+            });
+            exportFlatRowsToExcel('ใบโอนขยายลาย.xlsx', 'ใบโอนขยายลาย', DESIGN_TRANSFER_COLUMNS, flatRows);
+        }
+
+        function importDesignKpiTransferLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, DESIGN_TRANSFER_COLUMNS);
+                let added = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.design) order.design = {};
+                    if (!Array.isArray(order.design.patternTransferLog)) order.design.patternTransferLog = [];
+                    const item = Object.assign({}, r); delete item.moSo;
+                    if (item.scrapSqm === '') item.scrapSqm = Math.max(0, (Number(item.areaSqm) || 0) - (Number(item.actualSqm) || 0));
+                    order.design.patternTransferLog.push(item);
+                    persistOrderChange(order);
+                    added++;
+                });
+                renderPatternTransferLog();
+                showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 7. ย้อม: บันทึกสั่งย้อม + ย้อมเพิ่ม (ตารางเดียวกัน ผูกกับ M/O เพิ่มแถวใหม่เสมอ) ----------------
+        const DYEING_ORDER_COLUMNS = [
+            { key: 'moSo', label: 'M/O' },
+            { key: 'isExtra', label: 'ย้อมเพิ่ม (TRUE/FALSE)', type: 'bool' },
+            { key: 'orderDate', label: 'วันที่รับ order สั่งย้อม', type: 'date' },
+            { key: 'colorNo', label: 'เบอร์สี' },
+            { key: 'colorCode', label: 'code สี' },
+            { key: 'yarnType', label: 'ชนิดไหม' },
+            { key: 'lotNo', label: 'LOT ไหม' },
+            { key: 'orderKg', label: 'นน.ในใบสั่งย้อม (Kg.)', type: 'number' },
+            { key: 'dyeTubNo', label: 'หมายเลขตู้ย้อม' },
+            { key: 'requisitionKg', label: 'นน.โอนจากใบเบิก (Kg.)', type: 'number' },
+            { key: 'actualTransferKg', label: 'นน.โอนจริง (Kg.)', type: 'number' },
+            { key: 'plannedDate', label: 'วันที่กำหนดเสร็จตามแผน', type: 'date' },
+            { key: 'actualDate', label: 'วันที่ย้อมเสร็จจริง', type: 'date' },
+            { key: 'dueDate', label: 'วันที่กำหนดส่ง', type: 'date' }
+        ];
+
+        function exportDyeingKpiOrderLog() {
+            let flatRows = [];
+            productionOrders.forEach(order => {
+                (((order.dyeing || {}).dyeOrderLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
+            });
+            exportFlatRowsToExcel('บันทึกสั่งย้อม.xlsx', 'สั่งย้อม', DYEING_ORDER_COLUMNS, flatRows);
+        }
+
+        function importDyeingKpiOrderLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, DYEING_ORDER_COLUMNS);
+                let added = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.dyeing) order.dyeing = {};
+                    if (!Array.isArray(order.dyeing.dyeOrderLog)) order.dyeing.dyeOrderLog = [];
+                    const item = Object.assign({}, r); delete item.moSo;
+                    if (item.isExtra === '') item.isExtra = currentDyeingKpiTab === 'extra';
+                    order.dyeing.dyeOrderLog.push(item);
+                    persistOrderChange(order);
+                    added++;
+                });
+                renderDyeOrderLogTable();
+                showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 8. ทากาวตกแต่ง: ประสิทธิภาพการตกแต่ง (ผูกกับ M/O เพิ่มแถวใหม่เสมอ) ------------------------
+        const FINISHING_EFFICIENCY_COLUMNS = [
+            { key: 'moSo', label: 'M/O' },
+            { key: 'grade', label: 'เกรด' },
+            { key: 'areaSqm', label: 'พ.ท แต่งได้ (ตร.ม.)', type: 'number' },
+            { key: 'hours', label: 'เวลา (ชม.)', type: 'number' },
+            { key: 'note', label: 'หมายเหตุ' }
+        ];
+
+        function exportFinishingKpiEfficiencyLog() {
+            let flatRows = [];
+            productionOrders.forEach(order => {
+                (((order.finishing || {}).efficiencyLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
+            });
+            exportFlatRowsToExcel('ประสิทธิภาพการตกแต่ง.xlsx', 'ประสิทธิภาพ', FINISHING_EFFICIENCY_COLUMNS, flatRows);
+        }
+
+        function importFinishingKpiEfficiencyLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, FINISHING_EFFICIENCY_COLUMNS);
+                let added = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.finishing) order.finishing = {};
+                    if (!Array.isArray(order.finishing.efficiencyLog)) order.finishing.efficiencyLog = [];
+                    const item = Object.assign({}, r); delete item.moSo;
+                    order.finishing.efficiencyLog.push(item);
+                    persistOrderChange(order);
+                    added++;
+                });
+                renderFinishingEfficiencyTable();
+                showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
+        }
+
+        // ---- 9. ทากาวตกแต่ง: การเบิกใช้กาว (ผูกกับ M/O เพิ่มแถวใหม่เสมอ) ------------------------------
+        const FINISHING_GLUE_COLUMNS = [
+            { key: 'moSo', label: 'M/O' },
+            { key: 'date', label: 'ว.ด.ป.', type: 'date' },
+            { key: 'areaSqm', label: 'พื้นที่ (ตร.ม.)', type: 'number' },
+            { key: 'standardKg', label: 'เบิกตามมาตรฐาน (Kg.)', type: 'number' },
+            { key: 'eur178Kg', label: 'กาว EUR178 (Kg.)', type: 'number' },
+            { key: 'kg66012', label: 'กาว 66012 (Kg.)', type: 'number' },
+            { key: 'th31Kg', label: 'กาว TH31 (Kg.)', type: 'number' }
+        ];
+
+        function exportFinishingKpiGlueLog() {
+            let flatRows = [];
+            productionOrders.forEach(order => {
+                (((order.finishing || {}).glueUsageLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
+            });
+            exportFlatRowsToExcel('การเบิกใช้กาว.xlsx', 'เบิกกาว', FINISHING_GLUE_COLUMNS, flatRows);
+        }
+
+        function importFinishingKpiGlueLog(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+            readExcelAoaFromFile(file, (err, aoa) => {
+                fileInput.value = '';
+                if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
+                const rows = parseFlatRowsFromAoa(aoa, FINISHING_GLUE_COLUMNS);
+                let added = 0, unmatched = 0;
+                rows.forEach(r => {
+                    const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
+                    if (orderIndex === -1) { unmatched++; return; }
+                    const order = productionOrders[orderIndex];
+                    if (!order.finishing) order.finishing = {};
+                    if (!Array.isArray(order.finishing.glueUsageLog)) order.finishing.glueUsageLog = [];
+                    const item = Object.assign({}, r); delete item.moSo;
+                    order.finishing.glueUsageLog.push(item);
+                    persistOrderChange(order);
+                    added++;
+                });
+                renderGlueUsageTable();
+                showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
+            });
         }
 
         function escapeHtml(str) {
