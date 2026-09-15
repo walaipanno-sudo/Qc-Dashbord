@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -2537,6 +2534,15 @@
         let weavingStaffList = [];
         let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
 
+        // NEW (2026-09-16): "แจ้งเตือนผ่านไลน์ แจ้งแค่ปัญหาพอ ถ้ามีรายการอื่นด้วย limit จะเต็ม" — the LINE
+        // Official Account's free-tier monthly message quota gets used up if every event type (งานเสร็จ
+        // พร้อมส่ง/โอนย้ายข้ามแผนก/เปิด M/O ใหม่/แผนกวางแผนกำหนดวันเสร็จ, on top of แจ้งปัญหา) pushes its own
+        // LINE message. Per this request, only the "แจ้งปัญหา" (issue-reported) notification —
+        // notifyLineIssueReported() — actually sends; the other four notifyLineXxx() functions below
+        // early-return without calling the backend, so no .gs/token changes were needed and every one of
+        // them can be switched back on later just by flipping this one flag back to false.
+        const LINE_NOTIFY_ISSUES_ONLY = true;
+
         // =========================================================================================
         // NEW (2026-09-11): Supabase — Login + สิทธิ์แต่ละแผนก. Entirely opt-in: until a Supabase URL +
         // anon key have been saved (via "ตั้งค่าเชื่อมต่อ" — see saveGasConfig()/initSupabase()), every
@@ -4319,16 +4325,28 @@
             const emptyState = document.getElementById('emptyMarkNosState');
             if (!container) return;
 
+            // FIX (2026-09-16): "หารายการพิมพ์ Mark & Nos ไม่เจอ" — this used to filter on the raw
+            // order.readyToShip/order.shipped FIELDS only, but the "รายการรอส่ง" tab right next to this
+            // one (getShippingReadyList()) also — and for this factory, MOSTLY — surfaces orders whose
+            // ready-to-ship status comes from the LEGACY path: a packaging-department QC PASS record,
+            // which never sets order.readyToShip at all (see getEffectiveStage()'s own comment). Every
+            // one of those 29 "รอส่ง" orders in the user's screenshot was legacy-path, so this raw-field
+            // filter found none of them and showed the empty state despite the other tab showing 29.
+            // getEffectiveStage() is the single source of truth that already reconciles both paths (new
+            // order.readyToShip flag AND legacy QC-PASS record) — using it here instead keeps this tab
+            // in sync with "รายการรอส่ง" no matter which path put the order there.
             let list = productionOrders
-                .map((order, orderIndex) => ({ order, orderIndex }))
-                .filter(({ order }) => order.readyToShip || order.shipped);
+                .map((order, orderIndex) => ({ order, orderIndex, effectiveStage: getEffectiveStage(order) }))
+                .filter(({ effectiveStage }) => effectiveStage === 'ready_to_ship' || effectiveStage === 'shipped');
             if (orderTypeFilter !== 'all') {
                 list = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === orderTypeFilter);
             }
             list = list.filter(({ order }) => matchesMarketFilter(order));
             list.sort((a, b) => {
                 // Not-yet-shipped first (still actionable), then most recently shipped first.
-                if (!!a.order.shipped !== !!b.order.shipped) return a.order.shipped ? 1 : -1;
+                const aShipped = a.effectiveStage === 'shipped';
+                const bShipped = b.effectiveStage === 'shipped';
+                if (aShipped !== bShipped) return aShipped ? 1 : -1;
                 return String(b.order.shippedDate || '').localeCompare(String(a.order.shippedDate || ''));
             });
 
@@ -4339,12 +4357,12 @@
             }
             if (emptyState) emptyState.classList.add('hidden');
 
-            container.innerHTML = list.map(({ order, orderIndex }) => `
+            container.innerHTML = list.map(({ order, orderIndex, effectiveStage }) => `
                 <div class="border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row gap-3">
                     <div class="sm:w-56 shrink-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        <p class="text-[11px] mt-1 ${order.shipped ? 'text-emerald-600' : 'text-orange-600'} font-semibold">${order.shipped ? `ส่งแล้ว (${escapeHtml(order.shippedDate || '-')})` : 'รอส่ง'}</p>
+                        <p class="text-[11px] mt-1 ${effectiveStage === 'shipped' ? 'text-emerald-600' : 'text-orange-600'} font-semibold">${effectiveStage === 'shipped' ? `ส่งแล้ว (${escapeHtml(order.shippedDate || '-')})` : 'รอส่ง'}</p>
                     </div>
                     <div class="flex-grow">
                         <label class="block text-[10px] text-slate-500 mb-0.5">Shipping Mark &amp; Nos (ข้อความอิสระ — จะพิมพ์ตามที่พิมพ์ไว้นี้เป๊ะๆ)</label>
@@ -4810,7 +4828,7 @@
                     <table class="so-grid">
                         <tr><td colspan="2" class="so-section-header">แผนกย้อม และแผนกกรอ/Dyeing &amp; Winding Department</td></tr>
                         <tr><td>ชนิดไหม/Yarn: <span class="so-fill">${v(order.yarnType)}</span></td><td>สิ่งที่แนบให้</td></tr>
-                        <tr><td>จำนวนสี/No. Of Colours......<span class="so-fill">${v(order.colorsCount ? String(order.colorsCount) : '')}</span>......สี</td><td>อ้างถึง/As per: <span class="so-fill">${v(order.refNote)}</span></td></tr>
+                        <tr><td>จำนวนสี/No. Of Colours......<span class="so-fill">${v(order.colorsCount ? String(order.colorsCount) : '')}</span>......สี POM:.......................</td><td>อ้างถึง/As per: <span class="so-fill">${v(order.refNote)}</span></td></tr>
                     </table>
                     <table class="so-grid so-color-table">
                         <thead>
@@ -5726,6 +5744,21 @@
         }
         function orderTypeTextClass(type) {
             return type === 'SO' ? 'text-amber-700' : 'text-indigo-700';
+        }
+        // NEW (2026-09-16): "ตัวหนังสือที่ภาพรวมผลิต ให้ย้ายตามสีของแผนกด้วย" — the M/O, S/O code text at
+        // the top of every card/row (previously always orderTypeTextClass(order.orderType): a FIXED
+        // indigo/amber by M/O vs S/O, unrelated to which department the job is actually sitting in) now
+        // recolors to match whichever department currently has it, using the same STAGE_COLORS the
+        // Kanban board/stage-stepper already use — so the text itself visibly "moves" (changes color)
+        // as the order transfers between departments. getEffectiveStage() is the same helper the stage
+        // stepper/Kanban columns use, so this always agrees with wherever else the order's stage shows
+        // on screen. The M/O/S/O badge pill (orderTypeBadgeHtml) keeps its own fixed indigo/amber — that
+        // badge is what still tells M/O from S/O at a glance; this text's color now carries a different
+        // signal (current department) instead of duplicating the badge's. Falls back to
+        // orderTypeTextClass() if the effective stage isn't one STAGE_COLORS knows about.
+        function moSoTextColorClass(order) {
+            const c = STAGE_COLORS[getEffectiveStage(order)];
+            return c ? c.text : orderTypeTextClass(order.orderType);
         }
         // NEW (2026-09c): market badge — same style/placement convention as orderTypeBadgeHtml() above,
         // shown alongside it wherever an M/O, S/O's badges are rendered. '' (not yet tagged) shows no
@@ -7052,7 +7085,7 @@
         // if it fails (or Google Sheet sync isn't configured yet), the ready-to-ship confirmation
         // itself is unaffected — sending the LINE message is not a requirement for that step.
         async function notifyLineReadyToShip(order) {
-            if (!gasWebAppUrl) return;
+            if (!gasWebAppUrl || LINE_NOTIFY_ISSUES_ONLY) return;
             const messageLines = [
                 '🟢 พรมเสร็จ พร้อมส่ง',
                 `M/O, S/O: ${order.moSo || '-'}`
@@ -7078,7 +7111,7 @@
         // notifyLineReadyToShip() above, reusing the same ?type=lineNotify backend endpoint (no .gs
         // changes needed for this). Never blocks the transfer itself if it fails.
         async function notifyLineStageTransfer(order, fromStage, toStage) {
-            if (!gasWebAppUrl) return;
+            if (!gasWebAppUrl || LINE_NOTIFY_ISSUES_ONLY) return;
             const messageLines = [
                 '🔄 โอนงานข้ามแผนก',
                 `M/O, S/O: ${order.moSo || '-'}`,
@@ -7105,7 +7138,7 @@
         // backend endpoint (no .gs changes needed). Called from submitNewOrder(); never blocks creating
         // the order if it fails.
         async function notifyLineNewOrder(order) {
-            if (!gasWebAppUrl) return;
+            if (!gasWebAppUrl || LINE_NOTIFY_ISSUES_ONLY) return;
             const messageLines = [
                 '🆕 เปิด M/O, S/O ใหม่ — แจ้งแผนกวางแผน',
                 `M/O, S/O: ${order.moSo || '-'}`
@@ -7137,7 +7170,7 @@
         // detailed per-department message; several at once (a staff/loom-count change reshuffling the
         // whole queue) get one consolidated list instead of spamming one message per order.
         async function notifyLinePlanDatesUpdate(changedOrders) {
-            if (!gasWebAppUrl || changedOrders.length === 0) return;
+            if (!gasWebAppUrl || LINE_NOTIFY_ISSUES_ONLY || changedOrders.length === 0) return;
             let messageLines;
             if (changedOrders.length === 1) {
                 const order = changedOrders[0];
@@ -8054,7 +8087,7 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
                                 ${salesLineHtml}
                                 ${sqmPiecesLineHtml}
@@ -8278,7 +8311,7 @@
                         <div class="flex items-start gap-2">
                             ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-9 h-9 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                             <div class="min-w-0">
-                                <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                                <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
                                 ${customerLineHtml}
                             </div>
                         </div>
@@ -8465,7 +8498,7 @@
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">อยู่ที่แผนก: <span class="font-semibold ${stageTextCls}">${escapeHtml(stageLabel)}</span> (${percent}%)</p>
                         <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
@@ -8902,7 +8935,7 @@
                 <div class="flex justify-between items-start gap-2">
                     ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
@@ -8915,9 +8948,34 @@
 
             let mainHtml = '';
             if (stage === 'planning') {
+                // NEW (2026-09-16): "แผนกวางแผน ให้มีกดสั่งย้อมภายในบริษัท หรือนอกบริษัท และมีเพิ่มใช้ไหม
+                // Surplus ในการทอกี่สี ใช้กี่สี" — these fields already existed inside the order detail
+                // modal's Planning section (renderPlanningChecklistHtml), but weren't reachable from the
+                // Kanban card itself, so Planning had to open every card just to set them. Surfacing the
+                // same fields (order.dyeing.mode/plannedColorCount/surplusUsed/surplusColorCount) right
+                // here means Planning can decide dyeing mode + how much is covered by surplus without
+                // leaving the board. See dyeingFullyCoveredBySurplus() for the "skip Dyeing" condition
+                // this feeds into (footer button below).
+                const d = order.dyeing || {};
                 mainHtml = `
                     <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded"> คำนวณสเปคแล้ว</label>
                     <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded"> ลงแผนงานแล้ว</label>
+                    <div class="pt-1.5 mt-0.5 border-t border-slate-100 space-y-1.5">
+                        <p class="text-[10px] font-semibold text-slate-500">การย้อมไหม</p>
+                        ${renderStageModeToggleHtml(orderIndex, 'dyeing', d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท')}
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div>
+                                <label class="block text-[9px] text-slate-400 mb-0.5">สั่งย้อมกี่สี</label>
+                                <input type="number" min="0" value="${d.plannedColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.plannedColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px]">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-slate-400 mb-0.5">ไหม surplus กี่สี</label>
+                                <input type="number" min="0" ${d.surplusUsed ? '' : 'disabled'} value="${d.surplusColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.surplusColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] disabled:opacity-50">
+                            </div>
+                        </div>
+                        <label class="flex items-center gap-2 text-[11px] text-slate-600"><input type="checkbox" ${d.surplusUsed ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'dyeing.surplusUsed', this.checked)" class="rounded"> ใช้ไหม surplus (ไหมที่มีอยู่แล้วในคลัง)</label>
+                        ${dyeingFullyCoveredBySurplus(order) ? `<p class="text-[10px] text-teal-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>ไหม surplus ครอบคลุมทุกสีแล้ว — โอนตรงไปแผนกทอได้เลย</p>` : ''}
+                    </div>
                 `;
             } else if (stage === 'dyeing' && order.dyeing.mode === 'external') {
                 mainHtml = `<p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> ไหมสั่งย้อมนอกบริษัท</p>`;
@@ -8955,6 +9013,15 @@
             let footerHtml = '';
             if (stage === 'finishing') {
                 footerHtml = `<button onclick="markOrderReadyToShip(${orderIndex})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-truck-fast"></i> ยืนยันงานเสร็จ พร้อมส่ง</button>`;
+            } else if (stage === 'planning' && dyeingFullyCoveredBySurplus(order)) {
+                // NEW (2026-09-16): skip Dyeing entirely when ไหม surplus already covers every planned
+                // color (see dyeingFullyCoveredBySurplus()) — the normal "โอนไปแผนกย้อม" path stays
+                // available underneath as a plain text link, in case Planning wants to route it through
+                // Dyeing anyway (e.g. to keep that department's records complete even with nothing to dye).
+                footerHtml = `
+                    <button onclick="transferPlanningDirectToWeaving(${orderIndex})" class="w-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-forward"></i> โอนตรงไปแผนกทอ (ข้ามแผนกย้อม)</button>
+                    <button onclick="transferOrderStage(${orderIndex}, 'planning', 'dyeing')" class="w-full mt-1.5 text-[10px] text-slate-400 hover:text-indigo-600 underline text-center">หรือโอนไปแผนกย้อมตามปกติ</button>
+                `;
             } else {
                 const toStage = NEXT_STAGE[stage];
                 footerHtml = `<button onclick="transferOrderStage(${orderIndex}, '${stage}', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>`;
@@ -8984,7 +9051,7 @@
                 <div class="flex justify-between items-start gap-2">
                     ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">ดีไซน์ (รหัสอ้างอิง): ${order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>'}</p>
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
@@ -9024,7 +9091,7 @@
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
                     <div class="flex-grow min-w-0">
-                        <p class="font-bold ${orderTypeTextClass(order.orderType)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">ตร.ม.: ${escapeHtml(String(order.totalSqm || '-'))}</p>
                         <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
@@ -9629,6 +9696,47 @@
             showToast(`โอนงาน "${order.moSo}" ไปแผนก${STAGE_LABELS[toStage]}แล้ว`, 'fa-arrow-right', 'text-emerald-400');
             mascotCelebrate('transfer');
             notifyLineStageTransfer(order, fromStage, toStage);
+        }
+
+        // NEW (2026-09-16): "ถ้าใช้ไหม Surplus ทอให้กดโอนไปแผนกทอได้เลยโดยไม่ต้องผ่านแผนกย้อม" — true only
+        // when EVERY color planned for this M/O, S/O is covered by yarn already in stock (ไหม surplus),
+        // i.e. the Dyeing department would have literally nothing left to dye. Reuses the exact same
+        // plannedColorCount/surplusColorCount fields Planning already fills in for the ใบสั่งย้อม (see
+        // renderPlanningChecklistHtml/computeDyeingSuggestion) — not a new data model, just a new
+        // condition read off it. Requires a real plan (plannedColorCount > 0) so an M/O nobody has
+        // planned yet doesn't look "fully covered" by two blank/zero fields.
+        function dyeingFullyCoveredBySurplus(order) {
+            const d = order.dyeing || {};
+            if (!d.surplusUsed) return false;
+            const planned = Number(d.plannedColorCount) || 0;
+            const surplus = Number(d.surplusColorCount) || 0;
+            return planned > 0 && surplus >= planned;
+        }
+
+        // Lets Planning send an M/O, S/O straight to Weaving, skipping Dyeing entirely — only offered
+        // (see buildOrderCard()'s planning footer) when dyeingFullyCoveredBySurplus() is true, but
+        // re-checked here too since this is reachable directly by onclick. Mirrors transferOrderStage()'s
+        // own guard/side-effects (100% planning checklist required, transfer counter, LINE notify,
+        // mascot) so this reads as "the same kind of transfer", just skipping one stage in the chain.
+        function transferPlanningDirectToWeaving(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const percent = order.planning.percent || 0;
+            if (percent < 100) {
+                showToast(`แผนกวางแผนยังทำงานไม่ครบ 100% (ตอนนี้ ${percent}%) ยังโอนงานไม่ได้`, 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (!dyeingFullyCoveredBySurplus(order)) {
+                showToast('ไหม surplus ยังไม่ครอบคลุมทุกสีที่วางแผนไว้ ต้องโอนผ่านแผนกย้อมตามปกติ', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            order.currentStage = 'weaving';
+            persistOrderChange(order);
+            incrementTransferCount();
+            rerenderOrderViews(orderIndex);
+            showToast(`โอนงาน "${order.moSo}" ข้ามแผนกย้อม ไปแผนกทอโดยตรงแล้ว (ใช้ไหม surplus ครบทุกสี)`, 'fa-arrow-right', 'text-emerald-400');
+            mascotCelebrate('transfer');
+            notifyLineStageTransfer(order, 'planning', 'weaving');
         }
 
         // Finishing reaches "รอส่ง" once its own work is 100% complete AND the packaging-department QC
