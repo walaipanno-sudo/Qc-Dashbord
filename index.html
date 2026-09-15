@@ -2633,6 +2633,35 @@
         </div>
     </div>
 
+    <!-- NEW (2026-09-16): "หมายเหตุ" note editor for a single M/O, S/O — opened from the small note
+         chip/"+ หมายเหตุ" link on the Overview row (see buildOverviewRemarkWidgetHtml()). Edits the SAME
+         order.orderRemark field already on the order detail modal, so a note added here shows up there
+         too and vice versa. -->
+    <div id="overviewRemarkModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-note-sticky text-amber-500 mr-2"></i>หมายเหตุ M/O, S/O</h3>
+                <button onclick="closeOverviewRemarkModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">M/O, S/O</label>
+                    <p id="overviewRemarkMoSoLabel" class="px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-mono font-bold text-indigo-700"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">หมายเหตุ</label>
+                    <textarea id="overviewRemarkText" rows="4" placeholder="พิมพ์หมายเหตุที่นี่..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeOverviewRemarkModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
+                <button onclick="saveOverviewRemark()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow transition flex items-center gap-2"><i class="fa-solid fa-check"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
     <!-- NEW (2026-09-16): mascot problem popup — opens when someone clicks "น้องไหม" while it's
          flagging something (open issues from แจ้งปัญหา + M/O, S/O overdue/at-risk of a deadline — see
          updateMascotProblemState()). Lets a person leave one quick reply per issue right there
@@ -9014,6 +9043,54 @@
                 </button>`;
         }
 
+        // NEW (2026-09-16): a per-M/O "หมายเหตุ" (remark) note directly on the Overview row, right under
+        // the M/O, S/O number — reuses the SAME order.orderRemark field that's already editable in the
+        // order detail modal (see the `f('orderRemark')` textarea there) rather than creating a second,
+        // parallel note field. When there IS a remark, shows it as a small clickable amber note chip
+        // (truncated, full text in the tooltip); when there ISN'T one, shows only a tiny ghost "+
+        // หมายเหตุ" link so an empty row doesn't grow an empty box — either one opens the same small
+        // modal to add/edit it. See openOverviewRemarkModal()/saveOverviewRemark() below.
+        function buildOverviewRemarkWidgetHtml(order, orderIndex) {
+            const remark = (order.orderRemark || '').trim();
+            if (!remark) {
+                return `
+                    <button type="button" onclick="openOverviewRemarkModal(${orderIndex})" class="mt-1 text-[10px] text-slate-400 hover:text-indigo-600 transition">
+                        <i class="fa-solid fa-plus mr-0.5"></i>หมายเหตุ
+                    </button>`;
+            }
+            const truncated = remark.length > 40 ? remark.slice(0, 40) + '…' : remark;
+            return `
+                <button type="button" onclick="openOverviewRemarkModal(${orderIndex})" title="${escapeHtml(remark)}" class="mt-1 block max-w-[220px] text-left text-[10px] font-medium px-1.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition truncate">
+                    <i class="fa-solid fa-note-sticky mr-1"></i>${escapeHtml(truncated)}
+                </button>`;
+        }
+
+        let overviewRemarkOrderIndex = null;
+
+        function openOverviewRemarkModal(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            overviewRemarkOrderIndex = orderIndex;
+            document.getElementById('overviewRemarkMoSoLabel').textContent = order.moSo || '-';
+            document.getElementById('overviewRemarkText').value = order.orderRemark || '';
+            document.getElementById('overviewRemarkModal').classList.remove('hidden');
+        }
+
+        function closeOverviewRemarkModal() {
+            document.getElementById('overviewRemarkModal').classList.add('hidden');
+            overviewRemarkOrderIndex = null;
+        }
+
+        function saveOverviewRemark() {
+            const orderIndex = overviewRemarkOrderIndex;
+            const order = productionOrders[orderIndex];
+            if (!order) { closeOverviewRemarkModal(); return; }
+            const value = document.getElementById('overviewRemarkText').value.trim();
+            updateOrderField(orderIndex, 'orderRemark', value); // persists + re-renders the Overview row automatically
+            closeOverviewRemarkModal();
+            showToast('บันทึกหมายเหตุแล้ว', 'fa-circle-check', 'text-emerald-400');
+        }
+
         // NEW: LINE broadcast for a due-date reschedule request. Wired the same way as
         // notifyLineStageTransfer()/notifyLineNewOrder()/notifyLinePlanDatesUpdate() above — gated
         // behind LINE_NOTIFY_ISSUES_ONLY (see that flag's comment: the LINE OA's free-tier monthly quota
@@ -9210,6 +9287,7 @@
                                 ${customerLineHtml}
                                 ${salesLineHtml}
                                 ${sqmPiecesLineHtml}
+                                ${buildOverviewRemarkWidgetHtml(order, orderIndex)}
                             </div>
                         </div>
                     </td>
