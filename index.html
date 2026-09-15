@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -41,7 +38,6 @@
         main.max-w-7xl { max-width: 1440px; }
         main > .bg-white.rounded-2xl,
         main .bg-white.rounded-2xl { border-color: var(--line); box-shadow: 0 2px 10px rgba(15, 23, 42, .045); }
-        #mascotWidget { display: none !important; }
         .app-navigation { border-color: var(--line) !important; box-shadow: 0 2px 12px rgba(15, 23, 42, .055) !important; }
         .app-navigation-title { color: var(--brand-950); letter-spacing: .01em; }
         .app-navigation-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: thin; }
@@ -1391,26 +1387,12 @@
                         </div>
                     </div>
                     <div id="weavingLogGradeSummary"></div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500">
-                                    <th class="py-1.5 px-2 text-left font-semibold whitespace-nowrap">วันที่</th>
-                                    <th class="py-1.5 px-2 text-center font-semibold">จอ</th>
-                                    <th class="py-1.5 px-2 text-left font-semibold">M/O</th>
-                                    <th class="py-1.5 px-2 text-left font-semibold">คุณภาพ</th>
-                                    <th class="py-1.5 px-2 text-center font-semibold">เกรด</th>
-                                    <th class="py-1.5 px-2 text-right font-semibold">ตร.ม.</th>
-                                    <th class="py-1.5 px-2 text-right font-semibold">ชม. (คน×ชม.)</th>
-                                    <th class="py-1.5 px-2 text-right font-semibold">ประสิทธิภาพ</th>
-                                    <th class="py-1.5 px-2 text-center font-semibold">% เทียบเกรด</th>
-                                    <th class="py-1.5 px-2 text-left font-semibold">พนักงาน</th>
-                                    <th class="py-1.5 px-2 text-center font-semibold">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="weavingLogTableBody"></tbody>
-                        </table>
+                    <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+                        <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                        <div id="weavingLogPeriodSelectWrap"></div>
                     </div>
+                    <div id="weavingLogPeriodSummary"></div>
+                    <div id="weavingLogSplitContainer"></div>
                 </div>
             </div>
 
@@ -1442,7 +1424,7 @@
             </div>
 
             <div id="kpiDueDateSection">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-3">
                     <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-truck-ramp-box mr-2 text-indigo-600"></i> รายงาน M/O, S/O กำหนดส่งตามแผนไหม</h3>
                         <div class="flex flex-wrap items-center gap-1.5">
@@ -1456,38 +1438,17 @@
                             </label>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                <tr>
-                                    <th class="px-2 py-2 text-left">วันรับ</th>
-                                    <th class="px-2 py-2 text-left">M/O, S/O</th>
-                                    <th class="px-2 py-2 text-left">ลูกค้า</th>
-                                    <th class="px-2 py-2 text-left">PROJECT/PO</th>
-                                    <th class="px-2 py-2 text-left">คุณภาพ</th>
-                                    <th class="px-2 py-2 text-left">กำหนดส่ง</th>
-                                    <th class="px-2 py-2 text-right">จำนวนชิ้น</th>
-                                    <th class="px-2 py-2 text-right">จำนวนสี</th>
-                                    <th class="px-2 py-2 text-right">M2</th>
-                                    <th class="px-2 py-2 text-left">GRADE</th>
-                                    <th class="px-2 py-2 text-left">สถานที่ทอ</th>
-                                    <th class="px-2 py-2 text-left">เริ่มทอ</th>
-                                    <th class="px-2 py-2 text-left">ทอเสร็จ</th>
-                                    <th class="px-2 py-2 text-right">ค้างทอ</th>
-                                    <th class="px-2 py-2 text-left">วันที่โอน</th>
-                                    <th class="px-2 py-2 text-left">เลขที่ใบส่ง</th>
-                                    <th class="px-2 py-2 text-left">วันส่งพรม</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpiDueDateTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                    <div class="p-3 flex flex-wrap items-center gap-2">
+                        <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา (ตามกำหนดส่ง):</span>
+                        <div id="kpiDuePeriodSelectWrap"></div>
                     </div>
-                    <div id="kpiDueDateEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ไม่มีรายการ</div>
+                    <div id="kpiDuePeriodSummary" class="px-3 pb-3"></div>
                 </div>
+                <div id="kpiDueSplitContainer"></div>
             </div>
 
             <div id="kpiYarnSection" class="hidden">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-3">
                     <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-scale-balanced mr-2 text-indigo-600"></i> ปริมาณไหมเหลือจากการทอแต่ละ M/O, S/O</h3>
@@ -1503,32 +1464,13 @@
                             </label>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                <tr>
-                                    <th class="px-2 py-2 text-left">M/O, S/O</th>
-                                    <th class="px-2 py-2 text-left">ลูกค้า / PROJECT</th>
-                                    <th class="px-2 py-2 text-right">จำนวนสี</th>
-                                    <th class="px-2 py-2 text-right">M2</th>
-                                    <th class="px-2 py-2 text-right">ยอดเข้าทอทั้งหมด (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">เฉพาะไหมลูกค้า (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">ยอดใช้จริง (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">Kg./M2</th>
-                                    <th class="px-2 py-2 text-right">ไหมเหลือจากทอ (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">%ไหมเหลือ</th>
-                                    <th class="px-2 py-2 text-right">รับเข้าคลัง Surplus (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">สูญเสีย (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">%สูญเสีย</th>
-                                    <th class="px-2 py-2 text-left">หมายเหตุ</th>
-                                    <th class="px-2 py-2 text-center">รายละเอียดสี</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpiYarnTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                    <div class="p-3 flex flex-wrap items-center gap-2">
+                        <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา (ตามวันที่เปิด M/O):</span>
+                        <div id="kpiYarnPeriodSelectWrap"></div>
                     </div>
-                    <div id="kpiYarnEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ไม่มีรายการ</div>
+                    <div id="kpiYarnPeriodSummary" class="px-3 pb-3"></div>
                 </div>
+                <div id="kpiYarnSplitContainer"></div>
             </div>
 
             <div id="kpiSurplusSection" class="hidden">
@@ -1550,6 +1492,13 @@
                                 <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importKpiSurplusLedger(this)">
                             </label>
                         </div>
+                    </div>
+                    <div class="p-3 border-b border-slate-100">
+                        <p class="text-[11px] text-slate-400 mb-2">ข้อมูลชุดนี้บันทึกเป็นรายเดือนอยู่แล้ว (ไม่มีวันที่ระดับวัน) — สรุปยอดรวมทำได้เฉพาะระดับปี:</p>
+                        <button type="button" onclick="toggleKpiSurplusYearSummary()" id="kpiSurplusYearSummaryToggleBtn" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-dashed border-indigo-200 rounded-lg px-2.5 py-1">
+                            <i class="fa-solid fa-calendar-days mr-1"></i> แสดงสรุปยอดรวมรายปี
+                        </button>
+                        <div id="kpiSurplusYearSummary" class="hidden mt-2"></div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs">
@@ -1596,29 +1545,12 @@
                             </label>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                <tr>
-                                    <th class="px-2 py-2 text-left">วันที่ส่งย้อมเพิ่ม</th>
-                                    <th class="px-2 py-2 text-left">สถานที่ทอ</th>
-                                    <th class="px-2 py-2 text-left">M/O</th>
-                                    <th class="px-2 py-2 text-right">No.</th>
-                                    <th class="px-2 py-2 text-left">CODE</th>
-                                    <th class="px-2 py-2 text-left">ชนิดไหม</th>
-                                    <th class="px-2 py-2 text-right">ยอดย้อมเพิ่ม (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">น้ำหนักก่อนย้อม (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">น้ำหนักหลังย้อม (Kg.)</th>
-                                    <th class="px-2 py-2 text-left">วันที่ย้อม</th>
-                                    <th class="px-2 py-2 text-right">Surplus (Kg.)</th>
-                                    <th class="px-2 py-2 text-left">หมายเหตุ (เพราะอะไร)</th>
-                                    <th class="px-2 py-2 text-center">ลบ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpiExtraDyeTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                    <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                        <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                        <div id="kpiExtraDyePeriodSelectWrap"></div>
                     </div>
-                    <div id="kpiExtraDyeEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการย้อมเพิ่ม</div>
+                    <div id="kpiExtraDyePeriodSummary" class="p-3 border-b border-slate-100"></div>
+                    <div id="kpiExtraDyeSplitContainer"></div>
                 </div>
             </div>
             </div>
@@ -1681,6 +1613,11 @@
                                 </label>
                             </div>
                         </div>
+                        <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                            <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา (ตามวันที่รับงาน):</span>
+                            <div id="designKpiJobsPeriodSelectWrap"></div>
+                        </div>
+                        <div id="designKpiJobsPeriodSummary" class="p-3 border-b border-slate-100"></div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-xs">
                                 <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
@@ -1727,27 +1664,12 @@
                                 <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importDesignKpiTransferLog(this)">
                             </label>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs">
-                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="px-2 py-2 text-left">วันที่รับ</th>
-                                        <th class="px-2 py-2 text-left">M/O, S/O</th>
-                                        <th class="px-2 py-2 text-left">ชิ้นที่</th>
-                                        <th class="px-2 py-2 text-right">พ.ท / ตร.ม.</th>
-                                        <th class="px-2 py-2 text-right">ใช้จริง / ตร.ม.</th>
-                                        <th class="px-2 py-2 text-right">เศษผ้า / ตร.ม.</th>
-                                        <th class="px-2 py-2 text-right">จำนวน</th>
-                                        <th class="px-2 py-2 text-left">หน่วย</th>
-                                        <th class="px-2 py-2 text-left">วันที่โอน</th>
-                                        <th class="px-2 py-2 text-left">หมายเหตุ</th>
-                                        <th class="px-2 py-2 text-center">ลบ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="designKpiTransferTableBody" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                            <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                            <div id="designKpiTransferPeriodSelectWrap"></div>
                         </div>
-                        <div id="designKpiTransferEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                        <div id="designKpiTransferPeriodSummary" class="p-3 border-b border-slate-100"></div>
+                        <div id="designKpiTransferSplitContainer"></div>
                     </div>
                 </div>
             </div>
@@ -1788,31 +1710,12 @@
                             </label>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                <tr>
-                                    <th class="px-2 py-2 text-left">วันที่รับ order สั่งย้อม</th>
-                                    <th class="px-2 py-2 text-left">M/O</th>
-                                    <th class="px-2 py-2 text-right">เบอร์สี</th>
-                                    <th class="px-2 py-2 text-left">code สี</th>
-                                    <th class="px-2 py-2 text-left">ชนิดไหม</th>
-                                    <th class="px-2 py-2 text-left">LOT ไหม</th>
-                                    <th class="px-2 py-2 text-right">นน.ในใบสั่งย้อม (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">หมายเลขตู้ย้อม</th>
-                                    <th class="px-2 py-2 text-right">นน.โอนจากใบเบิก (Kg.)</th>
-                                    <th class="px-2 py-2 text-right">นน.โอนจริง (Kg.)</th>
-                                    <th class="px-2 py-2 text-left">วันที่กำหนดเสร็จตามแผน</th>
-                                    <th class="px-2 py-2 text-left">วันที่ย้อมเสร็จจริง</th>
-                                    <th class="px-2 py-2 text-center">สรุปตามแผน</th>
-                                    <th class="px-2 py-2 text-left">วันที่กำหนดส่ง</th>
-                                    <th class="px-2 py-2 text-center">ลบ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dyeingKpiTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                    <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                        <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                        <div id="dyeingKpiPeriodSelectWrap"></div>
                     </div>
-                    <div id="dyeingKpiEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                    <div id="dyeingKpiPeriodSummary" class="p-3 border-b border-slate-100"></div>
+                    <div id="dyeingKpiSplitContainer"></div>
                 </div>
             </div>
 
@@ -1851,23 +1754,12 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs">
-                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="px-2 py-2 text-left">M/O</th>
-                                        <th class="px-2 py-2 text-left">เกรด</th>
-                                        <th class="px-2 py-2 text-right">พ.ท แต่งได้ (ตร.ม.)</th>
-                                        <th class="px-2 py-2 text-right">เวลา (ชม.)</th>
-                                        <th class="px-2 py-2 text-right">Productivity (m2/hr)</th>
-                                        <th class="px-2 py-2 text-left">หมายเหตุ</th>
-                                        <th class="px-2 py-2 text-center">ลบ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="finishingKpiEfficiencyTableBody" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                            <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                            <div id="finishingKpiEfficiencyPeriodSelectWrap"></div>
                         </div>
-                        <div id="finishingKpiEfficiencyEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                        <div id="finishingKpiEfficiencyPeriodSummary" class="p-3 border-b border-slate-100"></div>
+                        <div id="finishingKpiEfficiencySplitContainer"></div>
                     </div>
                 </div>
 
@@ -1892,26 +1784,12 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs">
-                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="px-2 py-2 text-left">ว.ด.ป.</th>
-                                        <th class="px-2 py-2 text-left">M/O</th>
-                                        <th class="px-2 py-2 text-right">พื้นที่ (ตร.ม.)</th>
-                                        <th class="px-2 py-2 text-right">เบิกตามมาตรฐาน (Kg.)</th>
-                                        <th class="px-2 py-2 text-right">กาว EUR178 (Kg.)</th>
-                                        <th class="px-2 py-2 text-right">กาว 66012 (Kg.)</th>
-                                        <th class="px-2 py-2 text-right">กาว TH31 (Kg.)</th>
-                                        <th class="px-2 py-2 text-right">รวมเบิกกาว (Kg.)</th>
-                                        <th class="px-2 py-2 text-right">% การเบิกกาวจริง</th>
-                                        <th class="px-2 py-2 text-center">ลบ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="finishingKpiGlueTableBody" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        <div class="p-3 flex flex-wrap items-center gap-2 border-b border-slate-100">
+                            <span class="text-[11px] text-slate-500 font-medium">สรุปยอดรวมตามช่วงเวลา:</span>
+                            <div id="finishingKpiGluePeriodSelectWrap"></div>
                         </div>
-                        <div id="finishingKpiGlueEmptyState" class="hidden py-10 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>
+                        <div id="finishingKpiGluePeriodSummary" class="p-3 border-b border-slate-100"></div>
+                        <div id="finishingKpiGlueSplitContainer"></div>
                     </div>
                 </div>
             </div>
@@ -2663,6 +2541,64 @@
                 <button onclick="closeResolveIssueModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
                 <button onclick="submitResolveIssue()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow transition flex items-center gap-2"><i class="fa-solid fa-check"></i> ยืนยันปิดปัญหา</button>
             </div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09-15): "ขอเลื่อนกำหนดส่ง" modal — opened from the ⏪ เลื่อนเข้า / เลื่อนออก ⏩ buttons
+         under each M/O, S/O's due date on the Overview page (see buildDueDateRescheduleWidgetHtml()).
+         Submitting sets order.dueDate and tags a new dueDateHistory entry with a direction + an empty
+         acknowledgedBy map — see submitDueDateReschedule()/pushDueDateHistoryEntry(). -->
+    <div id="dueDateRescheduleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="dueDateRescheduleTitle" class="font-bold text-lg text-slate-800">ขอเลื่อนกำหนดส่ง</h3>
+                <button onclick="closeDueDateRescheduleModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">M/O, S/O</label>
+                    <p id="dueDateRescheduleMoSoLabel" class="px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-mono font-bold text-indigo-700"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">กำหนดส่งเดิม</label>
+                    <p id="dueDateRescheduleOldDate" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">กำหนดส่งใหม่</label>
+                    <input type="date" id="dueDateRescheduleNewDate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เหตุผล (ไม่บังคับ)</label>
+                    <input type="text" id="dueDateRescheduleReason" placeholder="เช่น ลูกค้าเร่งงาน / ลูกค้าขอเลื่อน" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ผู้ขอเลื่อน (ไม่บังคับ)</label>
+                    <input type="text" id="dueDateRescheduleRequestedBy" placeholder="ชื่อผู้ขอ" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <p class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>ยืนยันแล้วทุกแผนกจะต้องกดรับทราบที่หน้า "ภาพรวมการผลิต"</p>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeDueDateRescheduleModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
+                <button onclick="submitDueDateReschedule()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow transition flex items-center gap-2"><i class="fa-solid fa-check"></i> ยืนยันขอเลื่อน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09-15): acknowledgment modal for a pending due-date reschedule — opened by clicking
+         the "รอรับทราบ x/5" pill under the due date (see buildDueDateRescheduleWidgetHtml()). Each
+         department gets its own รับทราบ button; once every department in DUE_DATE_ACK_DEPARTMENTS has
+         clicked it, the pill disappears from the Overview row — see acknowledgeDueDateReschedule(). -->
+    <div id="dueDateAckModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-bell text-amber-500 mr-2"></i>รับทราบการเลื่อนกำหนดส่ง</h3>
+                <button onclick="closeDueDateAckModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="dueDateAckModalBody" class="space-y-3"></div>
         </div>
     </div>
 
@@ -7668,12 +7604,35 @@
             return rows;
         }
 
+        let weavingLogPeriodGranularity = 'month';
+        function setWeavingLogPeriod(value) {
+            weavingLogPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderWeavingLogTable();
+        }
+
+        const WEAVING_LOG_THEAD_HTML = `
+            <th class="py-1.5 px-2 text-left font-semibold whitespace-nowrap">วันที่</th>
+            <th class="py-1.5 px-2 text-center font-semibold">จอ</th>
+            <th class="py-1.5 px-2 text-left font-semibold">M/O</th>
+            <th class="py-1.5 px-2 text-left font-semibold">คุณภาพ</th>
+            <th class="py-1.5 px-2 text-center font-semibold">เกรด</th>
+            <th class="py-1.5 px-2 text-right font-semibold">ตร.ม.</th>
+            <th class="py-1.5 px-2 text-right font-semibold">ชม. (คน×ชม.)</th>
+            <th class="py-1.5 px-2 text-right font-semibold">ประสิทธิภาพ</th>
+            <th class="py-1.5 px-2 text-center font-semibold">% เทียบเกรด</th>
+            <th class="py-1.5 px-2 text-left font-semibold">พนักงาน</th>
+            <th class="py-1.5 px-2 text-center font-semibold">จัดการ</th>
+        `;
+
         function renderWeavingLogTable() {
-            const tbody = document.getElementById('weavingLogTableBody');
+            const splitContainer = document.getElementById('weavingLogSplitContainer');
             const summaryEl = document.getElementById('weavingLogGradeSummary');
-            if (!tbody) return;
+            if (!splitContainer) return;
             const monthFilter = document.getElementById('weavingLogTableMonth') ? document.getElementById('weavingLogTableMonth').value : '';
             const searchTerm = document.getElementById('weavingLogTableSearch') ? document.getElementById('weavingLogTableSearch').value.trim().toLowerCase() : '';
+
+            const selectWrap = document.getElementById('weavingLogPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('weavingLogPeriodSelect', 'setWeavingLogPeriod', weavingLogPeriodGranularity);
 
             let rows = flattenAllWeavingLogEntries();
             if (monthFilter) rows = rows.filter(r => String(r.date || '').startsWith(monthFilter));
@@ -7682,14 +7641,18 @@
             }
             rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : String(a.loom).localeCompare(String(b.loom))));
 
-            if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="text-center text-slate-400 py-4 text-xs">ยังไม่มีรายการทอในช่วงที่เลือก</td></tr>`;
-            } else {
-                tbody.innerHTML = rows.map(r => {
-                    const pctBadge = r.gradePercent === null || r.gradePercent === undefined
-                        ? '<span class="text-slate-300">-</span>'
-                        : `<span class="font-semibold ${r.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${r.gradePercent}%</span>`;
-                    return `
+            const periodSummaryEl = document.getElementById('weavingLogPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(rows, 'date', weavingLogPeriodGranularity, [
+                    { key: 'sqm', label: 'ตร.ม. รวม' }, { key: 'hours', label: 'ชม. รวม (คน×ชม.)' }
+                ]);
+            }
+
+            const rowHtml = (r) => {
+                const pctBadge = r.gradePercent === null || r.gradePercent === undefined
+                    ? '<span class="text-slate-300">-</span>'
+                    : `<span class="font-semibold ${r.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${r.gradePercent}%</span>`;
+                return `
                     <tr class="border-t border-slate-100 hover:bg-slate-50">
                         <td class="py-1.5 px-2 whitespace-nowrap">${escapeHtml(r.date || '-')}</td>
                         <td class="py-1.5 px-2 text-center">${escapeHtml(String(r.loom || '-'))}</td>
@@ -7707,8 +7670,15 @@
                         </td>
                     </tr>
                 `;
-                }).join('');
-            }
+            };
+
+            const orderTypeOf = (r) => {
+                const order = productionOrders[r.orderIndex];
+                return (order && (order.orderType || detectOrderTypeFromMoSo(order.moSo))) || detectOrderTypeFromMoSo(r.moSo);
+            };
+            const moRows = rows.filter(r => orderTypeOf(r) !== 'SO');
+            const soRows = rows.filter(r => orderTypeOf(r) === 'SO');
+            renderSplitOrderTypeTables('weavingLogSplitContainer', WEAVING_LOG_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 11);
 
             // Per-grade rollup — same shape as the excel's bottom summary block (A/B/C/C+/D/D+/E/X/Z: รวม
             // ตร.ม. + รวม ชั่วโมง), plus an overall %เทียบเกรด per grade so it's obvious at a glance which
@@ -8751,6 +8721,243 @@
             return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 text-[10px] font-bold whitespace-nowrap align-middle ml-1.5" title="${escapeHtml(title)}"><i class="fa-solid fa-clock-rotate-left"></i> เลื่อนครั้งที่ ${count} (เดิม ${escapeHtml(last.from)})</span>`;
         }
 
+        // =========================================================================================
+        // NEW (2026-09-15): "เลื่อนเข้า/เลื่อนออก ให้ทุกแผนกรับทราบร่วมกัน" — every change to an order's
+        // dueDate (whether from the dedicated "ขอเลื่อนกำหนดส่ง" buttons on the Overview page below, or
+        // the plain date field in the order detail modal) now also tags the dueDateHistory entry with
+        // which direction it was ('in' = เลื่อนเข้า/เร็วขึ้น, 'out' = เลื่อนออก/ช้าลง) and an
+        // acknowledgedBy map that starts empty. The Overview row shows a "รอรับทราบ x/5" pill for the
+        // latest entry until every production department (วางแผน/ดีไซน์/ย้อม/ทอ/ตกแต่ง) has clicked
+        // รับทราบ in openDueDateAckModal() — see buildDueDateRescheduleWidgetHtml() below. Persisted the
+        // same way dueDateHistory always was (plain JSON blob column, see .gs upsertOrderIntoSheets_),
+        // so no backend changes were needed for the new direction/acknowledgedBy fields.
+        // =========================================================================================
+        const DUE_DATE_ACK_DEPARTMENTS = [
+            { key: 'planning', label: 'วางแผน' },
+            { key: 'design', label: 'ดีไซน์/ขยายลาย' },
+            { key: 'dyeing', label: 'ย้อม' },
+            { key: 'weaving', label: 'ทอ' },
+            { key: 'finishing', label: 'ตกแต่ง/บรรจุ' }
+        ];
+
+        function pushDueDateHistoryEntry(order, oldValue, newValue, extra) {
+            if (!Array.isArray(order.dueDateHistory)) order.dueDateHistory = [];
+            const entry = Object.assign({
+                from: oldValue,
+                to: newValue,
+                changedAt: formatDateKeyUTC(new Date()),
+                direction: newValue < oldValue ? 'in' : 'out',
+                acknowledgedBy: {}
+            }, extra || {});
+            order.dueDateHistory.push(entry);
+            return entry;
+        }
+
+        // Latest dueDateHistory entry that actually carries a direction (i.e. was created by this
+        // feature — older entries from before this change won't have one, and are just ignored here
+        // since there's nothing sensible to ask departments to acknowledge retroactively).
+        function getLatestDueDateReschedule(order) {
+            const history = Array.isArray(order.dueDateHistory) ? order.dueDateHistory : [];
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i] && history[i].direction) return { entry: history[i], index: i };
+            }
+            return null;
+        }
+
+        function isDueDateRescheduleFullyAcked(entry) {
+            const ack = (entry && entry.acknowledgedBy) || {};
+            return DUE_DATE_ACK_DEPARTMENTS.every(d => !!ack[d.key]);
+        }
+
+        // Small "⏪ เลื่อนเข้า / เลื่อนออก ⏩" request buttons plus, when the latest request hasn't been
+        // acknowledged by every department yet, a "รอรับทราบ x/5" pill that opens the acknowledgment
+        // modal — spliced directly under the due date on the Overview table row.
+        function buildDueDateRescheduleWidgetHtml(order, orderIndex) {
+            const actionButtonsHtml = `
+                <div class="flex items-center gap-1 mt-1">
+                    <button type="button" onclick="openDueDateRescheduleModal(${orderIndex}, 'in')" title="ขอเลื่อนกำหนดส่งให้เร็วขึ้น" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition">⏪ เลื่อนเข้า</button>
+                    <button type="button" onclick="openDueDateRescheduleModal(${orderIndex}, 'out')" title="ขอเลื่อนกำหนดส่งให้ช้าลง" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition">เลื่อนออก ⏩</button>
+                </div>`;
+
+            const pending = getLatestDueDateReschedule(order);
+            if (!pending || isDueDateRescheduleFullyAcked(pending.entry)) return actionButtonsHtml;
+
+            const ack = pending.entry.acknowledgedBy || {};
+            const ackedCount = DUE_DATE_ACK_DEPARTMENTS.filter(d => !!ack[d.key]).length;
+            const directionLabel = pending.entry.direction === 'in' ? '⏪ เลื่อนเข้า' : 'เลื่อนออก ⏩';
+            return actionButtonsHtml + `
+                <button type="button" onclick="openDueDateAckModal(${orderIndex})" class="mt-1 block w-full text-left text-[10px] font-semibold px-1.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">
+                    <i class="fa-solid fa-bell mr-1"></i>${directionLabel} ${escapeHtml(pending.entry.from)}→${escapeHtml(pending.entry.to)} • รับทราบแล้ว ${ackedCount}/${DUE_DATE_ACK_DEPARTMENTS.length}
+                </button>`;
+        }
+
+        // NEW: LINE broadcast for a due-date reschedule request. Wired the same way as
+        // notifyLineStageTransfer()/notifyLineNewOrder()/notifyLinePlanDatesUpdate() above — gated
+        // behind LINE_NOTIFY_ISSUES_ONLY (see that flag's comment: the LINE OA's free-tier monthly quota
+        // is reserved for แจ้งปัญหา only, per an earlier request) so it currently no-ops, but is ready to
+        // switch on later just by flipping that one flag.
+        async function notifyLineDueDateReschedule(order, entry) {
+            if (!gasWebAppUrl || LINE_NOTIFY_ISSUES_ONLY) return;
+            const directionLabel = entry.direction === 'in' ? '⏪ เลื่อนกำหนดส่งเข้า (เร็วขึ้น)' : 'เลื่อนกำหนดส่งออก (ช้าลง) ⏩';
+            const messageLines = [
+                `📅 ${directionLabel}`,
+                `M/O, S/O: ${order.moSo || '-'}`,
+                `กำหนดส่งเดิม: ${entry.from} → กำหนดส่งใหม่: ${entry.to}`
+            ];
+            if (order.customerName) messageLines.push(`ลูกค้า: ${order.customerName}`);
+            if (entry.reason) messageLines.push(`เหตุผล: ${entry.reason}`);
+            if (entry.requestedBy) messageLines.push(`ผู้ขอ: ${entry.requestedBy}`);
+            messageLines.push('👉 ทุกแผนกกรุณากดรับทราบที่หน้า "ภาพรวมการผลิต"');
+            try {
+                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
+                await fetch(postUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageLines.join('\n') })
+                });
+            } catch(err) {
+                console.error("Error sending LINE due-date-reschedule notification:", err);
+            }
+        }
+
+        // Local "งานมีการเปลี่ยนแปลง" center-screen popup for a due-date reschedule — same
+        // hard-to-miss/queued mechanism as queueWorkChangeAlert() is already used for elsewhere (new
+        // issue reported, new M/O opened), so whoever is looking at THIS browser right now can't miss it
+        // either, on top of the LINE broadcast and the in-app "รอรับทราบ" pill.
+        function queueDueDateRescheduleAlert(order, entry) {
+            queueWorkChangeAlert({
+                icon: entry.direction === 'in' ? 'fa-forward' : 'fa-backward',
+                iconColor: entry.direction === 'in' ? 'text-rose-500' : 'text-amber-500',
+                title: entry.direction === 'in' ? '⏪ ขอเลื่อนกำหนดส่งเข้า (เร็วขึ้น)' : 'ขอเลื่อนกำหนดส่งออก (ช้าลง) ⏩',
+                message: `M/O, S/O: ${order.moSo || '-'}\nกำหนดส่งเดิม: ${entry.from}\nกำหนดส่งใหม่: ${entry.to}` +
+                    (entry.reason ? `\nเหตุผล: ${entry.reason}` : '') +
+                    (entry.requestedBy ? `\nผู้ขอ: ${entry.requestedBy}` : '') +
+                    `\n\nกรุณาแจ้งทุกแผนกให้กดรับทราบที่หน้า "ภาพรวมการผลิต"`
+            });
+        }
+
+        let dueDateRescheduleOrderIndex = null;
+        let dueDateRescheduleDirection = null;
+
+        function openDueDateRescheduleModal(orderIndex, direction) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            dueDateRescheduleOrderIndex = orderIndex;
+            dueDateRescheduleDirection = direction === 'in' ? 'in' : 'out';
+            document.getElementById('dueDateRescheduleMoSoLabel').textContent = order.moSo || '-';
+            document.getElementById('dueDateRescheduleOldDate').textContent = order.dueDate || 'ยังไม่ได้กำหนด';
+            document.getElementById('dueDateRescheduleTitle').textContent = dueDateRescheduleDirection === 'in'
+                ? '⏪ ขอเลื่อนกำหนดส่งเข้า (เร็วขึ้น)' : 'ขอเลื่อนกำหนดส่งออก (ช้าลง) ⏩';
+            document.getElementById('dueDateRescheduleNewDate').value = order.dueDate || '';
+            document.getElementById('dueDateRescheduleReason').value = '';
+            document.getElementById('dueDateRescheduleRequestedBy').value = '';
+            document.getElementById('dueDateRescheduleModal').classList.remove('hidden');
+        }
+
+        function closeDueDateRescheduleModal() {
+            document.getElementById('dueDateRescheduleModal').classList.add('hidden');
+            dueDateRescheduleOrderIndex = null;
+            dueDateRescheduleDirection = null;
+        }
+
+        function submitDueDateReschedule() {
+            const orderIndex = dueDateRescheduleOrderIndex;
+            const order = productionOrders[orderIndex];
+            if (!order) { closeDueDateRescheduleModal(); return; }
+
+            const oldValue = normalizeDateString(order.dueDate);
+            const newValue = normalizeDateString(document.getElementById('dueDateRescheduleNewDate').value);
+            if (!newValue) { showToast('กรุณาเลือกวันที่ใหม่', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            if (!oldValue) { showToast('M/O, S/O นี้ยังไม่มีกำหนดส่งเดิม กรุณากรอกกำหนดส่งในหน้ารายละเอียดก่อน', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            if (newValue === oldValue) { showToast('วันที่ใหม่ต้องไม่ตรงกับกำหนดส่งเดิม', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            if (dueDateRescheduleDirection === 'in' && newValue > oldValue) { showToast('"เลื่อนเข้า" ต้องเลือกวันที่เร็วกว่าเดิม', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+            if (dueDateRescheduleDirection === 'out' && newValue < oldValue) { showToast('"เลื่อนออก" ต้องเลือกวันที่ช้ากว่าเดิม', 'fa-triangle-exclamation', 'text-amber-400'); return; }
+
+            const reason = document.getElementById('dueDateRescheduleReason').value.trim();
+            const requestedBy = document.getElementById('dueDateRescheduleRequestedBy').value.trim();
+
+            order.dueDate = newValue;
+            const entry = pushDueDateHistoryEntry(order, oldValue, newValue, { reason, requestedBy });
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+            notifyLineDueDateReschedule(order, entry);
+            queueDueDateRescheduleAlert(order, entry);
+            closeDueDateRescheduleModal();
+            showToast('ส่งคำขอเลื่อนกำหนดส่งแล้ว รอทุกแผนกกดรับทราบ', 'fa-check', 'text-emerald-400');
+        }
+
+        let dueDateAckOrderIndex = null;
+
+        function openDueDateAckModal(orderIndex) {
+            dueDateAckOrderIndex = orderIndex;
+            renderDueDateAckModalBody();
+            document.getElementById('dueDateAckModal').classList.remove('hidden');
+        }
+
+        function closeDueDateAckModal() {
+            document.getElementById('dueDateAckModal').classList.add('hidden');
+            dueDateAckOrderIndex = null;
+        }
+
+        function renderDueDateAckModalBody() {
+            const order = productionOrders[dueDateAckOrderIndex];
+            const body = document.getElementById('dueDateAckModalBody');
+            if (!body) return;
+            if (!order) { body.innerHTML = '<p class="text-sm text-slate-400">ไม่พบ M/O, S/O นี้แล้ว</p>'; return; }
+            const pending = getLatestDueDateReschedule(order);
+            if (!pending) { body.innerHTML = '<p class="text-sm text-slate-400">ไม่มีคำขอเลื่อนกำหนดส่งที่รอรับทราบ</p>'; return; }
+
+            const entry = pending.entry;
+            const ack = entry.acknowledgedBy || {};
+            const directionLabel = entry.direction === 'in' ? '⏪ ขอเลื่อนเข้า (เร็วขึ้น)' : 'ขอเลื่อนออก (ช้าลง) ⏩';
+            const deptRowsHtml = DUE_DATE_ACK_DEPARTMENTS.map(d => {
+                const acked = ack[d.key];
+                if (acked) {
+                    return `<div class="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                        <span class="font-semibold text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>${escapeHtml(d.label)}</span>
+                        <span class="text-emerald-600">${escapeHtml(acked.name || '')}${acked.at ? ` • ${escapeHtml(acked.at)}` : ''}</span>
+                    </div>`;
+                }
+                return `<button type="button" onclick="acknowledgeDueDateReschedule('${d.key}')" class="flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs hover:bg-slate-50 transition text-left">
+                    <span class="font-semibold text-slate-600">${escapeHtml(d.label)}</span>
+                    <span class="text-indigo-600 font-semibold whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>กดรับทราบ</span>
+                </button>`;
+            }).join('');
+
+            body.innerHTML = `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm space-y-1">
+                    <p class="font-mono font-bold ${moSoTextColorClass(order)}">${escapeHtml(order.moSo)}</p>
+                    <p class="text-slate-600">${directionLabel}: <span class="font-semibold">${escapeHtml(entry.from)} → ${escapeHtml(entry.to)}</span></p>
+                    ${entry.reason ? `<p class="text-slate-500 text-xs">เหตุผล: ${escapeHtml(entry.reason)}</p>` : ''}
+                    ${entry.requestedBy ? `<p class="text-slate-500 text-xs">ผู้ขอ: ${escapeHtml(entry.requestedBy)}</p>` : ''}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ชื่อผู้กดรับทราบ (ไม่บังคับ)</label>
+                    <input type="text" id="dueDateAckByName" placeholder="ชื่อ-นามสกุล" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-1 gap-2">${deptRowsHtml}</div>
+            `;
+        }
+
+        function acknowledgeDueDateReschedule(deptKey) {
+            const order = productionOrders[dueDateAckOrderIndex];
+            if (!order) return;
+            const pending = getLatestDueDateReschedule(order);
+            if (!pending) return;
+            const nameInput = document.getElementById('dueDateAckByName');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const dept = DUE_DATE_ACK_DEPARTMENTS.find(d => d.key === deptKey);
+            if (!pending.entry.acknowledgedBy) pending.entry.acknowledgedBy = {};
+            pending.entry.acknowledgedBy[deptKey] = { name: name || (dept ? dept.label : deptKey), at: formatDateKeyUTC(new Date()) };
+            persistOrderChange(order);
+            renderDueDateAckModalBody();
+            rerenderOrderViews(dueDateAckOrderIndex);
+            if (isDueDateRescheduleFullyAcked(pending.entry)) {
+                showToast('ทุกแผนกรับทราบการเลื่อนกำหนดส่งแล้ว', 'fa-check', 'text-emerald-400');
+            }
+        }
+
         function buildOverviewRowHtml(order, orderIndex, runningNo, today) {
             const effectiveStage = getEffectiveStage(order);
             const isOverdue = order.dueDate && order.dueDate < today && effectiveStage !== 'shipped';
@@ -8783,7 +8990,10 @@
                             </div>
                         </div>
                     </td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">${dueDateHtml}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600">
+                        <div class="whitespace-nowrap">${dueDateHtml}</div>
+                        ${buildDueDateRescheduleWidgetHtml(order, orderIndex)}
+                    </td>
                     <td class="py-3.5 px-4">
                         ${renderStageStepper(effectiveStage)}
                         ${deadlineWarningHtml ? `<div class="mt-1.5">${deadlineWarningHtml}</div>` : ''}
@@ -10301,8 +10511,14 @@
                 const oldValue = normalizeDateString(obj[fieldKey]);
                 const newValue = normalizeDateString(value);
                 if (oldValue && newValue && oldValue !== newValue) {
-                    if (!Array.isArray(order.dueDateHistory)) order.dueDateHistory = [];
-                    order.dueDateHistory.push({ from: oldValue, to: newValue, changedAt: formatDateKeyUTC(new Date()) });
+                    // NEW (2026-09-15): also tag with direction + an empty acknowledgedBy map (see
+                    // pushDueDateHistoryEntry()) so ANY due-date edit — not just the dedicated
+                    // "ขอเลื่อนกำหนดส่ง" buttons on the Overview page — goes through the same
+                    // ทุกแผนกรับทราบร่วมกัน flow. Fires after obj[fieldKey] = value below would already
+                    // read the new value back, so grab the entry here while oldValue is still on hand.
+                    const dueDateEntry = pushDueDateHistoryEntry(order, oldValue, newValue);
+                    notifyLineDueDateReschedule(order, dueDateEntry);
+                    queueDueDateRescheduleAlert(order, dueDateEntry);
                 }
             }
 
@@ -12602,10 +12818,36 @@
         }
 
         // ---- 1. ส่งมอบทั้งหมด (due dates per weaving plan) --------------------------------------------
+        let kpiDuePeriodGranularity = 'month';
+        function setKpiDuePeriod(value) {
+            kpiDuePeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderKpiDueDateReport();
+        }
+
+        const KPI_DUE_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">วันรับ</th>
+            <th class="px-2 py-2 text-left">M/O, S/O</th>
+            <th class="px-2 py-2 text-left">ลูกค้า</th>
+            <th class="px-2 py-2 text-left">PROJECT/PO</th>
+            <th class="px-2 py-2 text-left">คุณภาพ</th>
+            <th class="px-2 py-2 text-left">กำหนดส่ง</th>
+            <th class="px-2 py-2 text-right">จำนวนชิ้น</th>
+            <th class="px-2 py-2 text-right">จำนวนสี</th>
+            <th class="px-2 py-2 text-right">M2</th>
+            <th class="px-2 py-2 text-left">GRADE</th>
+            <th class="px-2 py-2 text-left">สถานที่ทอ</th>
+            <th class="px-2 py-2 text-left">เริ่มทอ</th>
+            <th class="px-2 py-2 text-left">ทอเสร็จ</th>
+            <th class="px-2 py-2 text-right">ค้างทอ</th>
+            <th class="px-2 py-2 text-left">วันที่โอน</th>
+            <th class="px-2 py-2 text-left">เลขที่ใบส่ง</th>
+            <th class="px-2 py-2 text-left">วันส่งพรม</th>
+        `;
+
         function renderKpiDueDateReport() {
-            const tbody = document.getElementById('kpiDueDateTableBody');
-            const emptyState = document.getElementById('kpiDueDateEmptyState');
-            if (!tbody) return;
+            const selectWrap = document.getElementById('kpiDuePeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('kpiDuePeriodSelect', 'setKpiDuePeriod', kpiDuePeriodGranularity);
+
             const searchEl = document.getElementById('kpiDueSearchInput');
             const searchTerm = (searchEl ? searchEl.value : '').trim().toLowerCase();
 
@@ -12616,15 +12858,15 @@
             }
             list.sort((a, b) => String(a.order.dueDate || '9999').localeCompare(String(b.order.dueDate || '9999')));
 
-            if (list.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
+            const periodSummaryEl = document.getElementById('kpiDuePeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(list.map(({ order }) => order), 'dueDate', kpiDuePeriodGranularity, [
+                    { key: 'totalSqm', label: 'M2 รวม' }, { key: 'totalPieces', label: 'จำนวนชิ้นรวม' }
+                ]);
             }
-            emptyState.classList.add('hidden');
 
             const f = (orderIndex, path) => `updateOrderField(${orderIndex}, '${path}', this.value)`;
-            tbody.innerHTML = list.map(({ order, orderIndex }) => {
+            const rowHtml = ({ order, orderIndex }) => {
                 const w = order.weaving || {};
                 const fin = order.finishing || {};
                 return `
@@ -12648,27 +12890,55 @@
                         <td class="px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.shippedDate || '-')}</td>
                     </tr>
                 `;
-            }).join('');
+            };
+
+            const moList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO');
+            const soList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('kpiDueSplitContainer', KPI_DUE_THEAD_HTML, moList.map(rowHtml).join(''), soList.map(rowHtml).join(''), moList.length, soList.length, 17);
         }
 
         // ---- 3-4. ปริมาณไหมเหลือจากการทอ + Surplus ต่อ M/O -------------------------------------------
+        let kpiYarnPeriodGranularity = 'month';
+        function setKpiYarnPeriod(value) {
+            kpiYarnPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderKpiYarnRemainingReport();
+        }
+
+        const KPI_YARN_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">M/O, S/O</th>
+            <th class="px-2 py-2 text-left">ลูกค้า / PROJECT</th>
+            <th class="px-2 py-2 text-right">จำนวนสี</th>
+            <th class="px-2 py-2 text-right">M2</th>
+            <th class="px-2 py-2 text-right">ยอดเข้าทอทั้งหมด (Kg.)</th>
+            <th class="px-2 py-2 text-right">เฉพาะไหมลูกค้า (Kg.)</th>
+            <th class="px-2 py-2 text-right">ยอดใช้จริง (Kg.)</th>
+            <th class="px-2 py-2 text-right">Kg./M2</th>
+            <th class="px-2 py-2 text-right">ไหมเหลือจากทอ (Kg.)</th>
+            <th class="px-2 py-2 text-right">%ไหมเหลือ</th>
+            <th class="px-2 py-2 text-right">รับเข้าคลัง Surplus (Kg.)</th>
+            <th class="px-2 py-2 text-right">สูญเสีย (Kg.)</th>
+            <th class="px-2 py-2 text-right">%สูญเสีย</th>
+            <th class="px-2 py-2 text-left">หมายเหตุ</th>
+            <th class="px-2 py-2 text-center">รายละเอียดสี</th>
+        `;
+
         function renderKpiYarnRemainingReport() {
-            const tbody = document.getElementById('kpiYarnTableBody');
-            const emptyState = document.getElementById('kpiYarnEmptyState');
-            if (!tbody) return;
+            const selectWrap = document.getElementById('kpiYarnPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('kpiYarnPeriodSelect', 'setKpiYarnPeriod', kpiYarnPeriodGranularity);
+
             const list = productionOrders.map((order, orderIndex) => ({ order, orderIndex }));
 
-            if (list.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
+            const periodSummaryEl = document.getElementById('kpiYarnPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(list.map(({ order }) => ({ openDate: order.openDate, totalIntoWeavingKg: (order.dyeing || {}).totalIntoWeavingKg, remainingKg: (order.dyeing || {}).remainingKg })), 'openDate', kpiYarnPeriodGranularity, [
+                    { key: 'totalIntoWeavingKg', label: 'ยอดเข้าทอรวม (Kg.)' }, { key: 'remainingKg', label: 'ไหมเหลือรวม (Kg.)' }
+                ]);
             }
-            emptyState.classList.add('hidden');
 
             const numField = (orderIndex, path, val, width = 'w-16') =>
                 `<input type="number" step="0.01" value="${val || ''}" onchange="updateOrderField(${orderIndex}, '${path}', Number(this.value)); recomputeKpiYarnRow(${orderIndex})" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = list.map(({ order, orderIndex }) => {
+            const rowHtml = ({ order, orderIndex }) => {
                 const d = order.dyeing || {};
                 const isExpanded = kpiYarnExpandedOrderIndex === orderIndex;
                 const colorRows = renderKpiColorBreakdownRows(order, orderIndex);
@@ -12694,7 +12964,11 @@
                     </tr>
                     ${isExpanded ? `<tr><td colspan="15" class="px-2 pb-3 bg-slate-50/60">${colorRows}</td></tr>` : ''}
                 `;
-            }).join('');
+            };
+
+            const moList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO');
+            const soList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('kpiYarnSplitContainer', KPI_YARN_THEAD_HTML, moList.map(rowHtml).join(''), soList.map(rowHtml).join(''), moList.length, soList.length, 15);
         }
 
         function computeKpiRemainPercent(d) {
@@ -12795,6 +13069,64 @@
                     <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeSurplusLedgerEntry('${entry.id}')" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                 </tr>
             `).join('');
+
+            renderKpiSurplusYearSummary();
+        }
+
+        let kpiSurplusYearSummaryVisible = false;
+        function toggleKpiSurplusYearSummary() {
+            kpiSurplusYearSummaryVisible = !kpiSurplusYearSummaryVisible;
+            document.getElementById('kpiSurplusYearSummary').classList.toggle('hidden', !kpiSurplusYearSummaryVisible);
+            document.getElementById('kpiSurplusYearSummaryToggleBtn').innerHTML = kpiSurplusYearSummaryVisible
+                ? '<i class="fa-solid fa-calendar-days mr-1"></i> ซ่อนสรุปยอดรวมรายปี'
+                : '<i class="fa-solid fa-calendar-days mr-1"></i> แสดงสรุปยอดรวมรายปี';
+            renderKpiSurplusYearSummary();
+        }
+
+        // เดือน (monthLabel) เป็นข้อความอิสระ ไม่ใช่วันที่จริง — ดึงเลขปี 4 หลักจากข้อความถ้ามี (เช่น
+        // "ก.ย. 2569" หรือ "9/2569") มาจัดกลุ่มรวมยอดรายปีแบบประมาณการ์ ถ้าไม่พบเลขปีจะรวมไว้ในกลุ่ม
+        // "ไม่ระบุปี"
+        function renderKpiSurplusYearSummary() {
+            const container = document.getElementById('kpiSurplusYearSummary');
+            if (!container || !kpiSurplusYearSummaryVisible) return;
+            const byYear = {};
+            surplusYarnLedger.forEach(entry => {
+                const match = String(entry.monthLabel || '').match(/(19|20|25)\d{2}/);
+                const year = match ? match[0] : 'ไม่ระบุปี';
+                if (!byYear[year]) byYear[year] = { count: 0, weightInKg: 0, weightOutKg: 0 };
+                byYear[year].count += 1;
+                byYear[year].weightInKg += Number(entry.weightInKg) || 0;
+                byYear[year].weightOutKg += Number(entry.weightOutKg) || 0;
+            });
+            const years = Object.keys(byYear).sort().reverse();
+            if (years.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-slate-400 py-3 text-center">ไม่มีข้อมูล</p>';
+                return;
+            }
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                            <tr>
+                                <th class="px-2 py-2 text-left">ปี</th>
+                                <th class="px-2 py-2 text-right">จำนวนเดือนที่บันทึก</th>
+                                <th class="px-2 py-2 text-right">น้ำหนักไหมเข้ารวม (Kg.)</th>
+                                <th class="px-2 py-2 text-right">น้ำหนักเบิกออกรวม (Kg.)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${years.map(y => `
+                                <tr class="hover:bg-slate-50/80">
+                                    <td class="px-2 py-1.5 font-semibold text-indigo-700">${escapeHtml(y)}</td>
+                                    <td class="px-2 py-1.5 text-right">${byYear[y].count}</td>
+                                    <td class="px-2 py-1.5 text-right">${byYear[y].weightInKg.toFixed(2)}</td>
+                                    <td class="px-2 py-1.5 text-right">${byYear[y].weightOutKg.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
         function addSurplusLedgerEntry() {
@@ -12826,12 +13158,33 @@
         }
 
         // ---- 6. ไหมสั่งย้อมเพิ่ม (extra dyeing log, flattened across every order) ----------------------
-        function renderKpiExtraDyeingLog() {
-            const tbody = document.getElementById('kpiExtraDyeTableBody');
-            const emptyState = document.getElementById('kpiExtraDyeEmptyState');
-            const select = document.getElementById('kpiExtraDyeMoSoSelect');
-            if (!tbody) return;
+        let kpiExtraDyePeriodGranularity = 'month';
+        function setKpiExtraDyePeriod(value) {
+            kpiExtraDyePeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderKpiExtraDyeingLog();
+        }
 
+        const KPI_EXTRADYE_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">วันที่ส่งย้อมเพิ่ม</th>
+            <th class="px-2 py-2 text-left">สถานที่ทอ</th>
+            <th class="px-2 py-2 text-left">M/O</th>
+            <th class="px-2 py-2 text-right">No.</th>
+            <th class="px-2 py-2 text-left">CODE</th>
+            <th class="px-2 py-2 text-left">ชนิดไหม</th>
+            <th class="px-2 py-2 text-right">ยอดย้อมเพิ่ม (Kg.)</th>
+            <th class="px-2 py-2 text-right">น้ำหนักก่อนย้อม (Kg.)</th>
+            <th class="px-2 py-2 text-right">น้ำหนักหลังย้อม (Kg.)</th>
+            <th class="px-2 py-2 text-left">วันที่ย้อม</th>
+            <th class="px-2 py-2 text-right">Surplus (Kg.)</th>
+            <th class="px-2 py-2 text-left">หมายเหตุ (เพราะอะไร)</th>
+            <th class="px-2 py-2 text-center">ลบ</th>
+        `;
+
+        function renderKpiExtraDyeingLog() {
+            const selectWrap = document.getElementById('kpiExtraDyePeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('kpiExtraDyePeriodSelect', 'setKpiExtraDyePeriod', kpiExtraDyePeriodGranularity);
+
+            const select = document.getElementById('kpiExtraDyeMoSoSelect');
             if (select) {
                 const currentVal = select.value;
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
@@ -12843,20 +13196,20 @@
                 const log = Array.isArray((order.dyeing || {}).extraDyeingLog) ? order.dyeing.extraDyeingLog : [];
                 log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
             });
-
-            if (flatRows.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
             flatRows.sort((a, b) => String(b.item.date || '').localeCompare(String(a.item.date || '')));
+
+            const periodSummaryEl = document.getElementById('kpiExtraDyePeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => r.item), 'date', kpiExtraDyePeriodGranularity, [
+                    { key: 'orderedKg', label: 'ยอดย้อมเพิ่มรวม (Kg.)' }, { key: 'surplusKg', label: 'Surplus รวม (Kg.)' }
+                ]);
+            }
 
             const t = (orderIndex, itemIndex, field, val, width = 'w-20') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const dt = (orderIndex, itemIndex, field, val) => `<input type="date" value="${val || ''}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (orderIndex, itemIndex, field, val, width = 'w-16') => `<input type="number" step="0.001" value="${val || ''}" onchange="updateExtraDyeingLogItemField(${orderIndex}, ${itemIndex}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => `
+            const rowHtml = ({ order, orderIndex, item, itemIndex }) => `
                 <tr class="hover:bg-slate-50/80">
                     <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
                     <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'location', item.location, 'w-16')}</td>
@@ -12872,7 +13225,11 @@
                     <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-32')}</td>
                     <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeExtraDyeingLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                 </tr>
-            `).join('');
+            `;
+
+            const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
+            const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('kpiExtraDyeSplitContainer', KPI_EXTRADYE_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 13);
         }
 
         function addExtraDyeingLogItemFromSelect() {
@@ -12942,7 +13299,22 @@
             return { daysTaken, onTime };
         }
 
+        let designKpiJobsPeriodGranularity = 'month';
+        function setDesignKpiJobsPeriod(value) {
+            designKpiJobsPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderDesignKpiJobsTable();
+        }
+
         function renderDesignKpiJobsTable() {
+            const selectWrap = document.getElementById('designKpiJobsPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('designKpiJobsPeriodSelect', 'setDesignKpiJobsPeriod', designKpiJobsPeriodGranularity);
+            const periodSummaryEl = document.getElementById('designKpiJobsPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(designJobLogs, 'receivedDate', designKpiJobsPeriodGranularity, [
+                    { key: 'revisionCount', label: 'จำนวนแก้ไขรวม (ครั้ง)' }
+                ]);
+            }
+
             const tbody = document.getElementById('designKpiJobsTableBody');
             const emptyState = document.getElementById('designKpiJobsEmptyState');
             if (!tbody) return;
@@ -13050,11 +13422,31 @@
         }
 
         // ---- ใบโอนขยายลาย (pattern-enlargement transfer log, per order.design.patternTransferLog) ------
+        let designKpiTransferPeriodGranularity = 'month';
+        function setDesignKpiTransferPeriod(value) {
+            designKpiTransferPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderPatternTransferLog();
+        }
+
+        const DESIGN_TRANSFER_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">วันที่รับ</th>
+            <th class="px-2 py-2 text-left">M/O, S/O</th>
+            <th class="px-2 py-2 text-left">ชิ้นที่</th>
+            <th class="px-2 py-2 text-right">พ.ท / ตร.ม.</th>
+            <th class="px-2 py-2 text-right">ใช้จริง / ตร.ม.</th>
+            <th class="px-2 py-2 text-right">เศษผ้า / ตร.ม.</th>
+            <th class="px-2 py-2 text-right">จำนวน</th>
+            <th class="px-2 py-2 text-left">หน่วย</th>
+            <th class="px-2 py-2 text-left">วันที่โอน</th>
+            <th class="px-2 py-2 text-left">หมายเหตุ</th>
+            <th class="px-2 py-2 text-center">ลบ</th>
+        `;
+
         function renderPatternTransferLog() {
-            const tbody = document.getElementById('designKpiTransferTableBody');
-            const emptyState = document.getElementById('designKpiTransferEmptyState');
+            const selectWrap = document.getElementById('designKpiTransferPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('designKpiTransferPeriodSelect', 'setDesignKpiTransferPeriod', designKpiTransferPeriodGranularity);
+
             const select = document.getElementById('designKpiTransferMoSoSelect');
-            if (!tbody) return;
             if (select) {
                 const currentVal = select.value;
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
@@ -13065,19 +13457,20 @@
                 const log = Array.isArray((order.design || {}).patternTransferLog) ? order.design.patternTransferLog : [];
                 log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
             });
-            if (flatRows.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
             flatRows.sort((a, b) => String(b.item.receivedDate || '').localeCompare(String(a.item.receivedDate || '')));
+
+            const periodSummaryEl = document.getElementById('designKpiTransferPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => r.item), 'receivedDate', designKpiTransferPeriodGranularity, [
+                    { key: 'areaSqm', label: 'พ.ท รวม (ตร.ม.)' }, { key: 'scrapSqm', label: 'เศษผ้ารวม (ตร.ม.)' }
+                ]);
+            }
 
             const t = (oi, ii, field, val, width = 'w-16') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (oi, ii, field, val, width = 'w-16', recompute = false) => `<input type="number" step="0.01" value="${val || ''}" onchange="updatePatternTransferLogItemField(${oi}, ${ii}, '${field}', Number(this.value)${recompute ? ', true' : ''})" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => `
+            const rowHtml = ({ order, orderIndex, item, itemIndex }) => `
                 <tr class="hover:bg-slate-50/80">
                     <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'receivedDate', item.receivedDate)}</td>
                     <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
@@ -13091,7 +13484,11 @@
                     <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-24')}</td>
                     <td class="px-2 py-1.5 text-center"><button type="button" onclick="removePatternTransferLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                 </tr>
-            `).join('');
+            `;
+
+            const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
+            const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('designKpiTransferSplitContainer', DESIGN_TRANSFER_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 11);
         }
 
         function addPatternTransferLogFromSelect() {
@@ -13152,11 +13549,35 @@
             renderDyeOrderLogTable();
         }
 
+        let dyeingKpiPeriodGranularity = 'month';
+        function setDyeingKpiPeriod(value) {
+            dyeingKpiPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderDyeOrderLogTable();
+        }
+
+        const DYEING_ORDER_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">วันที่รับ order สั่งย้อม</th>
+            <th class="px-2 py-2 text-left">M/O</th>
+            <th class="px-2 py-2 text-right">เบอร์สี</th>
+            <th class="px-2 py-2 text-left">code สี</th>
+            <th class="px-2 py-2 text-left">ชนิดไหม</th>
+            <th class="px-2 py-2 text-left">LOT ไหม</th>
+            <th class="px-2 py-2 text-right">นน.ในใบสั่งย้อม (Kg.)</th>
+            <th class="px-2 py-2 text-right">หมายเลขตู้ย้อม</th>
+            <th class="px-2 py-2 text-right">นน.โอนจากใบเบิก (Kg.)</th>
+            <th class="px-2 py-2 text-right">นน.โอนจริง (Kg.)</th>
+            <th class="px-2 py-2 text-left">วันที่กำหนดเสร็จตามแผน</th>
+            <th class="px-2 py-2 text-left">วันที่ย้อมเสร็จจริง</th>
+            <th class="px-2 py-2 text-center">สรุปตามแผน</th>
+            <th class="px-2 py-2 text-left">วันที่กำหนดส่ง</th>
+            <th class="px-2 py-2 text-center">ลบ</th>
+        `;
+
         function renderDyeOrderLogTable() {
-            const tbody = document.getElementById('dyeingKpiTableBody');
-            const emptyState = document.getElementById('dyeingKpiEmptyState');
+            const selectWrap = document.getElementById('dyeingKpiPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('dyeingKpiPeriodSelect', 'setDyeingKpiPeriod', dyeingKpiPeriodGranularity);
+
             const select = document.getElementById('dyeingKpiMoSoSelect');
-            if (!tbody) return;
             if (select) {
                 const currentVal = select.value;
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
@@ -13168,19 +13589,20 @@
                 const log = Array.isArray((order.dyeing || {}).dyeOrderLog) ? order.dyeing.dyeOrderLog : [];
                 log.forEach((item, itemIndex) => { if (!!item.isExtra === wantExtra) flatRows.push({ order, orderIndex, item, itemIndex }); });
             });
-            if (flatRows.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
             flatRows.sort((a, b) => String(b.item.orderDate || '').localeCompare(String(a.item.orderDate || '')));
+
+            const periodSummaryEl = document.getElementById('dyeingKpiPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => r.item), 'orderDate', dyeingKpiPeriodGranularity, [
+                    { key: 'orderKg', label: 'นน.สั่งย้อมรวม (Kg.)' }, { key: 'actualTransferKg', label: 'นน.โอนจริงรวม (Kg.)' }
+                ]);
+            }
 
             const t = (oi, ii, field, val, width = 'w-16') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (oi, ii, field, val, width = 'w-14') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateDyeOrderLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+            const rowHtml = ({ order, orderIndex, item, itemIndex }) => {
                 const planned = item.plannedDate ? new Date(item.plannedDate) : null;
                 const actual = item.actualDate ? new Date(item.actualDate) : null;
                 const onTimeHtml = (!planned || !actual) ? '<span class="text-slate-400">-</span>' : (actual <= planned ? '<span class="text-emerald-600">🟢</span>' : '<span class="text-rose-600">🔴</span>');
@@ -13203,7 +13625,11 @@
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeDyeOrderLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                     </tr>
                 `;
-            }).join('');
+            };
+
+            const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
+            const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('dyeingKpiSplitContainer', DYEING_ORDER_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 15);
         }
 
         function addDyeOrderLogFromSelect() {
@@ -13258,11 +13684,28 @@
             document.getElementById('finishingKpiGlueSection').classList.toggle('hidden', currentFinishingKpiTab !== 'glue');
         }
 
+        let finishingKpiEfficiencyPeriodGranularity = 'month';
+        function setFinishingKpiEfficiencyPeriod(value) {
+            finishingKpiEfficiencyPeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderFinishingEfficiencyTable();
+        }
+
+        const FINISHING_EFFICIENCY_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">วันที่</th>
+            <th class="px-2 py-2 text-left">M/O</th>
+            <th class="px-2 py-2 text-left">เกรด</th>
+            <th class="px-2 py-2 text-right">พ.ท แต่งได้ (ตร.ม.)</th>
+            <th class="px-2 py-2 text-right">เวลา (ชม.)</th>
+            <th class="px-2 py-2 text-right">Productivity (m2/hr)</th>
+            <th class="px-2 py-2 text-left">หมายเหตุ</th>
+            <th class="px-2 py-2 text-center">ลบ</th>
+        `;
+
         function renderFinishingEfficiencyTable() {
-            const tbody = document.getElementById('finishingKpiEfficiencyTableBody');
-            const emptyState = document.getElementById('finishingKpiEfficiencyEmptyState');
+            const selectWrap = document.getElementById('finishingKpiEfficiencyPeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('finishingKpiEfficiencyPeriodSelect', 'setFinishingKpiEfficiencyPeriod', finishingKpiEfficiencyPeriodGranularity);
+
             const select = document.getElementById('finishingKpiMoSoSelect');
-            if (!tbody) return;
             if (select) {
                 const currentVal = select.value;
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
@@ -13273,20 +13716,23 @@
                 const log = Array.isArray((order.finishing || {}).efficiencyLog) ? order.finishing.efficiencyLog : [];
                 log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
             });
-            if (flatRows.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
+
+            const periodSummaryEl = document.getElementById('finishingKpiEfficiencyPeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => r.item), 'date', finishingKpiEfficiencyPeriodGranularity, [
+                    { key: 'areaSqm', label: 'พ.ท แต่งได้รวม (ตร.ม.)' }, { key: 'hours', label: 'เวลารวม (ชม.)' }
+                ]);
             }
-            emptyState.classList.add('hidden');
 
             const t = (oi, ii, field, val, width = 'w-14') => `<input type="text" value="${escapeHtml(val || '')}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', this.value)" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
+            const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+            const rowHtml = ({ order, orderIndex, item, itemIndex }) => {
                 const productivity = (Number(item.hours) || 0) > 0 ? ((Number(item.areaSqm) || 0) / (Number(item.hours) || 1)).toFixed(2) : '-';
                 return `
                     <tr class="hover:bg-slate-50/80">
+                        <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
                         <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'grade', item.grade, 'w-10')}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm)}</td>
@@ -13296,7 +13742,11 @@
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeFinishingEfficiencyLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                     </tr>
                 `;
-            }).join('');
+            };
+
+            const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
+            const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('finishingKpiEfficiencySplitContainer', FINISHING_EFFICIENCY_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 8);
         }
 
         function addFinishingEfficiencyLogFromSelect() {
@@ -13307,7 +13757,7 @@
             const order = productionOrders[orderIndex];
             if (!order.finishing) order.finishing = {};
             if (!Array.isArray(order.finishing.efficiencyLog)) order.finishing.efficiencyLog = [];
-            order.finishing.efficiencyLog.push({ grade: 'A', areaSqm: 0, hours: 0, note: '' });
+            order.finishing.efficiencyLog.push({ date: '', grade: 'A', areaSqm: 0, hours: 0, note: '' });
             persistOrderChange(order);
             renderFinishingEfficiencyTable();
         }
@@ -13329,11 +13779,30 @@
         }
 
         // ---- การเบิกใช้กาว (glue usage) -----------------------------------------------------------------
+        let finishingKpiGluePeriodGranularity = 'month';
+        function setFinishingKpiGluePeriod(value) {
+            finishingKpiGluePeriodGranularity = (value === 'day' || value === 'year') ? value : 'month';
+            renderGlueUsageTable();
+        }
+
+        const FINISHING_GLUE_THEAD_HTML = `
+            <th class="px-2 py-2 text-left">ว.ด.ป.</th>
+            <th class="px-2 py-2 text-left">M/O</th>
+            <th class="px-2 py-2 text-right">พื้นที่ (ตร.ม.)</th>
+            <th class="px-2 py-2 text-right">เบิกตามมาตรฐาน (Kg.)</th>
+            <th class="px-2 py-2 text-right">กาว EUR178 (Kg.)</th>
+            <th class="px-2 py-2 text-right">กาว 66012 (Kg.)</th>
+            <th class="px-2 py-2 text-right">กาว TH31 (Kg.)</th>
+            <th class="px-2 py-2 text-right">รวมเบิกกาว (Kg.)</th>
+            <th class="px-2 py-2 text-right">% การเบิกกาวจริง</th>
+            <th class="px-2 py-2 text-center">ลบ</th>
+        `;
+
         function renderGlueUsageTable() {
-            const tbody = document.getElementById('finishingKpiGlueTableBody');
-            const emptyState = document.getElementById('finishingKpiGlueEmptyState');
+            const selectWrap = document.getElementById('finishingKpiGluePeriodSelectWrap');
+            if (selectWrap) selectWrap.innerHTML = periodDropdownHtml('finishingKpiGluePeriodSelect', 'setFinishingKpiGluePeriod', finishingKpiGluePeriodGranularity);
+
             const select = document.getElementById('finishingKpiGlueMoSoSelect');
-            if (!tbody) return;
             if (select) {
                 const currentVal = select.value;
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
@@ -13344,18 +13813,21 @@
                 const log = Array.isArray((order.finishing || {}).glueUsageLog) ? order.finishing.glueUsageLog : [];
                 log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
             });
-            if (flatRows.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
             flatRows.sort((a, b) => String(b.item.date || '').localeCompare(String(a.item.date || '')));
+
+            const periodSummaryEl = document.getElementById('finishingKpiGluePeriodSummary');
+            if (periodSummaryEl) {
+                periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => Object.assign({}, r.item, {
+                    totalKg: (Number(r.item.eur178Kg) || 0) + (Number(r.item.kg66012) || 0) + (Number(r.item.th31Kg) || 0)
+                })), 'date', finishingKpiGluePeriodGranularity, [
+                    { key: 'areaSqm', label: 'พื้นที่รวม (ตร.ม.)' }, { key: 'totalKg', label: 'รวมเบิกกาวรวม (Kg.)' }
+                ]);
+            }
 
             const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateGlueUsageLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateGlueUsageLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
-            tbody.innerHTML = flatRows.map(({ order, orderIndex, item, itemIndex }) => {
+            const rowHtml = ({ order, orderIndex, item, itemIndex }) => {
                 const totalKg = (Number(item.eur178Kg) || 0) + (Number(item.kg66012) || 0) + (Number(item.th31Kg) || 0);
                 const standard = Number(item.standardKg) || 0;
                 const percent = standard > 0 ? ((totalKg / standard) * 100).toFixed(1) + '%' : '-';
@@ -13374,7 +13846,11 @@
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeGlueUsageLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                     </tr>
                 `;
-            }).join('');
+            };
+
+            const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
+            const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
+            renderSplitOrderTypeTables('finishingKpiGlueSplitContainer', FINISHING_GLUE_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 10);
         }
 
         function addGlueUsageLogFromSelect() {
@@ -13824,6 +14300,7 @@
         // ---- 8. ทากาวตกแต่ง: ประสิทธิภาพการตกแต่ง (ผูกกับ M/O เพิ่มแถวใหม่เสมอ) ------------------------
         const FINISHING_EFFICIENCY_COLUMNS = [
             { key: 'moSo', label: 'M/O' },
+            { key: 'date', label: 'วันที่', type: 'date' },
             { key: 'grade', label: 'เกรด' },
             { key: 'areaSqm', label: 'พ.ท แต่งได้ (ตร.ม.)', type: 'number' },
             { key: 'hours', label: 'เวลา (ชม.)', type: 'number' },
@@ -13903,6 +14380,99 @@
                 renderGlueUsageTable();
                 showToast(`นำเข้าสำเร็จ ${added} รายการ${unmatched > 0 ? `, ไม่พบ M/O ${unmatched} รายการ` : ''}`, 'fa-check', 'text-emerald-400');
             });
+        }
+
+        // ============================================================================================
+        // ตัวช่วยกลาง (ใช้ร่วมกันในทุกตาราง KPI ของ 4 แผนก + บันทึกการทอรายวัน):
+        //   (1) แยกแสดงเป็น 2 ตาราง M/O และ S/O ในหน้าเดียว
+        //   (2) dropdown "สรุปยอดรวมตามช่วงเวลา" รายวัน/รายเดือน/รายปี
+        // ============================================================================================
+
+        const THAI_MONTH_ABBR = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+        function bucketKeyForDate(dateStr, granularity) {
+            const norm = normalizeDateString(dateStr);
+            if (!norm || !/^\d{4}-\d{2}-\d{2}$/.test(norm)) return null;
+            if (granularity === 'year') return norm.slice(0, 4);
+            if (granularity === 'month') return norm.slice(0, 7);
+            return norm;
+        }
+
+        function formatBucketLabel(key, granularity) {
+            if (!key) return '-';
+            if (granularity === 'year') return `ปี ${key}`;
+            if (granularity === 'month') {
+                const parts = key.split('-');
+                return `${THAI_MONTH_ABBR[parseInt(parts[1], 10)] || parts[1]} ${parts[0]}`;
+            }
+            return key;
+        }
+
+        // metrics: [{ key, label }] — รวมค่า row[key] ต่อช่วงเวลา คู่กับคอลัมน์จำนวนรายการเสมอ
+        function renderPeriodSummaryTableHtml(rows, dateField, granularity, metrics) {
+            const buckets = {};
+            rows.forEach(r => {
+                const key = bucketKeyForDate(r[dateField], granularity);
+                if (!key) return;
+                if (!buckets[key]) { buckets[key] = { count: 0, sums: {} }; metrics.forEach(m => { buckets[key].sums[m.key] = 0; }); }
+                buckets[key].count += 1;
+                metrics.forEach(m => { buckets[key].sums[m.key] += Number(r[m.key]) || 0; });
+            });
+            const keys = Object.keys(buckets).sort().reverse();
+            if (keys.length === 0) return '<p class="text-[11px] text-slate-400 py-4 text-center">ไม่มีข้อมูลวันที่สำหรับสรุปยอด</p>';
+            return `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+                            <tr>
+                                <th class="px-2 py-2 text-left">ช่วงเวลา</th>
+                                <th class="px-2 py-2 text-right">จำนวนรายการ</th>
+                                ${metrics.map(m => `<th class="px-2 py-2 text-right">${escapeHtml(m.label)}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${keys.map(k => `
+                                <tr class="hover:bg-slate-50/80">
+                                    <td class="px-2 py-1.5 font-semibold text-indigo-700 whitespace-nowrap">${escapeHtml(formatBucketLabel(k, granularity))}</td>
+                                    <td class="px-2 py-1.5 text-right">${buckets[k].count}</td>
+                                    ${metrics.map(m => `<td class="px-2 py-1.5 text-right">${buckets[k].sums[m.key].toFixed(2)}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function periodDropdownHtml(id, onchangeFn, currentValue) {
+            const opts = [['day', 'รายวัน'], ['month', 'รายเดือน'], ['year', 'รายปี']];
+            return `<select id="${id}" onchange="${onchangeFn}(this.value)" class="text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                ${opts.map(([v, l]) => `<option value="${v}" ${currentValue === v ? 'selected' : ''}>${l}</option>`).join('')}
+            </select>`;
+        }
+
+        // สร้าง 2 ตาราง (M/O และ S/O) ลงใน container เดียวจาก rowsHtml ที่แยกไว้แล้ว — theadHtml คือ
+        // <th>...</th> ทั้งแถวหัวตาราง (ใช้ซ้ำกับทั้งสองตาราง), colspan คือจำนวนคอลัมน์ (สำหรับข้อความ
+        // "ไม่มีรายการ" ตอนตารางว่าง)
+        function renderSplitOrderTypeTables(containerId, theadHtml, moRowsHtml, soRowsHtml, moCount, soCount, colspan) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const section = (label, badgeCls, rowsHtml, count) => `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-3">
+                    <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                        <h4 class="text-xs font-bold ${badgeCls}">${label}</h4>
+                        <span class="text-[11px] text-slate-400">${count} รายการ</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]"><tr>${theadHtml}</tr></thead>
+                            <tbody class="divide-y divide-slate-100">${rowsHtml || `<tr><td colspan="${colspan}" class="text-center text-slate-400 py-6 text-xs">ไม่มีรายการ</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = section('<i class="fa-solid fa-tag mr-1"></i> M/O', 'text-indigo-700', moRowsHtml, moCount)
+                + section('<i class="fa-solid fa-tag mr-1"></i> S/O', 'text-amber-700', soRowsHtml, soCount);
         }
 
         function escapeHtml(str) {
