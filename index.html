@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -512,11 +515,12 @@
                         <option value="FAIL">FAIL</option>
                         <option value="PENDING">PENDING</option>
                     </select>
-                    <!-- Superseded by the department tab-pills row inside recordsViewContainer (below the
-                         table toolbar) — kept in the DOM (just visually hidden) since filterTable()/
-                         resetFilters() still read/write its value; removing it would require touching
-                         that already-working logic for no benefit. -->
-                    <select id="deptFilter" onchange="filterTable()" class="hidden">
+                    <!-- UPDATED (2026-09-16): the friendlier department tab-pills row has moved out of
+                         this tab entirely (now living in the "แผนผังการผลิต" tab, next to the board), so
+                         this <select> is un-hidden again to stay as the only on-tab way to filter this
+                         table by department. filterTable()/resetFilters()/setDepartmentTab() all still
+                         read/write its value exactly as before — nothing about that logic changed. -->
+                    <select id="deptFilter" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">ทุกแผนก</option>
                         <option value="แผนกวางแผน">แผนกวางแผน</option>
                         <option value="ดีไซน์/ขยายลาย">ดีไซน์/ขยายลาย</option>
@@ -645,6 +649,14 @@
                     <i class="fa-solid fa-plus-circle"></i> เพิ่ม M/O, S/O ใหม่
                 </button>
             </div>
+
+            <!-- REMOVED (2026-09-16): the "กรองรายงาน QC ตามแผนก" pills that briefly lived here (moved
+                 from the QC records tab) were pulled back out — per the user's feedback they duplicated
+                 the board's own department layout tabs directly below and weren't needed as a second row.
+                 The QC records table's department filter still works via the #deptFilter <select> in the
+                 "รายงาน QC ทั้งหมด" tab's own toolbar (now un-hidden there), and setDepartmentTab()/
+                 DEPT_TAB_BTN_IDS/DEPT_TAB_COUNT_IDS are untouched in case this is ever revisited. -->
+
             <!-- NEW (2026-09-09): department tab-pills — click one to focus on just that column
                  (expanded full-width) instead of scanning all 4 side by side; "ทั้งหมด" restores the
                  normal 4-column Kanban grid. Purely a visibility/layout toggle on top of the SAME 4
@@ -1450,43 +1462,12 @@
         <!-- Records View: the full QC audit trail (every department's inspection records), plus a
              company-wide weekly summary report (counts + pass rate for the last 8 weeks). -->
         <div id="recordsViewContainer" class="space-y-4 hidden">
-            <!-- NEW (2026-09-09): Department tab-pills — quick way to focus on one department's QC
-                 records at a time instead of scrolling a mixed table or reaching for a dropdown.
-                 Each pill mirrors the pre-existing #deptFilter <select> value via setDepartmentTab(),
-                 so it combines correctly with search/status/month/M-O-S-O and with the global
-                 order-type/market switches above — the count badge on each pill always matches what
-                 clicking it will show. -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3">
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
-                    <button onclick="setDepartmentTab('')" id="deptTabAllBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
-                        <i class="fa-solid fa-layer-group"></i> ทั้งหมด
-                        <span id="deptTabCountAll" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white/20 text-white text-[10px] font-bold">0</span>
-                    </button>
-                    <!-- NEW (2026-09-16): reordered to sit right after "แผนกวางแผน" (ต่อจากแผนกวางแผน,
-                         per the user's request) — ids/onclick unchanged, only the visual position of
-                         these two pills is swapped, so setDepartmentTab()/DEPT_TAB_BTN_IDS need no changes. -->
-                    <button onclick="setDepartmentTab('แผนกวางแผน')" id="deptTabBtn1" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-calendar-days"></i> แผนกวางแผน
-                        <span id="deptTabCount1" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
-                    </button>
-                    <button onclick="setDepartmentTab('ดีไซน์/ขยายลาย')" id="deptTabBtn0" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-pen-ruler"></i> ดีไซน์/ขยายลาย
-                        <span id="deptTabCount0" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
-                    </button>
-                    <button onclick="setDepartmentTab('แผนกย้อม')" id="deptTabBtn2" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-droplet"></i> แผนกย้อม
-                        <span id="deptTabCount2" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
-                    </button>
-                    <button onclick="setDepartmentTab('แผนกทอมือ')" id="deptTabBtn3" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-hand-holding-heart"></i> แผนกทอมือ
-                        <span id="deptTabCount3" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
-                    </button>
-                    <button onclick="setDepartmentTab('แผนกตกแต่ง/ทากาว/บรรจุภัณฑ์')" id="deptTabBtn4" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-box-archive"></i> ตกแต่ง/บรรจุภัณฑ์
-                        <span id="deptTabCount4" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
-                    </button>
-                </div>
-            </div>
+            <!-- REMOVED (2026-09-16): the department tab-pills row that used to live here was moved to the
+                 "แผนผังการผลิต" tab and then removed altogether — it duplicated that tab's own department
+                 layout tabs (ทั้งหมด/แผนกขาย/วางแผน/ดีไซน์/ย้อม/ทอ/ตกแต่ง-บรรจุ/แจ้งเตือน), which the user
+                 pointed out. Filtering this table by department is unchanged either way: it's the
+                 un-hidden #deptFilter <select> in the toolbar above (setDepartmentTab()/filterTable()
+                 still read/write it) — that's now the only department-filter control for this table. -->
 
             <!-- Weekly QC Summary Report: company-wide totals per week, most recent 8 weeks. -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -4278,10 +4259,23 @@
                     detailText = 'งานเสร็จ 100% แล้ว (ยืนยันพร้อมส่งโดยไม่ผ่านการบันทึกผล QC)';
                 }
 
+                // NEW (2026-09-16): "ในหน้ารายการรอส่ง ให้มีชื่อลูกค้าและเลขที่ PO,Project แสดงด้วย" — this
+                // row previously only showed the bare M/O, S/O code, so telling two ready-to-ship orders
+                // apart meant opening each one. findOrderByMoSo() works for BOTH row sources here (the
+                // legacy 'qc' rows and the newer 'order' rows) since every M/O, S/O still has a matching
+                // productionOrders entry either way — only how its readiness was DERIVED differs.
+                const matchedOrder = findOrderByMoSo(row.moSo);
+                const customerLineHtml = (matchedOrder && (matchedOrder.customerName || matchedOrder.customerPO))
+                    ? `<p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(matchedOrder.customerName || '-')}${matchedOrder.customerPO ? ` • PO/Project ${escapeHtml(matchedOrder.customerPO)}` : ''}</p>`
+                    : '';
+
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold ${orderTypeTextClass(getOrderTypeByMoSo(row.moSo))} text-xs font-mono">${orderTypeBadgeHtml(getOrderTypeByMoSo(row.moSo))}${marketBadgeHtml(getMarketByMoSo(row.moSo))}${escapeHtml(row.moSo)}</td>
+                    <td class="py-3.5 px-4">
+                        <p class="font-bold ${orderTypeTextClass(getOrderTypeByMoSo(row.moSo))} text-xs font-mono">${orderTypeBadgeHtml(getOrderTypeByMoSo(row.moSo))}${marketBadgeHtml(getMarketByMoSo(row.moSo))}${escapeHtml(row.moSo)}</p>
+                        ${customerLineHtml}
+                    </td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(row.date || '-')}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600 max-w-sm truncate" title="${escapeHtml(detailText)}">${escapeHtml(detailText)}</td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">${escapeHtml(row.inspector || '-')}</td>
@@ -7630,6 +7624,16 @@
         // life of the order, same "onchange -> updateOrderField -> persist+rerender" pattern as every
         // other field in this modal. Deliberately excludes price/amount/billing columns (Unit Price,
         // Amount, Grand Total, PI NO., INV. NO., payment terms) per the user's request.
+        // MERGED (2026-09-16): this used to be two separate cards — "ข้อมูลเพิ่มเติม (จากใบเปิด M/O)" and
+        // "ข้อกำหนดสำหรับฝ่ายผลิต" — shown back-to-back in the order detail modal. Per the user's request
+        // ("รายละเอียดรายการซ้ำกัน ให้ตัดออก ... รวมเป็นข้อมูลเพิ่มเติมจากใบ M/O") they're now ONE card under
+        // this single heading, with the former production-requirements fields as a labeled subsection
+        // inside it, and the two overlapping free-text notes fields (หมายเหตุ/Remarks and คำสั่งพิเศษถึง
+        // ฝ่ายผลิต/QC — both general free-text notes on the order) placed together at the end so they read
+        // as one "notes" area instead of being split across two separate cards. No field was deleted —
+        // every input here is still the same order.<field>, still saved via updateOrderField() exactly as
+        // before, so nothing about persistence/printing (buildProductionWorkOrderPrintHTML reads these same
+        // order fields directly, not through this function) changed.
         function renderOrderExtraInfoBlock(order, orderIndex) {
             const f = (field, value) => `updateOrderField(${orderIndex}, '${field}', this.value)`;
             return `
@@ -7687,66 +7691,63 @@
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ขนาดพรม (Carpet Size, ข้อความอิสระ)</label>
                         <textarea rows="2" onchange="${f('carpetSizeNote')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.carpetSizeNote || '')}</textarea>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">หมายเหตุ (Remarks)</label>
-                        <textarea rows="2" onchange="${f('orderRemark')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.orderRemark || '')}</textarea>
-                    </div>
-                </div>
-            `;
-        }
 
-        // NEW (FIX 2026-09): "ข้อกำหนดสำหรับฝ่ายผลิต" — editable view of the fields collected on the
-        // "เพิ่ม M/O, S/O ใหม่" form's production-requirements panel (see submitNewOrder()/normalizeOrder()).
-        // Shown in the order detail modal so these can still be corrected/filled in later, and reused
-        // as-is by buildProductionWorkOrderPrintHTML() for the printable ใบสั่งเปิดงานผลิต.
-        function renderProductionRequirementsBlock(order, orderIndex) {
-            const f = field => `updateOrderField(${orderIndex}, '${field}', this.value)`;
-            return `
-                <div class="bg-indigo-50/40 border border-indigo-100 rounded-xl p-3.5 space-y-2.5">
-                    <span class="text-xs font-bold text-indigo-800"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</span>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชนิดไหม (Yarn type)</label>
-                            <input type="text" value="${escapeHtml(order.yarnType || '')}" onchange="${f('yarnType')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                    <!-- MERGED-IN subsection (was its own separate card: "ข้อกำหนดสำหรับฝ่ายผลิต") -->
+                    <div class="pt-2 mt-1 border-t border-slate-200 space-y-2.5">
+                        <span class="text-[11px] font-bold text-indigo-700"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชนิดไหม (Yarn type)</label>
+                                <input type="text" value="${escapeHtml(order.yarnType || '')}" onchange="${f('yarnType')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">สเปกทอ (Tufting spec)</label>
+                                <input type="text" value="${escapeHtml(order.tuftingSpec || '')}" onchange="${f('tuftingSpec')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวงาน (Surface)</label>
+                                <input type="text" value="${escapeHtml(order.surface || '')}" onchange="${f('surface')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวสัมผัส (Texture)</label>
+                                <input type="text" value="${escapeHtml(order.texture || '')}" onchange="${f('texture')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">สเปกทอ (Tufting spec)</label>
-                            <input type="text" value="${escapeHtml(order.tuftingSpec || '')}" onchange="${f('tuftingSpec')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตำแหน่งและรายละเอียดสี</label>
+                            <textarea rows="2" onchange="${f('colorPlacement')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.colorPlacement || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวงาน (Surface)</label>
-                            <input type="text" value="${escapeHtml(order.surface || '')}" onchange="${f('surface')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">แผนไหม/สีสำหรับผลิต</label>
+                            <textarea rows="3" onchange="${f('yarnPlan')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.yarnPlan || '')}</textarea>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวสัมผัส (Texture)</label>
-                            <input type="text" value="${escapeHtml(order.texture || '')}" onchange="${f('texture')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตำแหน่งและรายละเอียดสี</label>
-                        <textarea rows="2" onchange="${f('colorPlacement')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.colorPlacement || '')}</textarea>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">แผนไหม/สีสำหรับผลิต</label>
-                        <textarea rows="3" onchange="${f('yarnPlan')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.yarnPlan || '')}</textarea>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">งานทากาว (Latexing)</label>
-                            <input type="text" value="${escapeHtml(order.latexing || '')}" onchange="${f('latexing')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Tuft bind</label>
-                            <input type="text" value="${escapeHtml(order.tuftBind || '')}" onchange="${f('tuftBind')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Sprouting / Label</label>
-                            <input type="text" value="${escapeHtml(order.sproutingLabel || '')}" onchange="${f('sproutingLabel')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">งานทากาว (Latexing)</label>
+                                <input type="text" value="${escapeHtml(order.latexing || '')}" onchange="${f('latexing')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Tuft bind</label>
+                                <input type="text" value="${escapeHtml(order.tuftBind || '')}" onchange="${f('tuftBind')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Sprouting / Label</label>
+                                <input type="text" value="${escapeHtml(order.sproutingLabel || '')}" onchange="${f('sproutingLabel')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">คำสั่งพิเศษถึงฝ่ายผลิต / QC</label>
-                        <textarea rows="2" onchange="${f('productionInstruction')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.productionInstruction || '')}</textarea>
+
+                    <!-- The two overlapping free-text notes fields, kept together as one "notes" area
+                         instead of being split across two separate cards. -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 mt-1 border-t border-slate-200">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">หมายเหตุ (Remarks)</label>
+                            <textarea rows="2" onchange="${f('orderRemark')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.orderRemark || '')}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">คำสั่งพิเศษถึงฝ่ายผลิต / QC</label>
+                            <textarea rows="2" onchange="${f('productionInstruction')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.productionInstruction || '')}</textarea>
+                        </div>
                     </div>
                 </div>
             `;
@@ -8212,9 +8213,16 @@
             const searchInput = document.getElementById('overviewSearchInput');
             const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
+            // FIX (2026-09-16): "หน้าภาพรวมการผลิต ถ้า M/O,S/O ไหนเสร็จรอส่งแล้ว ให้ตัดออกจากหน้านี้ ย้าย
+            // ไปอยู่หน้ารอส่งแทน" — this previously only excluded 'shipped', so an order that had already
+            // finished production and moved to "รอส่ง" (ready_to_ship) still lingered here too, duplicating
+            // it with the "รายการรอส่ง" tab. Excluding ready_to_ship as well keeps each order showing in
+            // exactly one place: ภาพรวมการผลิต while still in production, รายการรอส่ง once finished and
+            // waiting to ship, จัดส่งเรียบร้อยแล้ว once shipped.
             let activeWithIndex = [];
             productionOrders.forEach((order, orderIndex) => {
-                if (getEffectiveStage(order) === 'shipped') return;
+                const stage = getEffectiveStage(order);
+                if (stage === 'shipped' || stage === 'ready_to_ship') return;
                 activeWithIndex.push({ order, orderIndex });
             });
 
@@ -11056,8 +11064,9 @@
             document.getElementById('orderDetailStepper').innerHTML = renderStageStepper(getEffectiveStage(order)) + (detailWarningHtml ? `<div class="mt-1.5">${detailWarningHtml}</div>` : '');
             const orderSizeItemsHtml = renderOrderSizeItemsBlock(order, orderIndex);
             const orderDesignImageHtml = renderDesignImageBlock(order, orderIndex, 'order', null, 'รูปดีไซน์ของ M/O นี้ (ถ้ามี)');
+            // MERGED (2026-09-16): renderOrderExtraInfoBlock() now includes what used to be the separate
+            // renderProductionRequirementsBlock() card as an inner subsection — see its own comment.
             const orderExtraInfoHtml = renderOrderExtraInfoBlock(order, orderIndex);
-            const orderProductionRequirementsHtml = renderProductionRequirementsBlock(order, orderIndex);
             const orderSpecificationsHtml = renderSpecificationsBlock(order, orderIndex);
             // "แผนกดีไซน์/ขยายลาย" is inserted right after "แผนกวางแผน" (ต่อจากแผนกวางแผน per the request),
             // not appended to ORDER_STAGES — see renderDesignSectionHtml()'s comment for why.
@@ -11070,7 +11079,7 @@
             // user isn't วางแผน/Admin — everything here (size items, design image, PO/customer/due date
             // etc.) is master M/O info, not any one department's working data.
             document.getElementById('orderDetailBody').innerHTML =
-                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}${orderProductionRequirementsHtml}${orderSpecificationsHtml}</div>` + stageSectionsHtml;
+                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}${orderSpecificationsHtml}</div>` + stageSectionsHtml;
             applyDeptPermissionGating();
         }
 
