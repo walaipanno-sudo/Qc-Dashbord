@@ -1333,6 +1333,35 @@
                         </div>
                     </div>
 
+                    <!-- NEW (2026-09-15): "ไหมเข้าจอ/เหลือแต่ละสี" + "ย้อมเพิ่ม" — see saveWeavingLogEntry()
+                         for how these two draft lists get attached on save: yarnColors rides along on
+                         THIS daily log entry itself (repeats per date+loom, per the user's request), while
+                         each ย้อมเพิ่ม row is pushed straight into order.dyeing.extraDyeingLog[] — the SAME
+                         array the "บันทึกย้อมเพิ่ม" report already under แผนกวางแผน (KPI) manages, reusing
+                         that feature entirely rather than duplicating it. Any yarnColors row with a
+                         remaining weight also auto-appends a row into surplusYarnLedger (ทะเบียนไหม Surplus
+                         รายเดือน) tagged with this M/O + รหัสสี, per "ไหมเหลือจะเป็น Surplus โอนเอาแผนก
+                         วางแผน". Both auto-created downstream rows carry a weavingSourceKey so re-saving or
+                         deleting this same date+loom entry replaces/removes them instead of piling up
+                         duplicates — see syncWeavingYarnDownstream()/removeWeavingYarnDownstream(). -->
+                    <div class="border border-cyan-100 bg-cyan-50/40 rounded-xl p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-bold text-cyan-800"><i class="fa-solid fa-palette mr-1"></i> ไหมเข้าจอ / เหลือแต่ละสี</p>
+                            <button type="button" onclick="addWeavingLogYarnColorRow()" class="text-[11px] font-semibold text-cyan-700 hover:text-cyan-900 border border-dashed border-cyan-300 rounded-lg px-2 py-1"><i class="fa-solid fa-plus"></i> เพิ่มสี</button>
+                        </div>
+                        <div id="weavingLogYarnColorsList" class="space-y-1.5"></div>
+                        <p class="text-[10px] text-slate-400">ไหมเหลือของแต่ละสีจะถูกโอนเป็น Surplus เข้าทะเบียนไหม Surplus รายเดือนของแผนกวางแผนอัตโนมัติ (ผูกกับ M/O และรหัสสีนี้)</p>
+                    </div>
+
+                    <div class="border border-amber-100 bg-amber-50/40 rounded-xl p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-bold text-amber-800"><i class="fa-solid fa-flask mr-1"></i> ย้อมเพิ่ม (ถ้ามี)</p>
+                            <button type="button" onclick="addWeavingLogExtraDyeRow()" class="text-[11px] font-semibold text-amber-700 hover:text-amber-900 border border-dashed border-amber-300 rounded-lg px-2 py-1"><i class="fa-solid fa-plus"></i> เพิ่มรายการย้อมเพิ่ม</button>
+                        </div>
+                        <div id="weavingLogExtraDyeList" class="space-y-1.5"></div>
+                        <p class="text-[10px] text-slate-400">รายการนี้จะบันทึกไปที่ "บันทึกย้อมเพิ่ม" ของแผนกวางแผน (KPI) ตัวเดียวกัน — ดูรายละเอียดเต็มได้ที่นั่น</p>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div class="border border-teal-100 bg-teal-50/40 rounded-xl p-3 space-y-2">
                             <p class="text-xs font-bold text-teal-800"><i class="fa-solid fa-sun mr-1"></i> กะปกติ</p>
@@ -1478,7 +1507,7 @@
                     <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-warehouse mr-2 text-indigo-600"></i> ไหม Surplus คงเหลือ (สรุปรายเดือน)</h3>
-                            <p class="text-[11px] text-slate-400 mt-0.5">ยอดรวมทั้งบริษัท ไม่ผูกกับ M/O ใดโดยเฉพาะ — บันทึกลงเครื่องนี้ (ยังไม่ซิงค์ Google Sheet)</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">ยอดรวมทั้งบริษัท ไม่ผูกกับ M/O ใดโดยเฉพาะ (ยกเว้นแถวที่โอนมาจากบันทึกทอรายวันอัตโนมัติ ซึ่งจะมี M/O และรหัสสีติดมาด้วย) — บันทึกลงเครื่องนี้ (ยังไม่ซิงค์ Google Sheet)</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5">
                             <button onclick="addSurplusLedgerEntry()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-lg shadow transition text-xs flex items-center gap-1.5">
@@ -1505,6 +1534,8 @@
                             <thead class="bg-slate-50 text-slate-500 uppercase text-[10px]">
                                 <tr>
                                     <th class="px-2 py-2 text-left">เดือน</th>
+                                    <th class="px-2 py-2 text-left">M/O, S/O</th>
+                                    <th class="px-2 py-2 text-left">รหัสสี</th>
                                     <th class="px-2 py-2 text-right">น้ำหนักไหมเข้า Surplus (Kg.)</th>
                                     <th class="px-2 py-2 text-right">น้ำหนักเบิกออกจาก Surplus (Kg.)</th>
                                     <th class="px-2 py-2 text-right">น้ำหนักไหมใน Surplus ทั้งหมดในคลัง (Kg.)</th>
@@ -7383,6 +7414,151 @@
             return diff > 0 ? Math.round(diff * 100) / 100 : 0;
         }
 
+        // =========================================================================================
+        // NEW (2026-09-15): "ไหมเข้าจอ/เหลือแต่ละสี" + "ย้อมเพิ่ม" draft lists for the weaving daily log
+        // form — plain in-memory arrays edited live in the form and only attached to the order on
+        // saveWeavingLogEntry(), same "nothing saved until บันทึก is pressed" convention as the rest of
+        // this form. See the HTML comment above weavingLogYarnColorsList/weavingLogExtraDyeList for how
+        // each list's rows flow downstream (yarnColors → this entry itself; extra-dye rows →
+        // order.dyeing.extraDyeingLog[]; any yarnColors remaining weight → surplusYarnLedger).
+        // =========================================================================================
+        let weavingLogYarnColorsDraft = [];
+        let weavingLogExtraDyeDraft = [];
+
+        function renderWeavingLogYarnColorsList() {
+            const container = document.getElementById('weavingLogYarnColorsList');
+            if (!container) return;
+            if (weavingLogYarnColorsDraft.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-slate-400">ยังไม่มีรายการสี — กด "เพิ่มสี" ถ้ามีไหมเข้าจอวันนี้</p>';
+                return;
+            }
+            container.innerHTML = weavingLogYarnColorsDraft.map((row, i) => `
+                <div class="flex items-center gap-1.5">
+                    <input type="text" value="${escapeHtml(row.colorCode || '')}" placeholder="รหัสสี/สี" oninput="updateWeavingLogYarnColorRow(${i}, 'colorCode', this.value)" class="w-28 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                    <input type="number" step="0.01" value="${row.qtyInKg || ''}" placeholder="เข้า (กก.)" oninput="updateWeavingLogYarnColorRow(${i}, 'qtyInKg', Number(this.value))" class="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-right">
+                    <span class="text-[10px] text-slate-400">กก. เข้า</span>
+                    <input type="number" step="0.01" value="${row.remainingKg || ''}" placeholder="เหลือ (กก.)" oninput="updateWeavingLogYarnColorRow(${i}, 'remainingKg', Number(this.value))" class="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-right">
+                    <span class="text-[10px] text-slate-400">กก. เหลือ</span>
+                    <button type="button" onclick="removeWeavingLogYarnColorRow(${i})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addWeavingLogYarnColorRow() {
+            weavingLogYarnColorsDraft.push({ colorCode: '', qtyInKg: 0, remainingKg: 0 });
+            renderWeavingLogYarnColorsList();
+        }
+
+        function updateWeavingLogYarnColorRow(index, field, value) {
+            if (!weavingLogYarnColorsDraft[index]) return;
+            weavingLogYarnColorsDraft[index][field] = value;
+        }
+
+        function removeWeavingLogYarnColorRow(index) {
+            weavingLogYarnColorsDraft.splice(index, 1);
+            renderWeavingLogYarnColorsList();
+        }
+
+        function renderWeavingLogExtraDyeList() {
+            const container = document.getElementById('weavingLogExtraDyeList');
+            if (!container) return;
+            if (weavingLogExtraDyeDraft.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-slate-400">ไม่มีการย้อมเพิ่มวันนี้</p>';
+                return;
+            }
+            container.innerHTML = weavingLogExtraDyeDraft.map((row, i) => `
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <input type="text" value="${escapeHtml(row.code || '')}" placeholder="รหัสสี" oninput="updateWeavingLogExtraDyeRow(${i}, 'code', this.value)" class="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                    <input type="number" step="0.01" value="${row.orderedKg || ''}" placeholder="จำนวนย้อมเพิ่ม (กก.)" oninput="updateWeavingLogExtraDyeRow(${i}, 'orderedKg', Number(this.value))" class="w-28 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-right">
+                    <span class="text-[10px] text-slate-400">กก. ย้อมเพิ่ม</span>
+                    <input type="number" step="0.01" value="${row.surplusKg || ''}" placeholder="เหลือ (กก.)" oninput="updateWeavingLogExtraDyeRow(${i}, 'surplusKg', Number(this.value))" class="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-right">
+                    <span class="text-[10px] text-slate-400">กก. เหลือ</span>
+                    <input type="text" value="${escapeHtml(row.note || '')}" placeholder="ทำไมถึงย้อมเพิ่ม" oninput="updateWeavingLogExtraDyeRow(${i}, 'note', this.value)" class="flex-1 min-w-[140px] px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                    <button type="button" onclick="removeWeavingLogExtraDyeRow(${i})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addWeavingLogExtraDyeRow() {
+            weavingLogExtraDyeDraft.push({ code: '', orderedKg: 0, surplusKg: 0, note: '' });
+            renderWeavingLogExtraDyeList();
+        }
+
+        function updateWeavingLogExtraDyeRow(index, field, value) {
+            if (!weavingLogExtraDyeDraft[index]) return;
+            weavingLogExtraDyeDraft[index][field] = value;
+        }
+
+        function removeWeavingLogExtraDyeRow(index) {
+            weavingLogExtraDyeDraft.splice(index, 1);
+            renderWeavingLogExtraDyeList();
+        }
+
+        // Thai month label ("ก.ย. 2026") for a surplusYarnLedger row auto-created from a weaving entry —
+        // same THAI_MONTH_ABBR table the period-summary widgets use, kept in the same Gregorian-year style
+        // as formatBucketLabel() for consistency (the surplus ledger's own year-summary already handles
+        // either Buddhist or Gregorian years via regex, so this is just a readable label, not a parsed key).
+        function weavingDateToMonthLabel(dateStr) {
+            const norm = normalizeDateString(dateStr);
+            if (!norm) return '';
+            const parts = norm.split('-');
+            return `${THAI_MONTH_ABBR[parseInt(parts[1], 10)] || parts[1]} ${parts[0]}`;
+        }
+
+        // Replaces (never accumulates) the extraDyeingLog + surplusYarnLedger rows this ONE weaving daily
+        // log entry (identified by weavingSourceKey = M/O::date::loom) previously auto-created, then adds
+        // fresh ones from the current form drafts — so editing and re-saving the same date+loom entry
+        // never piles up duplicate downstream rows. Called from saveWeavingLogEntry().
+        function syncWeavingYarnDownstream(order, sourceKey, date) {
+            removeWeavingYarnDownstream(sourceKey);
+            weavingLogExtraDyeDraft.forEach(row => {
+                if (!row.code) return;
+                if (!order.dyeing) order.dyeing = {};
+                if (!Array.isArray(order.dyeing.extraDyeingLog)) order.dyeing.extraDyeingLog = [];
+                order.dyeing.extraDyeingLog.push({
+                    date, location: '', no: '', code: row.code, yarnType: '',
+                    orderedKg: Number(row.orderedKg) || 0, beforeKg: '', afterKg: '', dyedDate: '',
+                    surplusKg: Number(row.surplusKg) || 0, note: row.note || '',
+                    weavingSourceKey: sourceKey
+                });
+            });
+            weavingLogYarnColorsDraft.forEach(row => {
+                const remaining = Number(row.remainingKg) || 0;
+                if (!row.colorCode || remaining <= 0) return;
+                surplusYarnLedger.push({
+                    id: 'surplus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                    monthLabel: weavingDateToMonthLabel(date),
+                    weightInKg: remaining,
+                    moSo: order.moSo,
+                    colorCode: row.colorCode,
+                    note: `โอนจากบันทึกทอ ${order.moSo || ''} วันที่ ${date}`,
+                    weavingSourceKey: sourceKey
+                });
+            });
+            saveSurplusLedgerToLocal();
+            renderKpiExtraDyeingLog();
+            renderKpiSurplusLedger();
+        }
+
+        // Removes every extraDyeingLog/surplusYarnLedger row previously auto-created by this weaving
+        // entry — called before re-adding fresh ones on save, and from deleteWeavingLogEntry() when the
+        // source entry itself is deleted.
+        function removeWeavingYarnDownstream(sourceKey) {
+            productionOrders.forEach(o => {
+                if (o.dyeing && Array.isArray(o.dyeing.extraDyeingLog)) {
+                    o.dyeing.extraDyeingLog = o.dyeing.extraDyeingLog.filter(item => item.weavingSourceKey !== sourceKey);
+                }
+            });
+            surplusYarnLedger = surplusYarnLedger.filter(item => item.weavingSourceKey !== sourceKey);
+            saveSurplusLedgerToLocal();
+            renderKpiExtraDyeingLog();
+            renderKpiSurplusLedger();
+        }
+
+        function weavingYarnSourceKey(moSo, date, loom) {
+            return `${moSo}::${date}::${loom}`;
+        }
+
         // Builds the {regular, ot, sqm, hours, efficiency, employees, gradeTargetEfficiency, gradePercent}
         // shape shared by both the live preview (recalcWeavingLogPreview()) and the actual saved entry
         // (saveWeavingLogEntry()) — one calculation, read from the DOM once, so the preview never shows
@@ -7466,6 +7642,10 @@
             const notFoundEl = document.getElementById('weavingLogMoSoNotFound');
             if (notFoundEl) notFoundEl.classList.add('hidden');
             weavingLogEditContext = null;
+            weavingLogYarnColorsDraft = [];
+            weavingLogExtraDyeDraft = [];
+            renderWeavingLogYarnColorsList();
+            renderWeavingLogExtraDyeList();
             const saveBtn = document.getElementById('weavingLogSaveBtn');
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>บันทึกรายการทอวันนี้';
             recalcWeavingLogPreview();
@@ -7493,21 +7673,27 @@
 
             // If editing an existing entry AND the M/O, date, or loom changed, the old entry no longer
             // belongs where it used to live — remove it from its original order first so it doesn't
-            // linger as a stale duplicate.
+            // linger as a stale duplicate. Also clean up whatever that old entry had auto-created
+            // downstream under its OLD weavingSourceKey (extraDyeingLog rows, surplusYarnLedger rows) —
+            // otherwise those would be orphaned once this save re-creates fresh ones under the new key.
             if (weavingLogEditContext) {
                 const ctx = weavingLogEditContext;
                 const movedAway = ctx.orderIndex !== orderIndex || ctx.date !== date || String(ctx.loom) !== String(loom);
                 if (movedAway) {
                     const oldOrder = productionOrders[ctx.orderIndex];
-                    if (oldOrder && Array.isArray(oldOrder.weaving.dailyLog)) {
-                        oldOrder.weaving.dailyLog = oldOrder.weaving.dailyLog.filter(l => !(l.date === ctx.date && String(l.loom || '') === String(ctx.loom || '')));
-                        recomputeWeavingSqmFromLog(oldOrder);
+                    if (oldOrder) {
+                        if (Array.isArray(oldOrder.weaving.dailyLog)) {
+                            oldOrder.weaving.dailyLog = oldOrder.weaving.dailyLog.filter(l => !(l.date === ctx.date && String(l.loom || '') === String(ctx.loom || '')));
+                            recomputeWeavingSqmFromLog(oldOrder);
+                        }
+                        removeWeavingYarnDownstream(weavingYarnSourceKey(oldOrder.moSo, ctx.date, ctx.loom));
                         persistOrderChange(oldOrder);
                     }
                 }
             }
 
             if (!Array.isArray(order.weaving.dailyLog)) order.weaving.dailyLog = [];
+            const sourceKey = weavingYarnSourceKey(order.moSo, date, loom);
             const entry = {
                 date, loom,
                 pieceNo: document.getElementById('weavingLogPieceNo').value.trim(),
@@ -7522,11 +7708,20 @@
                 hours: shifts.hours,
                 efficiency: shifts.efficiency,
                 employees: shifts.employees,
+                yarnColors: weavingLogYarnColorsDraft.filter(row => row.colorCode).map(row => ({
+                    colorCode: row.colorCode, qtyInKg: Number(row.qtyInKg) || 0, remainingKg: Number(row.remainingKg) || 0
+                })),
                 source: 'manual'
             };
             const existingIdx = order.weaving.dailyLog.findIndex(l => l.date === date && String(l.loom || '') === String(loom || ''));
             if (existingIdx === -1) order.weaving.dailyLog.push(entry);
             else order.weaving.dailyLog[existingIdx] = entry; // upsert — saving the same (date, loom) twice never double-counts
+
+            // NEW (2026-09-15): push this entry's ย้อมเพิ่ม rows into order.dyeing.extraDyeingLog[] (the
+            // same log แผนกวางแผน's KPI already manages) and any yarnColors remaining weight into
+            // surplusYarnLedger — see syncWeavingYarnDownstream()'s comment above for why this replaces
+            // rather than accumulates.
+            syncWeavingYarnDownstream(order, sourceKey, date);
 
             recomputeWeavingSqmFromLog(order);
             persistOrderChange(order);
@@ -7567,6 +7762,23 @@
             document.querySelectorAll('.weaving-log-emp-ot').forEach(cb => { cb.checked = (ot.employees || []).includes(cb.dataset.name); });
             const loggedSoFar = (order.weaving.dailyLog || []).filter(l => l.date < date).reduce((s, l) => s + (Number(l.sqm) || 0), 0);
             document.getElementById('weavingLogRemainingBefore').value = Math.max(0, Math.round(((Number(order.totalSqm) || 0) - loggedSoFar) * 100) / 100) || '';
+
+            // Load "ไหมเข้าจอ/เหลือแต่ละสี" straight back from this entry, and reconstruct "ย้อมเพิ่ม" from
+            // whichever order.dyeing.extraDyeingLog rows this same entry auto-created last time (matched
+            // by weavingSourceKey) — see syncWeavingYarnDownstream()/saveWeavingLogEntry().
+            weavingLogYarnColorsDraft = Array.isArray(entry.yarnColors)
+                ? entry.yarnColors.map(row => ({ colorCode: row.colorCode || '', qtyInKg: Number(row.qtyInKg) || 0, remainingKg: Number(row.remainingKg) || 0 }))
+                : [];
+            const sourceKey = weavingYarnSourceKey(order.moSo, date, loom);
+            const linkedExtraDye = Array.isArray((order.dyeing || {}).extraDyeingLog)
+                ? order.dyeing.extraDyeingLog.filter(item => item.weavingSourceKey === sourceKey)
+                : [];
+            weavingLogExtraDyeDraft = linkedExtraDye.map(item => ({
+                code: item.code || '', orderedKg: Number(item.orderedKg) || 0, surplusKg: Number(item.surplusKg) || 0, note: item.note || ''
+            }));
+            renderWeavingLogYarnColorsList();
+            renderWeavingLogExtraDyeList();
+
             weavingLogEditContext = { orderIndex, date, loom };
             const saveBtn = document.getElementById('weavingLogSaveBtn');
             if (saveBtn) saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1"></i>บันทึกการแก้ไข (${escapeHtml(order.moSo)} • ${date} • จอ ${loom})`;
@@ -7580,6 +7792,10 @@
             if (!order) return;
             if (!window.confirm(`ลบรายการทอ ${order.moSo} วันที่ ${date} จอ ${loom} ถาวรหรือไม่?`)) return;
             order.weaving.dailyLog = (order.weaving.dailyLog || []).filter(l => !(l.date === date && String(l.loom || '') === String(loom || '')));
+            // Also remove whatever this entry had auto-created downstream (ย้อมเพิ่ม rows in
+            // order.dyeing.extraDyeingLog, surplus rows in surplusYarnLedger) — see
+            // syncWeavingYarnDownstream()'s comment above saveWeavingLogEntry().
+            removeWeavingYarnDownstream(weavingYarnSourceKey(order.moSo, date, loom));
             recomputeWeavingSqmFromLog(order);
             persistOrderChange(order);
             renderProductionBoard();
@@ -7652,11 +7868,18 @@
                 const pctBadge = r.gradePercent === null || r.gradePercent === undefined
                     ? '<span class="text-slate-300">-</span>'
                     : `<span class="font-semibold ${r.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${r.gradePercent}%</span>`;
+                // NEW (2026-09-15): "ไหมเข้าจอ/เหลือแต่ละสี" summary badge — a small hover tooltip so the
+                // history table doesn't need extra columns/an expand row just to review what was recorded
+                // (full editing still happens by loading the entry back into the form via "แก้ไข").
+                const yarnColors = Array.isArray(r.yarnColors) ? r.yarnColors.filter(c => c.colorCode) : [];
+                const yarnColorsBadge = yarnColors.length > 0
+                    ? `<span class="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200 text-[9px] font-bold align-middle cursor-help" title="${escapeHtml('ไหมเข้าจอ:\n' + yarnColors.map(c => `${c.colorCode} เข้า ${Number(c.qtyInKg) || 0} กก. เหลือ ${Number(c.remainingKg) || 0} กก.`).join('\n'))}"><i class="fa-solid fa-palette"></i> ${yarnColors.length} สี</span>`
+                    : '';
                 return `
                     <tr class="border-t border-slate-100 hover:bg-slate-50">
                         <td class="py-1.5 px-2 whitespace-nowrap">${escapeHtml(r.date || '-')}</td>
                         <td class="py-1.5 px-2 text-center">${escapeHtml(String(r.loom || '-'))}</td>
-                        <td class="py-1.5 px-2 font-mono font-semibold text-indigo-700 cursor-pointer" onclick="openOrderDetailModal(${r.orderIndex})">${escapeHtml(r.moSo || '-')}</td>
+                        <td class="py-1.5 px-2 font-mono font-semibold text-indigo-700 cursor-pointer" onclick="openOrderDetailModal(${r.orderIndex})">${escapeHtml(r.moSo || '-')}${yarnColorsBadge}</td>
                         <td class="py-1.5 px-2">${escapeHtml(r.quality || '-')}</td>
                         <td class="py-1.5 px-2 text-center">${escapeHtml(r.grade || '-')}</td>
                         <td class="py-1.5 px-2 text-right font-medium">${(Number(r.sqm) || 0).toFixed(2)}</td>
@@ -13057,6 +13280,8 @@
             tbody.innerHTML = surplusYarnLedger.map(entry => `
                 <tr class="hover:bg-slate-50/80">
                     <td class="px-2 py-1.5">${t(entry.id, 'monthLabel', entry.monthLabel, 'w-28')}</td>
+                    <td class="px-2 py-1.5 font-semibold ${entry.moSo ? orderTypeTextClass(detectOrderTypeFromMoSo(entry.moSo)) : ''} whitespace-nowrap">${t(entry.id, 'moSo', entry.moSo, 'w-24')}</td>
+                    <td class="px-2 py-1.5">${t(entry.id, 'colorCode', entry.colorCode, 'w-20')}</td>
                     <td class="px-2 py-1.5">${n(entry.id, 'weightInKg', entry.weightInKg)}</td>
                     <td class="px-2 py-1.5">${n(entry.id, 'weightOutKg', entry.weightOutKg)}</td>
                     <td class="px-2 py-1.5">${n(entry.id, 'warehouseTotalKg', entry.warehouseTotalKg)}</td>
@@ -13133,7 +13358,7 @@
             const prev = surplusYarnLedger[surplusYarnLedger.length - 1];
             surplusYarnLedger.push({
                 id: 'surplus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-                monthLabel: '', weightInKg: 0, weightOutKg: 0,
+                monthLabel: '', moSo: '', colorCode: '', weightInKg: 0, weightOutKg: 0,
                 // Carries the previous month's warehouse total forward as a starting suggestion, same as
                 // the Excel's own "ยอดยกมา" convention — still a plain editable number, not locked.
                 warehouseTotalKg: prev ? (Number(prev.warehouseTotalKg) || 0) : 0,
@@ -14085,6 +14310,8 @@
         // ---- 3. วางแผน: ไหม Surplus คงเหลือรายเดือน (บริษัทรวม เพิ่มแถวใหม่เสมอ) --------------------------
         const PLANNING_SURPLUS_COLUMNS = [
             { key: 'monthLabel', label: 'เดือน' },
+            { key: 'moSo', label: 'M/O, S/O' },
+            { key: 'colorCode', label: 'รหัสสี' },
             { key: 'weightInKg', label: 'น้ำหนักไหมเข้า Surplus (Kg.)', type: 'number' },
             { key: 'weightOutKg', label: 'น้ำหนักเบิกออกจาก Surplus (Kg.)', type: 'number' },
             { key: 'warehouseTotalKg', label: 'น้ำหนักไหมใน Surplus ทั้งหมดในคลัง (Kg.)', type: 'number' },
