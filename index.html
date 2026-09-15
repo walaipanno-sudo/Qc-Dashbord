@@ -4777,6 +4777,17 @@
                     </tr>
                 `).join('');
 
+            // NEW (2026-09-15 rev.4): "ขนาด และผลรวมตร.เมตร ให้อยู่ที่ตารางว่าง ด้านล่างของจำนวนชิ้น" —
+            // the box beside "จำนวนชิ้นทั้งหมด...ชิ้น/Pcs." (a rowspan="4" cell spanning the ลูกค้า/
+            // Project/คุณภาพ/blank rows below it) used to be left completely empty; now it shows the
+            // order's size (same fallback logic as the Mark & Nos label's SIZE field — carpetSizeNote,
+            // else the first sizeItems entry) and the total square meterage (order.totalSqm), so no
+            // manual re-entry is needed on the printed form.
+            const soSizeText = defaultMarkNosSize(order);
+            const soTotalSqmText = (Number(order.totalSqm) || 0) > 0
+                ? (Number(order.totalSqm) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : '';
+
             const page1 = `
                 <div class="so-page">
                     <div class="so-header-row">
@@ -4787,9 +4798,9 @@
                     <table class="so-grid">
                         <tr>
                             <td style="width:62%;"><b>S/O:</b> ${v(order.moSo)}</td>
-                            <td>จำนวนชิ้นทั้งหมด......<span class="so-fill">${v(String(order.totalPieces || ''))}</span>......ชิ้น/Pcs.<br>ลูกค้าแนบมา/Enclosed:</td>
+                            <td>จำนวนชิ้นทั้งหมด......<span class="so-fill">${v(String(order.totalPieces || ''))}</span>......ชิ้น/Pcs.<br>ลูกค้าแนบมา/Enclosed: <span class="so-fill">${v(order.designRef)}</span></td>
                         </tr>
-                        <tr><td>ลูกค้า/Customer: <span class="so-fill">${v(order.customerName)}</span></td><td rowspan="4"></td></tr>
+                        <tr><td>ลูกค้า/Customer: <span class="so-fill">${v(order.customerName)}</span></td><td rowspan="4" style="vertical-align:top;">${(soSizeText || soTotalSqmText) ? `ขนาด/Size: <span class="so-fill">${v(soSizeText)}</span><br>รวมพื้นที่/Total Area: <span class="so-fill">${soTotalSqmText}</span> ตร.ม./Sq.M.` : ''}</td></tr>
                         <tr><td>Project: <span class="so-fill">${v(order.customerPO)}</span></td></tr>
                         <tr><td>คุณภาพ/Quality: <span class="so-fill">${v(order.quality)}</span></td></tr>
                         <tr><td>&nbsp;</td></tr>
