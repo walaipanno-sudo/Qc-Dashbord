@@ -82,6 +82,16 @@
 
         @media print {
             @page { size: A4; margin: 12mm; }
+            /* NEW (2026-09-15): ใบส่งของ + ใบ Mark & Nos are landscape A4 in the company's real paper
+               forms (per the attached examples — both measure 841.89 x 595.28pt, i.e. A4 rotated) —
+               named CSS pages (the "page" property below on each sheet's own wrapper class) let just
+               these two print landscape while every other print sheet in this file stays portrait. */
+            @page dn-landscape { size: A4 landscape; margin: 12mm; }
+            @page mn-landscape { size: A4 landscape; margin: 12mm; }
+            /* NEW (2026-09-15 rev.3): ใบ S/O ขอบกระดาษแคบลงเหลือ 10mm ทุกด้าน (เดิมใช้ margin ของ
+               @page ทั่วไปที่ 12mm ร่วมกับแบบฟอร์มอื่น) — แยกเป็น named page ของตัวเองเพื่อไม่กระทบ
+               แบบฟอร์มพิมพ์อื่นๆ ที่ยังใช้ margin 12mm เท่าเดิม */
+            @page so-portrait { size: A4; margin: 10mm; }
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
@@ -138,16 +148,50 @@
             50%      { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
         }
 
-        /* Mark & Nos print sheet: a bold, stencil-like box for the free-text shipping mark, meant to
-           read the way an actual carton/crate marking would. */
-        .mark-nos-box { border: 3px solid #1e293b; border-radius: 6px; padding: 18px; font-size: 18px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; text-align: center; letter-spacing: 0.02em; }
+        /* NEW (2026-09-15): "ใบ Mark & Nos" per-crate stencil label — rebuilt to match the company's
+           real paper label (a dashed-border box: "MARKS & NOS" heading + red "HANDLE WITH CARE" tag,
+           customer address, crate NO.X, "MADE IN THAILAND", REFERENCE, SIZE, M/O, INVOICE). See
+           buildMarkNosPrintHTML()/openMarkNosPrintModal()/confirmPrintMarkNos(). Structured fields
+           (REFERENCE/SIZE/M.O) are pre-filled from the order's own data (customerPO/carpetSizeNote/
+           sizeItems/moSo) in the print-prep modal but stay editable there per print — like INV. NO and
+           the crate number, they're per-shipment paperwork details, not saved back to the order.  */
+        /* NEW (2026-09-15 rev.2): "ใช้เต็มพื้นที่หน้ากระดาษ" — the dashed box now stretches to fill the
+           whole landscape A4 printable area (186mm tall inside the 12mm @page margins) instead of
+           sitting as a small box in the corner, with everything inside spaced out via flex so it reads
+           the way a real crate label does at full page size. */
+        .mn-print-sheet { page: mn-landscape; height: 182mm; box-sizing: border-box; }
+        .mn-label { border: 4px dashed #1e293b; border-radius: 10px; padding: 46px 60px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
+        .mn-label-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .mn-label-title { font-size: 38px; font-weight: 700; text-decoration: underline; text-underline-offset: 8px; margin: 0; }
+        .mn-label-care { background: #c0392b; color: #16a34a; font-weight: 700; font-size: 18px; letter-spacing: 0.02em; padding: 14px 26px; border-radius: 3px; }
+        .mn-label-address { font-size: 32px; line-height: 1.55; white-space: pre-wrap; }
+        .mn-label-meta p { font-size: 32px; margin: 5px 0; }
+        .mn-label-invoice { text-align: center; font-size: 20px; }
+
+        /* NEW (2026-09-15): "ใบส่งของ" (Delivery Note / Packing List) print sheet — the companion to
+           the Mark & Nos label above, summarizing an entire shipment as one table (INV. NO/Customer/
+           Roll No/M-O/Marks/Measurement/Note per roll) plus the same MARKS & NOS address block. See
+           buildDeliveryNotePrintHTML()/openDeliveryNoteModal()/confirmPrintDeliveryNote(). */
+        .dn-print-sheet { font-family: 'Prompt', sans-serif; color: #1e293b; page: dn-landscape; }
+        .dn-header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .dn-header-badge { background: #d97a2b; color: #fff; font-weight: 700; font-size: 17px; letter-spacing: 0.02em; padding: 10px 22px; border-radius: 2px; }
+        .dn-header-date { font-size: 13px; color: #1e293b; padding-top: 8px; }
+        table.dn-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 11.5px; }
+        table.dn-table th { background: #f8fafc; text-transform: uppercase; font-size: 10px; letter-spacing: 0.02em; text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #64748b; }
+        table.dn-table td { padding: 11px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        table.dn-table tr:nth-child(even) td { background: #f8fafc; }
+        .dn-pack-note { color: #dc2626; font-weight: 600; font-size: 12px; margin-bottom: 18px; }
+        .dn-marknos-heading { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+        .dn-marknos-grid { display: flex; justify-content: space-between; gap: 24px; font-size: 12px; line-height: 1.7; }
+        .dn-marknos-grid .dn-address { white-space: pre-wrap; }
+        .dn-marknos-grid .dn-ship-info p { margin: 0; }
 
         /* NEW (2026-09-14): "ใบ Sample Order (S/O)" print form — 2-page A4 replica of the company's
            existing paper "SAMPLE ORDER" form (see buildSampleOrderPrintHTML()/printSampleOrder()).
            Reuses the same #printArea/print-single-mode/window.print() mechanism as the other print
            sheets, but uses its own black-bordered grid styling (matching the original form's look)
            rather than the softer gray .print-info-table style used elsewhere in this file. */
-        .so-print-sheet { font-family: 'Prompt', sans-serif; color: #000; }
+        .so-print-sheet { font-family: 'Prompt', sans-serif; color: #000; page: so-portrait; }
         .so-page { padding: 4mm 2mm; position: relative; }
         .so-page + .so-page { page-break-before: always; }
         .so-page-number { text-align: right; font-size: 10px; margin-bottom: 3px; }
@@ -1763,7 +1807,8 @@
             </div>
 
             <!-- Mark & Nos subview: pick an M/O, S/O, type/edit its free-text Shipping Mark & Nos, then
-                 print a labeled sheet for the crates/cartons. See renderMarkNosSubview() / printMarkNos(). -->
+                 print a labeled sheet for the crates/cartons (or the summary ใบส่งของ). See
+                 renderMarkNosSubview() / openMarkNosPrintModal() / openDeliveryNoteModal(). -->
             <div id="markNosSubview" class="hidden p-4 space-y-3">
                 <p class="text-xs text-slate-500">พิมพ์ใบระบุ "Shipping Mark &amp; Nos" (เครื่องหมาย/เลขหีบห่อ) แนบไปกับสินค้า — พิมพ์ข้อความอิสระที่ต้องการให้ปรากฏบนใบต่อ M/O, S/O แต่ละรายการ แล้วกด "พิมพ์ใบ Mark &amp; Nos"</p>
                 <div id="markNosListContainer" class="space-y-3">
@@ -1829,6 +1874,85 @@
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeShipModal()" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
                 <button type="button" onclick="confirmShipItem()" class="w-1/2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl transition shadow">ยืนยันส่งแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09-15): "ใบส่งของ" print-prep modal — collects the per-shipment paperwork details
+         that deliberately aren't saved on the order itself (INV. NO, ship method/time, MARKS override,
+         per-roll measurement/note list) right before printing. See openDeliveryNoteModal()/
+         confirmPrintDeliveryNote() in the Mark & Nos sub-tab section. -->
+    <div id="deliveryNoteModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-file-invoice mr-2 text-emerald-600"></i>เตรียมพิมพ์ใบส่งของ</h3>
+                <button type="button" onclick="closeDeliveryNoteModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p id="deliveryNoteOrderSummary" class="text-xs text-slate-500 font-mono"></p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[11px] text-slate-500 mb-1">INV. NO <span class="text-rose-500">*</span></label>
+                    <input type="text" id="dnInvNo" placeholder="เลขที่ใบแจ้งหนี้" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-500 mb-1">ส่งทาง</label>
+                    <input type="text" id="dnShipMethod" placeholder="เช่น Sea Freight, Air Freight" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-500 mb-1">เวลา</label>
+                    <input type="text" id="dnShipTime" placeholder="เช่น ช่วงเช้า" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1">Marks (คอลัมน์ Marks ในตาราง)</label>
+                <input type="text" id="dnMarks" placeholder="เช่น PO.15198 BX LOBBY RIGS" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-ruler-combined mr-1"></i> รายการม้วน (Roll No / ขนาด / หมายเหตุ)</span>
+                    <button type="button" onclick="addDeliveryNoteRoll()" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-plus mr-1"></i>เพิ่มม้วน</button>
+                </div>
+                <div id="deliveryNoteRollsContainer" class="space-y-1.5"></div>
+                <p class="text-[10px] text-slate-400 mt-1">ดึงค่าเริ่มต้นจาก "รายการขนาด"/CARPET SIZE ของ M/O นี้ให้อัตโนมัติ — แก้ไขได้อิสระก่อนพิมพ์</p>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="closeDeliveryNoteModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="confirmPrintDeliveryNote()" class="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl transition shadow flex items-center justify-center gap-1.5"><i class="fa-solid fa-print"></i> พิมพ์ใบส่งของ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW (2026-09-15): "ใบ Mark & Nos" print-prep modal — crate number + REFERENCE/SIZE/INV. NO,
+         pre-filled from the order's own data but editable per print (not saved back to the order). See
+         openMarkNosPrintModal()/confirmPrintMarkNos(). -->
+    <div id="markNosPrintModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-tags mr-2 text-slate-700"></i>เตรียมพิมพ์ใบ Mark &amp; Nos</h3>
+                <button type="button" onclick="closeMarkNosPrintModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p id="markNosPrintOrderSummary" class="text-xs text-slate-500 font-mono"></p>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] text-slate-500 mb-1">กล่องที่ (NO.)</label>
+                    <input type="text" id="mnBoxNo" value="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-500 mb-1">INV. NO</label>
+                    <input type="text" id="mnInvNo" placeholder="เลขที่ใบแจ้งหนี้" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1">REFERENCE</label>
+                <input type="text" id="mnReference" placeholder="เช่น PO.CC2475 EXTRY ROOM FOYER" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1">SIZE</label>
+                <input type="text" id="mnSize" placeholder="เช่น 5.19 X 3.12 M." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="closeMarkNosPrintModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="confirmPrintMarkNos()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs rounded-xl transition shadow flex items-center justify-center gap-1.5"><i class="fa-solid fa-print"></i> พิมพ์</button>
             </div>
         </div>
     </div>
@@ -4226,8 +4350,11 @@
                         <label class="block text-[10px] text-slate-500 mb-0.5">Shipping Mark &amp; Nos (ข้อความอิสระ — จะพิมพ์ตามที่พิมพ์ไว้นี้เป๊ะๆ)</label>
                         <textarea rows="3" placeholder="เช่น ชื่อ/โลโก้ลูกค้า, ท่าปลายทาง, เลขที่หีบห่อ 1/5, 2/5..." onchange="updateOrderField(${orderIndex}, 'shippingMark', this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">${escapeHtml(order.shippingMark || '')}</textarea>
                     </div>
-                    <div class="sm:w-36 shrink-0 flex sm:flex-col justify-end gap-2">
-                        <button onclick="printMarkNos(${orderIndex})" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-3 py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                    <div class="sm:w-40 shrink-0 flex sm:flex-col justify-end gap-2">
+                        <button onclick="openDeliveryNoteModal(${orderIndex})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-file-invoice"></i> พิมพ์ใบส่งของ
+                        </button>
+                        <button onclick="openMarkNosPrintModal(${orderIndex})" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-3 py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-print"></i> พิมพ์ใบ Mark &amp; Nos
                         </button>
                     </div>
@@ -4235,36 +4362,273 @@
             `).join('');
         }
 
-        // Builds the printable "Mark & Nos" sheet for one M/O, S/O: minimal identifying info (M/O, S/O
-        // + customer, so whoever handles the crate can match it back to the order) plus the free-text
-        // shipping mark in a large stencil-style box. Reuses the same #printArea / print-single-mode
-        // mechanism as buildPrintDetailHTML() for the QC print sheet.
-        function buildMarkNosPrintHTML(order) {
+        // =========================================================================================
+        // NEW (2026-09-15): "ใบส่งของ" (Delivery Note / Packing List) + upgraded "ใบ Mark & Nos" crate
+        // label — a matched pair of documents for one shipment, per the user's own paper examples:
+        //   (1) ใบส่งของ: ONE table summarizing every roll/piece being shipped (INV. NO/Customer/Roll
+        //       No/M-O/Marks/Measurement/Note per row) + the same MARKS & NOS address block at the
+        //       bottom. See buildDeliveryNotePrintHTML()/openDeliveryNoteModal().
+        //   (2) ใบ Mark & Nos: ONE stencil label per crate (dashed box, "MARKS & NOS" + HANDLE WITH
+        //       CARE, address, crate NO.X, MADE IN THAILAND, REFERENCE, SIZE, M/O, INVOICE). See
+        //       buildMarkNosPrintHTML()/openMarkNosPrintModal().
+        // Both reuse the order's own system data where it already exists (M/O, S/O; customer name;
+        // customerPO as the PO+project "MARKS"/"REFERENCE" text; carpetSizeNote/sizeItems for SIZE;
+        // the existing free-text "Shipping Mark & Nos" field for the customer address block) — but
+        // INV. NO, ship method/time, per-roll measurements, and the crate number are deliberately kept
+        // OUT of the order's own saved data (same reasoning as the billing fields excluded from
+        // ORDERS_NEW_HEADERS in the Apps Script backend: these are per-shipment paperwork details, not
+        // durable facts about the M/O, S/O). They're entered in a small print-prep modal each time and
+        // kept only in an in-memory draft cache (deliveryNoteDrafts/markNosPrintDrafts below) so
+        // re-opening the modal later in the same session recalls the last typed values — nothing here
+        // is ever synced to Google Sheets.
+        // =========================================================================================
+
+        // ----- ใบ Mark & Nos (per-crate stencil label) -----
+
+        let currentMarkNosPrintOrderIndex = null;
+        const markNosPrintDrafts = {};
+
+        function defaultMarkNosSize(order) {
+            if (order.carpetSizeNote) return order.carpetSizeNote;
+            if (Array.isArray(order.sizeItems) && order.sizeItems[0] && (order.sizeItems[0].width || order.sizeItems[0].length)) {
+                const it = order.sizeItems[0];
+                return `${Number(it.width) || 0} X ${Number(it.length) || 0} M.`;
+            }
+            return '';
+        }
+
+        function openMarkNosPrintModal(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            currentMarkNosPrintOrderIndex = orderIndex;
+            const draft = markNosPrintDrafts[orderIndex] || {
+                boxNo: '1',
+                reference: order.customerPO || '',
+                size: defaultMarkNosSize(order),
+                invNo: ''
+            };
+            markNosPrintDrafts[orderIndex] = draft;
+
+            document.getElementById('markNosPrintOrderSummary').textContent = `${order.moSo || '-'} • ${order.customerName || 'ไม่ระบุลูกค้า'}`;
+            document.getElementById('mnBoxNo').value = draft.boxNo;
+            document.getElementById('mnReference').value = draft.reference;
+            document.getElementById('mnSize').value = draft.size;
+            document.getElementById('mnInvNo').value = draft.invNo;
+            document.getElementById('markNosPrintModal').classList.remove('hidden');
+        }
+
+        function closeMarkNosPrintModal() {
+            if (currentMarkNosPrintOrderIndex !== null && markNosPrintDrafts[currentMarkNosPrintOrderIndex]) {
+                const draft = markNosPrintDrafts[currentMarkNosPrintOrderIndex];
+                draft.boxNo = document.getElementById('mnBoxNo').value;
+                draft.reference = document.getElementById('mnReference').value;
+                draft.size = document.getElementById('mnSize').value;
+                draft.invNo = document.getElementById('mnInvNo').value;
+            }
+            document.getElementById('markNosPrintModal').classList.add('hidden');
+        }
+
+        // Builds the printable "Mark & Nos" crate label: dashed stencil box with the free-text
+        // shipping-mark address (order.shippingMark, printed exactly as typed, same as before) plus
+        // the crate number and structured REFERENCE/SIZE/M.O/INVOICE lines from the print-prep modal.
+        function buildMarkNosPrintHTML(order, meta) {
+            meta = meta || {};
+            const addressBlock = escapeHtml(order.shippingMark || '(ยังไม่ได้ระบุที่อยู่ลูกค้า)').replace(/\n/g, '<br>');
             return `
-                <div class="print-sheet">
-                    <div class="print-header">
-                        <h1>ใบ Shipping Mark &amp; Nos</h1>
-                        <p>Siam Carpets Manufacturing</p>
+                <div class="print-sheet mn-print-sheet">
+                    <div class="mn-label">
+                        <div class="mn-label-top">
+                            <h1 class="mn-label-title">MARKS &amp; NOS</h1>
+                            <div class="mn-label-care">HANDLE WITH CARE</div>
+                        </div>
+                        <div class="mn-label-address">${addressBlock}</div>
+                        <div class="mn-label-meta">
+                            <p>NO.${escapeHtml(String(meta.boxNo || '1'))}</p>
+                            <p>MADE IN THAILAND</p>
+                            ${meta.reference ? `<p>REFERENCE:&nbsp;&nbsp;${escapeHtml(meta.reference)}</p>` : ''}
+                            ${meta.size ? `<p>SIZE:&nbsp;&nbsp;${escapeHtml(meta.size)}</p>` : ''}
+                            <p>M/O ${escapeHtml(order.moSo || '-')}</p>
+                        </div>
+                        ${meta.invNo ? `<p class="mn-label-invoice">*INVOICE ${escapeHtml(meta.invNo)}*</p>` : ''}
                     </div>
-                    <table class="print-info-table">
-                        <tr><th>M/O, S/O</th><td>${escapeHtml(order.moSo || '-')}</td></tr>
-                        ${order.customerName ? `<tr><th>ลูกค้า</th><td>${escapeHtml(order.customerName)}</td></tr>` : ''}
-                        ${order.customerPO ? `<tr><th>PO</th><td>${escapeHtml(order.customerPO)}</td></tr>` : ''}
-                        ${order.dueDate ? `<tr><th>กำหนดส่ง</th><td>${escapeHtml(order.dueDate)}</td></tr>` : ''}
-                    </table>
-                    <div class="mark-nos-box">${escapeHtml(order.shippingMark || '(ยังไม่ได้ระบุ Shipping Mark)')}</div>
-                    <p class="print-footer-note">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
                 </div>
             `;
         }
 
-        function printMarkNos(orderIndex) {
+        function confirmPrintMarkNos() {
+            const orderIndex = currentMarkNosPrintOrderIndex;
             const order = productionOrders[orderIndex];
             if (!order) return;
+            const boxNo = document.getElementById('mnBoxNo').value.trim() || '1';
+            const reference = document.getElementById('mnReference').value.trim();
+            const size = document.getElementById('mnSize').value.trim();
+            const invNo = document.getElementById('mnInvNo').value.trim();
+            closeMarkNosPrintModal();
             const printArea = document.getElementById('printArea');
-            printArea.innerHTML = buildMarkNosPrintHTML(order);
+            printArea.innerHTML = buildMarkNosPrintHTML(order, { boxNo, reference, size, invNo });
             document.body.classList.add('print-single-mode');
             showToast('กำลังเปิดหน้าต่างพิมพ์ใบ Mark & Nos... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
+            setTimeout(() => window.print(), 150);
+        }
+
+        // ----- ใบส่งของ (Delivery Note / Packing List) -----
+
+        let currentDeliveryNoteOrderIndex = null;
+        let currentDeliveryNoteRolls = [];
+        const deliveryNoteDrafts = {};
+
+        // Default roll rows, pre-filled from whatever measurement data this M/O already has: one row
+        // per physical piece in "รายการขนาด" (sizeItems), expanded by qty; failing that, one row per
+        // piece using the free-text CARPET SIZE description; failing that, a single blank row to fill
+        // in by hand. Always fully editable afterwards — see the confirmed answer that Roll No/
+        // Measurement should be a fill-in-before-printing table, not derived rigidly from the system.
+        function buildDefaultDeliveryNoteRolls(order) {
+            if (Array.isArray(order.sizeItems) && order.sizeItems.length > 0) {
+                const rows = [];
+                order.sizeItems.forEach(item => {
+                    const qty = Math.max(1, Number(item.qty) || 1);
+                    const measurement = (item.width || item.length)
+                        ? `${Number(item.width) || 0} x ${Number(item.length) || 0} ม.`
+                        : '';
+                    for (let i = 0; i < qty; i++) rows.push({ measurement, note: '-' });
+                });
+                return rows;
+            }
+            if (order.carpetSizeNote) {
+                const qty = Math.max(1, Number(order.totalPieces) || 1);
+                return Array.from({ length: qty }).map(() => ({ measurement: order.carpetSizeNote, note: '-' }));
+            }
+            return [{ measurement: '', note: '-' }];
+        }
+
+        function openDeliveryNoteModal(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            currentDeliveryNoteOrderIndex = orderIndex;
+            const draft = deliveryNoteDrafts[orderIndex] || {
+                invNo: '', shipMethod: '', shipTime: '',
+                marks: order.customerPO || '',
+                rolls: buildDefaultDeliveryNoteRolls(order)
+            };
+            deliveryNoteDrafts[orderIndex] = draft;
+            currentDeliveryNoteRolls = draft.rolls;
+
+            document.getElementById('deliveryNoteOrderSummary').textContent = `${order.moSo || '-'} • ${order.customerName || 'ไม่ระบุลูกค้า'}`;
+            document.getElementById('dnInvNo').value = draft.invNo;
+            document.getElementById('dnShipMethod').value = draft.shipMethod;
+            document.getElementById('dnShipTime').value = draft.shipTime;
+            document.getElementById('dnMarks').value = draft.marks;
+            renderDeliveryNoteRollsTable();
+            document.getElementById('deliveryNoteModal').classList.remove('hidden');
+        }
+
+        function renderDeliveryNoteRollsTable() {
+            const container = document.getElementById('deliveryNoteRollsContainer');
+            if (!container) return;
+            container.innerHTML = currentDeliveryNoteRolls.map((r, idx) => `
+                <div class="flex items-center gap-1.5">
+                    <span class="w-6 text-center text-xs text-slate-400 font-mono">${idx + 1}</span>
+                    <input type="text" value="${escapeHtml(r.measurement || '')}" placeholder="ขนาด เช่น 12' 2&quot; X 8' 8&quot;" oninput="updateDeliveryNoteRoll(${idx}, 'measurement', this.value)" class="flex-1 min-w-0 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <input type="text" value="${escapeHtml(r.note || '')}" placeholder="หมายเหตุ" oninput="updateDeliveryNoteRoll(${idx}, 'note', this.value)" class="w-24 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <button type="button" onclick="removeDeliveryNoteRoll(${idx})" class="shrink-0 text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addDeliveryNoteRoll() {
+            currentDeliveryNoteRolls.push({ measurement: '', note: '-' });
+            renderDeliveryNoteRollsTable();
+        }
+
+        function removeDeliveryNoteRoll(idx) {
+            if (currentDeliveryNoteRolls.length <= 1) return;
+            currentDeliveryNoteRolls.splice(idx, 1);
+            renderDeliveryNoteRollsTable();
+        }
+
+        function updateDeliveryNoteRoll(idx, field, value) {
+            if (!currentDeliveryNoteRolls[idx]) return;
+            currentDeliveryNoteRolls[idx][field] = value;
+        }
+
+        function closeDeliveryNoteModal() {
+            if (currentDeliveryNoteOrderIndex !== null && deliveryNoteDrafts[currentDeliveryNoteOrderIndex]) {
+                const draft = deliveryNoteDrafts[currentDeliveryNoteOrderIndex];
+                draft.invNo = document.getElementById('dnInvNo').value;
+                draft.shipMethod = document.getElementById('dnShipMethod').value;
+                draft.shipTime = document.getElementById('dnShipTime').value;
+                draft.marks = document.getElementById('dnMarks').value;
+                draft.rolls = currentDeliveryNoteRolls;
+            }
+            document.getElementById('deliveryNoteModal').classList.add('hidden');
+        }
+
+        // Builds the printable "ใบส่งของ" sheet: one table row per roll (INV. NO/Customer/Roll No/M-O/
+        // Marks repeated on every row, Measurement/Note per roll) plus the red packing note and the
+        // same MARKS & NOS address block (order.shippingMark) + ship method/time used on the crate
+        // labels above.
+        function buildDeliveryNotePrintHTML(order, meta) {
+            meta = meta || {};
+            const rolls = meta.rolls && meta.rolls.length > 0 ? meta.rolls : [{ measurement: '', note: '-' }];
+            const rollsRows = rolls.map((r, idx) => `
+                <tr>
+                    <td>${escapeHtml(meta.invNo || '-')}</td>
+                    <td>${escapeHtml(order.customerName || '-')}</td>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHtml(order.moSo || '-')}</td>
+                    <td>${escapeHtml(meta.marks || '-')}</td>
+                    <td>${escapeHtml(r.measurement || '-')}</td>
+                    <td>${escapeHtml(r.note || '-')}</td>
+                </tr>
+            `).join('');
+            const addressBlock = escapeHtml(order.shippingMark || '').replace(/\n/g, '<br>');
+            const todayStr = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY, matching the paper form
+            return `
+                <div class="dn-print-sheet">
+                    <div class="dn-header-bar">
+                        <div class="dn-header-badge">SIAM CARPETS</div>
+                        <div class="dn-header-date">${todayStr}</div>
+                    </div>
+                    <table class="dn-table">
+                        <thead>
+                            <tr><th>INV. NO</th><th>Customer</th><th>Roll No</th><th>M/O</th><th>Marks</th><th>Measurment</th><th>Note</th></tr>
+                        </thead>
+                        <tbody>${rollsRows}</tbody>
+                    </table>
+                    <p class="dn-pack-note">หมายเหตุการแพ็ค: Shipping เอาพรมไปใส่ลังให้เอง</p>
+                    <p class="dn-marknos-heading">MARKS &amp; NOS</p>
+                    <div class="dn-marknos-grid">
+                        <div class="dn-address">${addressBlock}${addressBlock ? '<br>' : ''}NO. 1-${rolls.length}<br>MADE IN THAILAND</div>
+                        <div class="dn-ship-info">
+                            <p>ส่งทาง ${escapeHtml(meta.shipMethod || '-')}</p>
+                            <p>เวลา ${escapeHtml(meta.shipTime || '-')}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function confirmPrintDeliveryNote() {
+            const orderIndex = currentDeliveryNoteOrderIndex;
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const invNo = document.getElementById('dnInvNo').value.trim();
+            if (!invNo) {
+                showToast('กรุณาระบุเลขที่ INV. NO ก่อนพิมพ์', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const shipMethod = document.getElementById('dnShipMethod').value.trim();
+            const shipTime = document.getElementById('dnShipTime').value.trim();
+            const marks = document.getElementById('dnMarks').value.trim();
+            const rolls = currentDeliveryNoteRolls.map(r => ({
+                measurement: (r.measurement || '').trim(),
+                note: (r.note || '').trim() || '-'
+            }));
+            closeDeliveryNoteModal();
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildDeliveryNotePrintHTML(order, { invNo, shipMethod, shipTime, marks, rolls });
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบส่งของ... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-sky-400');
             setTimeout(() => window.print(), 150);
         }
 
@@ -4395,6 +4759,24 @@
         function buildSampleOrderPrintHTML(order) {
             const v = (val) => val ? escapeHtml(val) : '';
 
+            // NEW (2026-09-15): fill page 1's "รหัสสี/Code" table from the M/O, S/O's own ใบสั่งย้อมไหม
+            // (dyeing order) IF Planning has created one from the yarn calculator (order.dyeing.
+            // lastDyeingOrder — see the 'yarnCalcCreateDyeingOrder' message handler above). Otherwise
+            // leave the table exactly as before: header row only, plain blank space below — per the
+            // earlier feedback that this table should NOT be padded with empty ruled rows when there's
+            // nothing to show.
+            const dyeingOrderColors = ((order.dyeing || {}).lastDyeingOrder || {}).colors || [];
+            const dyeingColorRows = dyeingOrderColors
+                .filter(c => c.colorCode || (Number(c.dyeKg) || 0) > 0)
+                .map((c, idx) => `
+                    <tr>
+                        <td>${v(c.colorCode)}</td>
+                        <td>${idx + 1}</td>
+                        <td>${(Number(c.dyeKg) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                `).join('');
+
             const page1 = `
                 <div class="so-page">
                     <div class="so-header-row">
@@ -4427,6 +4809,7 @@
                                 <th style="width:12%;">Surplus</th><th>กรอ/ตีเกลียว</th>
                             </tr>
                         </thead>
+                        ${dyeingColorRows ? `<tbody>${dyeingColorRows}</tbody>` : ''}
                     </table>
                 </div>
             `;
@@ -4668,6 +5051,24 @@
                     const totalKg = Number(p.grandTotalDyeKg) || 0;
                     matchedOrder.dyeing.plannedColorCount = colorCount;
                     matchedOrder.dyeing.plannedKg = Math.round(totalKg * 100) / 100;
+                    // NEW (2026-09-15): keep the FULL per-color breakdown too (not just the aggregate
+                    // count/kg above), so the ใบ Sample Order (S/O) print form's page 1 — the "รหัสสี/
+                    // Code" table, left blank whenever there's nothing to show (see
+                    // buildSampleOrderPrintHTML()) — can auto-fill it with the color list the moment
+                    // Planning creates a ใบสั่งย้อม from this M/O, S/O in the calculator, with no manual
+                    // re-entry. Stored under order.dyeing (already a generic JSON column — no backend
+                    // schema change needed) so it round-trips through Google Sheets like everything else
+                    // in this object.
+                    matchedOrder.dyeing.lastDyeingOrder = {
+                        mode: p.mode || 'internal',
+                        colors: (p.colors || []).map(c => ({
+                            colorCode: c.colorCode || '',
+                            quality: c.quality || '',
+                            dyeKg: Number(c.dyeKg) || 0
+                        })),
+                        grandTotalDyeKg: Math.round(totalKg * 100) / 100,
+                        createdAt: new Date().toISOString()
+                    };
                     persistOrderChange(matchedOrder);
                     rerenderOrderViews(orderIndex);
                     closeYarnCalculatorModal();
@@ -5651,7 +6052,7 @@
                 // creation time in submitNewOrder() and kept as a permanent record from then on.
                 isInserted: !!raw.isInserted,
                 // shippingMark: free-text "Shipping Mark & Nos" content for the printable label on the
-                // "รายการรอส่ง" tab's Mark & Nos sub-tab (see renderMarkNosSubview() / printMarkNos()).
+                // "รายการรอส่ง" tab's Mark & Nos sub-tab (see renderMarkNosSubview() / openMarkNosPrintModal()).
                 shippingMark: raw.shippingMark || '',
                 // NEW (2026-09): fields brought in from the sales team's "เปิด M/O" Excel worksheet, so
                 // the same information gets captured right when the order is opened instead of living
