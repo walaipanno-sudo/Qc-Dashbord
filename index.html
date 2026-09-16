@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -2203,7 +2206,7 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
                 <h3 class="font-bold text-slate-800 text-sm mb-1"><i class="fa-solid fa-chart-line mr-2 text-violet-600"></i> KPI แผนกวางแผน / ดีไซน์-ขยายลาย / ย้อม / ทากาวตกแต่ง</h3>
                 <p class="text-[11px] text-slate-400 mb-3">สรุปตัวเลข KPI หลักของแต่ละแผนก — กด "ดูรายละเอียด" เพื่อไปยังหน้ารายงาน KPI เต็มรูปแบบของแผนกนั้น</p>
-                <div id="centralDeptKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                <div id="centralDeptKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3"></div>
             </div>
         </div>
 
@@ -4492,6 +4495,14 @@
         function goToDeptKpiFromCentral(dept) {
             switchView('board');
             setBoardDepartmentTab(dept);
+            // NEW (2026-09-16): แผนกทอ isn't part of the generic 4-department "บอร์ด/รายงาน KPI" sub-tab
+            // pattern (setDeptKpiSubTab) — it already has its own "บอร์ดงานทอ/บันทึกการทอรายวัน" pair (see
+            // setWeavingSubTab()), and "บันทึกการทอรายวัน" already IS its KPI-style report (the flattened
+            // log table + per-grade %เทียบเกรด summary), so the central card's "ดูรายละเอียด" opens that.
+            if (dept === 'weaving') {
+                setWeavingSubTab('log');
+                return;
+            }
             setDeptKpiSubTab(dept, 'kpi');
         }
 
@@ -4541,6 +4552,10 @@
             });
             const avgProductivity = effTotalHours > 0 ? (effTotalSqm / effTotalHours).toFixed(2) : null;
 
+            // --- ทอ: ภาพรวมทั้งบริษัทวันนี้ — จำนวนจอที่กำลังทอ/จอทั้งหมด, ตร.ม. รวมวันนี้, % เทียบเกรด
+            // เฉลี่ยถ่วงน้ำหนักตามชั่วโมงทำงานวันนี้ (ตามที่ผู้ใช้เลือก "สรุปภาพรวมทั้งบริษัท") ---
+            const weavingStats = computeWeavingTodayStats();
+
             const card = (icon, color, title, rows, dept) => `
                 <div class="border border-slate-100 rounded-xl p-3.5 flex flex-col justify-between">
                     <div>
@@ -4577,7 +4592,12 @@
                 card('fa-layer-group', 'amber', 'ทากาวตกแต่ง', [
                     { label: 'ประสิทธิภาพเฉลี่ย (ตร.ม./ชม.)', value: avgProductivity === null ? '-' : avgProductivity },
                     { label: 'ใช้กาวเกินมาตรฐาน', value: glueTotalCount > 0 ? `${glueOverStandardCount}/${glueTotalCount} รายการ` : '-' }
-                ], 'finishing');
+                ], 'finishing') +
+                card('fa-hand-holding-heart', 'teal', 'แผนกทอ', [
+                    { label: 'จอที่กำลังทอวันนี้', value: `${weavingStats.occupiedLoomsCount}/${weavingStats.totalLooms} จอ` },
+                    { label: 'ตร.ม. ที่ทอวันนี้', value: `${weavingStats.totalSqm.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ตร.ม.` },
+                    { label: '% เทียบเกรดเฉลี่ยวันนี้', value: weavingStats.avgGradePercent === null ? '-' : `${weavingStats.avgGradePercent}%` }
+                ], 'weaving');
         }
 
         // เทียบ "จำนวนงานที่กำลังอยู่ในคิวของแผนกนี้ตอนนี้" (นับจาก currentStage) กับ "กำลังการผลิตจริง"
@@ -5851,9 +5871,11 @@
         // fields exist for the current mode (internal items use weightKg, external items use
         // weightKgOrdered) and falls back to the Planning-entered plannedKg/plannedColorCount if no
         // per-color items have been entered yet.
-        function openDyeingOrderPrintFromOrder(orderIndex) {
-            const order = productionOrders[orderIndex];
-            if (!order) return;
+        // Factored out of openDyeingOrderPrintFromOrder() (2026-09-16) so the same "what colors/kg does
+        // Planning currently have on file for this order" logic can also feed
+        // sendDyeingColorListToKpiLog() below — reuse, not duplicate. Falls back to the overall
+        // plannedColorCount/plannedKg (one aggregate row) when no per-color items have been entered yet.
+        function getDyeingColorsForOrder(order) {
             const dyeing = order.dyeing || {};
             const isExternal = dyeing.mode === 'external';
             const items = dyeing.items || [];
@@ -5862,18 +5884,164 @@
                 quality: order.quality || '',
                 dyeKg: Number(isExternal ? it.weightKgOrdered : it.weightKg) || 0
             })).filter(c => c.dyeKg > 0);
-            let grandTotalDyeKg;
             if (colors.length === 0 && (dyeing.plannedKg || 0) > 0) {
                 // No per-color line items entered yet — fall back to Planning's overall plan (จำนวนสี/กิโลที่สั่งย้อม).
                 colors = [{ colorCode: `ตามแผน (${dyeing.plannedColorCount || 0} สี)`, quality: order.quality || '', dyeKg: Number(dyeing.plannedKg) || 0 }];
             }
+            return colors;
+        }
+
+        function openDyeingOrderPrintFromOrder(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const dyeing = order.dyeing || {};
+            const colors = getDyeingColorsForOrder(order);
             printDyeingOrderData({
                 moSo: order.moSo,
                 customerName: order.customerName,
                 dueDate: order.dueDate,
                 mode: dyeing.mode || 'internal',
                 colors: colors,
-                grandTotalDyeKg: grandTotalDyeKg
+                grandTotalDyeKg: undefined
+            });
+        }
+
+        // NEW (2026-09-16): "แผนกย้อมรับคำสั่งจากแผนกวางแผน ให้ดึงข้อมูล Code สี จำนวนที่สั่ง มาจากแผนก
+        // วางแผน" — a deliberate one-click bridge (same "ใช้ค่านี้"-style pattern as the BOM bridges
+        // above) that hands off Planning's current color/kg plan for this order straight into the
+        // existing "แผนกย้อม (KPI) → บันทึกสั่งย้อม" log (order.dyeing.dyeOrderLog — the SAME array/table
+        // that already produces the "รายงานการผลิตแผนกย้อม" report, export-to-Excel included). This is
+        // the fix for "ให้ดึงข้อมูล Code สี จำนวนที่สั่ง มาจากแผนกวางแผน": instead of the dyeing KPI log
+        // being typed up from scratch (Code สี re-typed by hand, prone to mismatching what Planning
+        // actually specified), Planning pushes it here once when the order is ready to hand off; the
+        // dyeing department then only fills in the EXECUTION columns (Yarn Type/Lot/Colour No/Hang/ตู้
+        // ย้อม/นน.โอนจากใบเบิก [material withdrawn from Store]/นน.โอนจริง/วันที่ย้อมเสร็จจริง/หมายเหตุ) —
+        // satisfying "ให้ตัดส่วนอื่นที่ไม่เกี่ยวกับแผนกย้อมออก" by touching only this dyeing-specific log.
+        // Each click appends fresh rows (like reprinting/re-confirming an order is expected to be
+        // repeatable) rather than trying to guess whether an earlier push already covered this — Planning
+        // presses it once per real hand-off, same as "พิมพ์ใบสั่งย้อม" itself can be re-clicked freely.
+        function sendDyeingColorListToKpiLog(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const colors = getDyeingColorsForOrder(order).filter(c => (Number(c.dyeKg) || 0) > 0);
+            if (colors.length === 0) {
+                showToast('ยังไม่มีรายการสี/กิโลที่สั่งย้อมให้ส่งเข้าบันทึกสั่งย้อม — กรอกรายการสีหรือจำนวนกิโลก่อน', 'fa-triangle-exclamation', 'text-amber-400');
+                return;
+            }
+            if (!order.dyeing) order.dyeing = {};
+            if (!Array.isArray(order.dyeing.dyeOrderLog)) order.dyeing.dyeOrderLog = [];
+            const today = new Date().toISOString().split('T')[0];
+            colors.forEach(c => {
+                order.dyeing.dyeOrderLog.push({
+                    isExtra: false,
+                    orderDate: today,
+                    colorNo: '',
+                    colorCode: c.colorCode || '',
+                    yarnType: '',
+                    lotNo: '',
+                    orderKg: Number(c.dyeKg) || 0,
+                    dyeTubNo: '',
+                    requisitionKg: 0,
+                    actualTransferKg: 0,
+                    plannedDate: (order.planDates || {}).dyeing || '',
+                    actualDate: '',
+                    dueDate: order.dueDate || '',
+                    hang: '',
+                    remark: ''
+                });
+            });
+            persistOrderChange(order);
+            // The KPI report panel may or may not be mounted right now — refresh it only if it is.
+            if (document.getElementById('dyeingKpiSplitContainer')) renderDyeOrderLogTable();
+            showToast(`ส่งรายการสี ${colors.length} รายการเข้าบันทึกสั่งย้อม (KPI) แล้ว`, 'fa-droplet', 'text-violet-500');
+        }
+
+        // NEW (2026-09-16): ใบสั่งจ้างทอ (weaving subcontract order) — printed only for จ้างทอภายนอก
+        // (external weaving), mirroring buildDyeingOrderPrintHTML's own layout/pattern per the user's
+        // explicit choice ("รูปแบบเดียวกับใบสั่งจ้างย้อมนอกบริษัท"): same header/info-table/signature-row
+        // shell, with a blank "ผู้รับจ้างทอ" cell left for hand-filling, same as "ผู้รับจ้างย้อม" above.
+        function buildWeavingOrderPrintHTML(data) {
+            const sizeRows = (data.sizeItems || []).map((it, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHtml(String(it.width || 0))} x ${escapeHtml(String(it.length || 0))} ม.</td>
+                    <td style="text-align:right;">${Number(it.qty) || 0}</td>
+                    <td style="text-align:right;">${(Number(it.sqm) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('');
+            const totalSqm = data.area !== undefined && data.area !== null
+                ? Number(data.area)
+                : (data.sizeItems || []).reduce((sum, it) => sum + (Number(it.sqm) || 0), 0);
+
+            return `
+                <div class="print-sheet">
+                    <div class="print-header">
+                        <h1>ใบสั่งจ้างทอ</h1>
+                        <p>Siam Carpets Manufacturing</p>
+                    </div>
+                    <table class="print-info-table">
+                        <tr><th>M/O, S/O</th><td>${escapeHtml(data.moSo || '-')}${data.refSo ? ` / ${escapeHtml(data.refSo)}` : ''}</td></tr>
+                        ${data.customerName ? `<tr><th>ลูกค้า</th><td>${escapeHtml(data.customerName)}</td></tr>` : ''}
+                        ${data.dueDate ? `<tr><th>กำหนดส่ง</th><td>${escapeHtml(data.dueDate)}</td></tr>` : ''}
+                        ${data.quality ? `<tr><th>คุณภาพ</th><td>${escapeHtml(data.quality)}</td></tr>` : ''}
+                        <tr><th>ประเภท</th><td>จ้างทอภายนอก (Outsourced Weaving)</td></tr>
+                        <tr><th>ผู้รับจ้างทอ</th><td>&nbsp;</td></tr>
+                    </table>
+                    <p class="print-section-title">รายละเอียดขนาดที่จ้างทอ</p>
+                    <table class="print-detail-table">
+                        <thead>
+                            <tr><th style="width:32px;">#</th><th>ขนาด</th><th style="text-align:right;">จำนวน (ชิ้น)</th><th style="text-align:right;">ตร.ม.</th></tr>
+                        </thead>
+                        <tbody>
+                            ${sizeRows || '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">ไม่มีรายการขนาด</td></tr>'}
+                        </tbody>
+                        <tfoot>
+                            <tr><th colspan="3" style="text-align:right;">รวมพื้นที่ที่จ้างทอ</th><th style="text-align:right;">${totalSqm.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ตร.ม.</th></tr>
+                        </tfoot>
+                    </table>
+                    <p class="print-section-title">สเปคไหมพรม (จาก BOM)</p>
+                    <table class="print-info-table">
+                        <tr><th>รหัส SKU ไหมพรม</th><td>${escapeHtml(data.yarnSkuCode || '-')}</td></tr>
+                        <tr><th>เกรด</th><td>${escapeHtml(data.spec ? data.spec.grade : '-')}</td></tr>
+                        <tr><th>จำนวนพลาย</th><td>${escapeHtml(data.spec ? data.spec.ply : '-')}</td></tr>
+                        <tr><th>รหัสสี</th><td>${escapeHtml(data.spec ? data.spec.colorCode : '-')}</td></tr>
+                        <tr><th>น้ำหนักไหมที่ส่งมอบให้ผู้รับจ้าง (โดยประมาณ)</th><td>${(Number(data.yarnKg) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} กก.</td></tr>
+                    </table>
+                    <div class="print-signature-row">
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้สั่งจ้าง (แผนกวางแผน)</div>
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้อนุมัติ</div>
+                        <div class="print-signature-box"><div class="print-sign-line"></div>ผู้รับจ้างทอ</div>
+                    </div>
+                    <p class="print-footer-note">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
+                </div>
+            `;
+        }
+
+        function printWeavingOrderData(data) {
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildWeavingOrderPrintHTML(data);
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบสั่งจ้างทอ... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF', 'fa-print', 'text-teal-400');
+            setTimeout(() => window.print(), 150);
+        }
+
+        // Manual trigger from an order's own งานทอ section (see renderPlanningChecklistHtml) — builds
+        // the print data straight from the same BOM calc (computeBomForOrder) shown in the BOM card, so
+        // the subcontract order always matches whatever spec/quantities Planning has on file.
+        function openWeavingOrderPrintFromOrder(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const bom = computeBomForOrder(order);
+            printWeavingOrderData({
+                moSo: order.moSo,
+                customerName: order.customerName,
+                dueDate: order.dueDate,
+                quality: order.quality,
+                area: bom.area,
+                sizeItems: order.sizeItems || [],
+                yarnSkuCode: bom.yarnSkuCode,
+                spec: bom.spec,
+                yarnKg: bom.quantities.yarnKg
             });
         }
 
@@ -6801,6 +6969,18 @@
                 else if (oldPercent > 0) { planning.specDone = true; }
             }
             recomputePlanningPercent(planning);
+
+            // NEW (2026-09-16): BOM ต้นทุนประมาณการผลิต (production cost BOM), saved PER M/O,S/O per the
+            // user's explicit choice ("บันทึกแยกตาม M/O,S/O แต่ละใบ") rather than as a shared tool. Unit
+            // prices default from a global localStorage settings blob (BOM_DEFAULT_PRICES_KEY, see below)
+            // but can be overridden per order — again per explicit user choice ("ตั้งค่าเริ่มต้นกลาง แก้ได้
+            // ต่อออเดอร์"). `prices` only holds an override when the planner has actually touched it for
+            // this order; an empty prices object means "still following the global default".
+            const bomRaw = (planningRaw.bom && typeof planningRaw.bom === 'object') ? planningRaw.bom : {};
+            planning.bom = {
+                yarnSkuCode: bomRaw.yarnSkuCode || '',
+                prices: Object.assign({}, (bomRaw.prices && typeof bomRaw.prices === 'object') ? bomRaw.prices : {})
+            };
 
             // NEW: "แผนกดีไซน์/ขยายลาย" checklist (done/doneBy/note) — deliberately NOT added to the
             // ORDER_STAGES/currentStage state machine (see STAGE_LABELS.design's comment above
@@ -8141,6 +8321,231 @@
                     <p class="text-xs text-slate-600"><i class="fa-solid fa-ruler-combined mr-1 text-indigo-500"></i>รวมทั้งหมด: <span class="font-bold">${totalSqm.toFixed(2)} ตร.ม.</span> • <span class="font-bold">${totalHours.toFixed(1)} ชม.</span> • ประสิทธิภาพรวม <span class="font-bold">${totalHours > 0 ? (totalSqm / totalHours).toFixed(4) : '-'}</span> ตรม./คน/ชม.</p>
                 `;
             }
+        }
+
+        // =========================================================================================
+        // NEW (2026-09-16): "จอทอพรมจริง" (real-loom weaving board) — replaces the generic per-order
+        // Kanban cards in the "ทอ" board column with one card PER PHYSICAL LOOM (1..getStageConcurrency
+        // ('weaving')), so anyone looking at the board sees the actual production floor: which M/O is on
+        // which loom right now, who's weaving it, what grade, how long, a picture of the carpet, how many
+        // days it's been running, and the cumulative ตร.ม. done on THAT loom (its current stint there) —
+        // plus a "รอขึ้นทอ" list for internal-mode orders not currently occupying any loom, and a separate
+        // "จ้างทอภายนอก" list for
+        // orders woven by an outside vendor (those were never on a physical loom of ours, so they never
+        // belong in the loom grid). Every number here is derived from order.weaving.dailyLog, which
+        // already exists — no new data model, no .gs backend change.
+        // =========================================================================================
+
+        // "Current occupant" of one physical loom, scoped to the orders already filtered/sorted for the
+        // weaving board column (ordersHere from renderProductionBoard()'s loop — respects the order-type/
+        // market/search filters already applied there). Each order's "current loom" is the loom named on
+        // its OWN single most-recent dailyLog entry (across every loom it's ever used) — so an order that
+        // moved from loom 2 to loom 1 is only ever shown on loom 1, never lingering as a stale occupant of
+        // loom 2 just because it logged something there once. Returns null when no order's latest entry
+        // points at this loom (i.e. the loom is free, or was only ever used by orders that have since
+        // moved on).
+        function getLoomBoardAssignment(loomNumber, ordersHere) {
+            let best = null;
+            ordersHere.forEach(order => {
+                const entries = order.weaving.dailyLog || [];
+                if (entries.length === 0) return;
+                const latest = entries.reduce((a, b) => (b.date > a.date ? b : a));
+                if (String(latest.loom || '') !== String(loomNumber)) return;
+                if (!best || latest.date > best.entry.date) {
+                    best = { order, orderIndex: productionOrders.indexOf(order), entry: latest };
+                }
+            });
+            return best;
+        }
+
+        // Everything this ONE order has ever logged on this ONE loom, rolled up: cumulative ตร.ม.,
+        // cumulative staff-hours (คน×ชม.), distinct-date count ("ระยะเวลาทำงาน" in days), and a properly
+        // staff-hours-weighted overall efficiency/gradePercent for THIS M/O on THIS loom — same formula as
+        // readWeavingLogShiftsFromForm()/renderWeavingLogTable()'s per-grade summary
+        // (efficiency = ตร.ม. / คน×ชม., gradePercent = efficiency / grade target × 100), just aggregated
+        // per (order, loom) instead of per grade-letter or per single entry. This is what satisfies "%
+        // เทียบเกรดแต่ละ M/O ควรจะหารที่จำนวนคนทำงานด้วย" at the loom-card level.
+        function getLoomOrderStint(order, loomNumber) {
+            const entries = (order.weaving.dailyLog || []).filter(e => String(e.loom || '') === String(loomNumber));
+            if (entries.length === 0) return null;
+            const latest = entries.reduce((a, b) => (b.date > a.date ? b : a));
+            const sqm = Math.round(entries.reduce((s, e) => s + (Number(e.sqm) || 0), 0) * 100) / 100;
+            const hours = Math.round(entries.reduce((s, e) => s + (Number(e.hours) || 0), 0) * 100) / 100;
+            const days = new Set(entries.map(e => e.date)).size;
+            const efficiency = hours > 0 ? sqm / hours : null;
+            const grade = latest.grade || '';
+            const gradeTargetEfficiency = grade ? getTuftingGradeTarget(grade) : null;
+            const gradePercent = (gradeTargetEfficiency && efficiency !== null) ? Math.round((efficiency / gradeTargetEfficiency) * 1000) / 10 : null;
+            return { sqm, hours, days, efficiency, grade, gradeTargetEfficiency, gradePercent, latestEntry: latest };
+        }
+
+        // Today's company-wide weaving snapshot for the central "Dashboard กลาง" KPI card — same
+        // staff-hours-weighted average convention as everywhere else in this feature (each entry's
+        // gradePercent weighted by its own staff-hours, not a plain average across entries).
+        function computeWeavingTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            let totalSqm = 0, weightedGradeSum = 0, weightedHours = 0;
+            const occupiedLooms = new Set();
+            productionOrders.forEach(order => {
+                (order.weaving.dailyLog || []).forEach(entry => {
+                    if (entry.date !== today) return;
+                    totalSqm += Number(entry.sqm) || 0;
+                    if (entry.loom !== undefined && entry.loom !== '') occupiedLooms.add(String(entry.loom));
+                    const hours = Number(entry.hours) || 0;
+                    if (entry.gradePercent !== null && entry.gradePercent !== undefined && hours > 0) {
+                        weightedGradeSum += Number(entry.gradePercent) * hours;
+                        weightedHours += hours;
+                    }
+                });
+            });
+            return {
+                totalSqm: Math.round(totalSqm * 100) / 100,
+                occupiedLoomsCount: occupiedLooms.size,
+                totalLooms: getStageConcurrency('weaving'),
+                avgGradePercent: weightedHours > 0 ? Math.round((weightedGradeSum / weightedHours) * 10) / 10 : null
+            };
+        }
+
+        function renderOccupiedLoomCardHtml(loomNumber, assignment, toStage) {
+            const { order, orderIndex, entry } = assignment;
+            const stint = getLoomOrderStint(order, loomNumber) || { sqm: 0, hours: 0, days: 0, gradePercent: null };
+            const pctBadge = stint.gradePercent === null || stint.gradePercent === undefined
+                ? '<span class="text-slate-300">-</span>'
+                : `<span class="font-bold ${stint.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${stint.gradePercent}%</span>`;
+            const employees = (entry.employees || []).map(escapeHtml).join(', ') || '-';
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            return `
+                <div class="bg-white rounded-xl border border-teal-200 shadow-sm p-2.5 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-0.5"><i class="fa-solid fa-diagram-project"></i> จอ ${escapeHtml(String(loomNumber))}</span>
+                        <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                        <div class="min-w-0">
+                            <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                            ${order.customerName ? `<p class="text-[10px] text-slate-500 truncate">${escapeHtml(order.customerName)}</p>` : ''}
+                            <p class="text-[10px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-600 truncate"><i class="fa-solid fa-users mr-1 text-teal-500"></i>${employees}</p>
+                    <div class="grid grid-cols-2 gap-1.5 text-center">
+                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">เกรด</p><p class="text-xs font-bold text-slate-700">${escapeHtml(entry.grade || '-')}</p></div>
+                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">% เทียบเกรด (M/O นี้)</p><p class="text-xs">${pctBadge}</p></div>
+                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">ใช้เวลาล่าสุด</p><p class="text-xs font-bold text-slate-700">${(Number(entry.hours) || 0).toFixed(2)} ชม.</p></div>
+                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">ระยะเวลาทำงาน</p><p class="text-xs font-bold text-slate-700">${stint.days} วัน</p></div>
+                    </div>
+                    <p class="text-[11px] text-slate-600"><i class="fa-solid fa-ruler-combined mr-1 text-teal-500"></i>รวมบนจอนี้ <span class="font-bold">${stint.sqm.toFixed(2)} ตร.ม.</span> (ล่าสุด ${escapeHtml(entry.date || '-')})</p>
+                    ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
+                    <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
+                </div>
+            `;
+        }
+
+        function renderIdleLoomCardHtml(loomNumber) {
+            return `
+                <div class="bg-white/60 rounded-xl border border-dashed border-slate-300 p-2.5 flex flex-col items-center justify-center gap-1.5 min-h-[120px]">
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5"><i class="fa-solid fa-diagram-project"></i> จอ ${escapeHtml(String(loomNumber))}</span>
+                    <p class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-pause mr-1"></i>จอว่าง</p>
+                </div>
+            `;
+        }
+
+        function renderWaitingWeavingRowHtml(order, orderIndex, toStage) {
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            return `
+                <div class="bg-white rounded-lg border border-slate-200 px-2.5 py-2 flex items-center justify-between gap-2 text-xs">
+                    <div class="min-w-0 flex-grow">
+                        <p class="font-bold ${moSoTextColorClass(order)} font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                        <p class="text-[10px] text-slate-400 truncate">${escapeHtml(order.customerName || '-')} • กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                        ${deadlineWarningHtml ? `<div class="mt-0.5">${deadlineWarningHtml}</div>` : ''}
+                    </div>
+                    <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="shrink-0 text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+                </div>
+            `;
+        }
+
+        function renderExternalWeavingRowHtml(order, orderIndex, toStage) {
+            const ext = order.weaving.external || {};
+            const qcBadge = ext.qcResult === 'pass'
+                ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
+                : (ext.qcResult === 'fail' ? '<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>QC ไม่ผ่าน</span>' : '<span class="text-slate-400">รอผล QC</span>');
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            return `
+                <div class="bg-white rounded-lg border border-amber-200 px-2.5 py-2 space-y-1 text-xs">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="font-bold ${moSoTextColorClass(order)} font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="openWeavingOrderPrintFromOrder(${orderIndex})" class="text-slate-400 hover:text-indigo-600 px-1" title="พิมพ์ใบสั่งจ้างทอ"><i class="fa-solid fa-print"></i></button>
+                            <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500">${escapeHtml(order.customerName || '-')} • กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                    <p class="text-[10px] text-slate-500">ส่งผ้า+ไหม: ${escapeHtml(ext.sentDate || '-')}${ext.vendorDueDate ? ` • กำหนดส่ง: ${escapeHtml(ext.vendorDueDate)}` : ''}</p>
+                    <p class="text-[10px]">${qcBadge}${ext.receivedDate ? ` • ได้รับพรม: ${escapeHtml(ext.receivedDate)}` : ''}</p>
+                    ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
+                    <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
+                </div>
+            `;
+        }
+
+        // Replaces the generic per-order Kanban card loop for the "ทอ" board column with one card PER
+        // PHYSICAL LOOM — see the block comment above getLoomBoardAssignment() for the full rationale.
+        // `ordersHere` is exactly what renderProductionBoard()'s loop already filtered/sorted (order-type/
+        // market/search filters + currentStage === 'weaving'), so this board respects the same filters as
+        // every other Kanban column without re-implementing them.
+        function renderWeavingLoomBoard(ordersHere, searchTerm) {
+            const column = document.getElementById('boardColumn-weaving');
+            if (!column) return;
+
+            const internalOrders = ordersHere.filter(o => o.weaving.mode !== 'external');
+            const externalOrders = ordersHere.filter(o => o.weaving.mode === 'external');
+            const loomCount = getStageConcurrency('weaving');
+            const toStage = NEXT_STAGE['weaving'];
+
+            const occupantOrderIndexes = new Set();
+            const loomCardsHtml = [];
+            for (let loom = 1; loom <= loomCount; loom++) {
+                const assignment = getLoomBoardAssignment(loom, internalOrders);
+                if (assignment) {
+                    occupantOrderIndexes.add(assignment.orderIndex);
+                    loomCardsHtml.push(renderOccupiedLoomCardHtml(loom, assignment, toStage));
+                } else {
+                    loomCardsHtml.push(renderIdleLoomCardHtml(loom));
+                }
+            }
+
+            // "รอขึ้นทอ": any internal-mode order at this stage that is NOT currently the latest occupant
+            // of any loom — covers both never-started orders AND orders bumped off their last loom by a
+            // newer entry, so nothing silently disappears from the board (see the block comment above).
+            const waitingOrders = internalOrders
+                .filter(o => !occupantOrderIndexes.has(productionOrders.indexOf(o)))
+                .sort((a, b) => {
+                    if (!a.dueDate && !b.dueDate) return 0;
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0);
+                });
+
+            const waitingHtml = waitingOrders.length > 0
+                ? waitingOrders.map(o => renderWaitingWeavingRowHtml(o, productionOrders.indexOf(o), toStage)).join('')
+                : `<p class="text-[11px] text-slate-400 px-1">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการรอขึ้นทอ'}</p>`;
+
+            const externalHtml = externalOrders.length > 0
+                ? externalOrders.map(o => renderExternalWeavingRowHtml(o, productionOrders.indexOf(o), toStage)).join('')
+                : `<p class="text-[11px] text-slate-400 px-1">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีงานจ้างทอภายนอก'}</p>`;
+
+            column.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">${loomCardsHtml.join('')}</div>
+                <div class="mt-3 pt-3 border-t border-teal-200/70">
+                    <h5 class="text-[11px] font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-hourglass-half text-amber-500"></i> รอขึ้นทอ (${waitingOrders.length})</h5>
+                    <div class="space-y-1.5">${waitingHtml}</div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-teal-200/70">
+                    <h5 class="text-[11px] font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-truck-ramp-box text-amber-500"></i> จ้างทอภายนอก (${externalOrders.length})</h5>
+                    <div class="space-y-1.5">${externalHtml}</div>
+                </div>
+            `;
         }
 
         async function syncOrderToSheet(order) {
@@ -9741,6 +10146,16 @@
                     });
                 }
                 countEl.textContent = ordersHere.length;
+
+                // NEW (2026-09-16): "ตรงบอร์ดงานแผนกทอ ให้เปลี่ยนเป็นจอทอพรมจริง" — the weaving column no
+                // longer renders one generic Kanban card per order; it renders one card per PHYSICAL LOOM
+                // (see renderWeavingLoomBoard()'s block comment). The count badge above still reflects the
+                // same "orders currently at this stage, after filters" total as every other column — only
+                // the card-rendering portion is special-cased here, so filtering/search/counts stay unified.
+                if (stage === 'weaving') {
+                    renderWeavingLoomBoard(ordersHere, searchTerm);
+                    return;
+                }
 
                 if (ordersHere.length === 0) {
                     column.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการ'}</p>`;
@@ -11892,10 +12307,222 @@
             return `<p class="text-[10px] text-fuchsia-600 mt-0.5 flex items-center gap-1 flex-wrap">${gradeText} → แนะนำ <span class="font-semibold">${suggestion.days} วัน</span>${alreadyApplied ? '' : `<button type="button" onclick="applyProductionSuggestion(${orderIndex}, '${stage}')" class="ml-1 px-1.5 py-0.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded whitespace-nowrap">ใช้ค่านี้</button>`}</p>`;
         }
 
+        // =====================================================================================
+        // NEW (2026-09-16): BOM ต้นทุนประมาณการผลิต (production-cost bill of materials), ported from
+        // the user's uploaded "BOM Hand Tufted Rug Planner" Excel into แผนกวางแผน's own spec-calculation
+        // page (renderPlanningChecklistHtml / renderBomCardHtml below), saved PER M/O,S/O in
+        // order.planning.bom (see normalizeOrder()) per the user's explicit choice.
+        //
+        // Formula source (the Excel's own per-sqm factors): main yarn = area × 2.8 kg/ตร.ม. × 1.1 เผื่อ
+        // เสีย; latex = area × 1.5 kg/ตร.ม. × 1.1; canvas and backing mesh are already sqm-based, so just
+        // × 1.1; labor is a straight 1:1 area quantity with NO waste factor. Each cost = qty × unit price.
+        //
+        // NOTE — a genuine bug in the source Excel was found and corrected here rather than reproduced:
+        // its own "รวมต้นทุนวัตถุดิบ" total (=SUM of the yarn/canvas/latex rows only) accidentally leaves
+        // out the backing-mesh cost row, and its "รวมต้นทุนค่าแรงช่าง" total actually points at that same
+        // backing row instead of the real labor row — so the Excel's grand total never actually includes
+        // labor cost at all. Fixed here: material cost = sum of ALL FOUR material costs (yarn + canvas +
+        // latex + backing), labor cost = its own row, net total = material + labor. Flagged to the user
+        // in the delivery summary so this isn't a silent change from what their spreadsheet shows.
+        // =====================================================================================
+        const BOM_YARN_KG_PER_SQM = 2.8;
+        const BOM_LATEX_KG_PER_SQM = 1.5;
+        const BOM_WASTE_FACTOR = 1.1;
+
+        // Global default unit prices — a shared starting point, editable per order (per the user's
+        // explicit choice, "ตั้งค่าเริ่มต้นกลาง แก้ได้ต่อออเดอร์"). Never synced to Google Sheets, same
+        // localStorage-only convention as FINISHING_CAPACITY_KEY above; only a per-order OVERRIDE (inside
+        // order.planning.bom.prices) travels with the order data itself.
+        const BOM_DEFAULT_PRICES_KEY = 'qc_bom_default_prices_v1';
+        const BOM_PRICE_FIELDS = [
+            { key: 'yarnPerKg', label: 'ไหมพรม', unit: 'บาท/กก.' },
+            { key: 'canvasPerSqm', label: 'ผ้าใบ (Canvas)', unit: 'บาท/ตร.ม.' },
+            { key: 'latexPerKg', label: 'น้ำยางลาเท็กซ์', unit: 'บาท/กก.' },
+            { key: 'backingPerSqm', label: 'ผ้ารองหลัง (Backing)', unit: 'บาท/ตร.ม.' },
+            { key: 'laborPerSqm', label: 'ค่าแรงช่างทอ', unit: 'บาท/ตร.ม.' }
+        ];
+        function getBomDefaultPrices() {
+            let raw = {};
+            try { raw = JSON.parse(localStorage.getItem(BOM_DEFAULT_PRICES_KEY) || '{}') || {}; } catch (e) { raw = {}; }
+            const prices = {};
+            BOM_PRICE_FIELDS.forEach(f => { prices[f.key] = Number(raw[f.key]) || 0; });
+            return prices;
+        }
+        function setBomDefaultPrices(prices) {
+            const clean = {};
+            BOM_PRICE_FIELDS.forEach(f => { clean[f.key] = Math.max(0, Number(prices[f.key]) || 0); });
+            localStorage.setItem(BOM_DEFAULT_PRICES_KEY, JSON.stringify(clean));
+        }
+        // Per-order price = whatever this order has explicitly overridden, falling back field-by-field
+        // to the shared global default — so overriding just one price (e.g. this order's own yarn deal)
+        // never disconnects the other four from future changes to the global default.
+        function resolveBomPrices(order) {
+            const defaults = getBomDefaultPrices();
+            const overrides = (order.planning && order.planning.bom && order.planning.bom.prices) || {};
+            const resolved = {};
+            BOM_PRICE_FIELDS.forEach(f => {
+                resolved[f.key] = Object.prototype.hasOwnProperty.call(overrides, f.key)
+                    ? (Number(overrides[f.key]) || 0)
+                    : defaults[f.key];
+            });
+            return resolved;
+        }
+
+        // SKU spec decoder, straight from the Excel's own cell formulas — see example in the header
+        // comment above: "YN-AP-WL01-103-WHT01" → Premium NZ Wool / 3-Ply / WHT01.
+        //   Grade      = MID(sku,4,2)="AP" ? Premium NZ Wool : Standard   → sku[3..5) (0-indexed)
+        //   Ply        = RIGHT(LEFT(sku,14),1) & "-Ply"                    → the 14th character
+        //   Color code = RIGHT(sku,5)                                      → the last 5 characters
+        function decodeYarnSkuSpec(sku) {
+            const code = String(sku || '').trim().toUpperCase();
+            if (!code) return null;
+            const gradeCode = code.length >= 5 ? code.slice(3, 5) : '';
+            const grade = gradeCode === 'AP' ? 'Premium NZ Wool' : 'Standard';
+            const plyChar = code.length >= 14 ? code.slice(0, 14).slice(-1) : '';
+            const ply = plyChar ? `${plyChar}-Ply` : '-';
+            const colorCode = code.length >= 5 ? code.slice(-5) : code;
+            return { grade, ply, colorCode, gradeCode };
+        }
+
+        // Full BOM computation for one order — quantities, resolved unit prices, and costs (corrected
+        // totals per the note above). Area comes straight from order.totalSqm (the same total-area field
+        // used everywhere else in the app, e.g. the delivery note / Mark & Nos totals).
+        function computeBomForOrder(order) {
+            const area = Number(order.totalSqm) || 0;
+            const bom = (order.planning && order.planning.bom) || { yarnSkuCode: '', prices: {} };
+            const spec = decodeYarnSkuSpec(bom.yarnSkuCode);
+            const prices = resolveBomPrices(order);
+
+            const yarnKg = area * BOM_YARN_KG_PER_SQM * BOM_WASTE_FACTOR;
+            const canvasSqm = area * BOM_WASTE_FACTOR;
+            const latexKg = area * BOM_LATEX_KG_PER_SQM * BOM_WASTE_FACTOR;
+            const backingSqm = area * BOM_WASTE_FACTOR;
+            const laborSqm = area; // labor billed on net area — no waste factor, per the source sheet
+
+            const yarnCost = yarnKg * prices.yarnPerKg;
+            const canvasCost = canvasSqm * prices.canvasPerSqm;
+            const latexCost = latexKg * prices.latexPerKg;
+            const backingCost = backingSqm * prices.backingPerSqm;
+            const laborCost = laborSqm * prices.laborPerSqm;
+            const materialCost = yarnCost + canvasCost + latexCost + backingCost;
+            const netTotal = materialCost + laborCost;
+
+            return {
+                area, spec, prices,
+                yarnSkuCode: bom.yarnSkuCode || '',
+                quantities: { yarnKg, canvasSqm, latexKg, backingSqm, laborSqm },
+                costs: { yarnCost, canvasCost, latexCost, backingCost, laborCost, materialCost, netTotal }
+            };
+        }
+
+        function fmtBomNum(n, digits) {
+            return (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+        }
+
+        // Writes the resolved (currently displayed) price set as the new shared global default — a
+        // one-click "ใช้ราคาชุดนี้เป็นค่าเริ่มต้นกลาง" per the user's explicit choice. Only affects OTHER
+        // orders that haven't customized a given field themselves; this order's own overrides (if any)
+        // are untouched.
+        function saveBomPricesAsDefault(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            setBomDefaultPrices(resolveBomPrices(order));
+            showToast('บันทึกราคาชุดนี้เป็นค่าเริ่มต้นกลางแล้ว — ออเดอร์อื่นที่ยังไม่เคยแก้ไขราคาเองจะใช้ค่านี้', 'fa-floppy-disk', 'text-emerald-500');
+            rerenderOrderViews(orderIndex);
+        }
+
+        // Bridges the BOM's computed yarn requirement straight into the existing "สั่งย้อมกี่กิโล" plan
+        // field (order.dyeing.plannedKg) — reuses the field Planning already fills in by hand, rather
+        // than inventing a second parallel number, per this session's reuse-not-duplicate convention.
+        function applyBomYarnKgToDyeingPlan(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const bom = computeBomForOrder(order);
+            updateOrderField(orderIndex, 'dyeing.plannedKg', Math.round(bom.quantities.yarnKg * 100) / 100);
+            showToast('นำน้ำหนักไหมที่คำนวณได้ไปใส่ในแผนสั่งย้อมแล้ว', 'fa-arrow-right', 'text-violet-500');
+        }
+
+        // The BOM card itself — sits at the top of the Planning spec section (renderPlanningChecklistHtml).
+        function renderBomCardHtml(order, orderIndex) {
+            const bom = computeBomForOrder(order);
+            const spec = bom.spec;
+            const hasArea = bom.area > 0;
+            const defaults = getBomDefaultPrices();
+            const overrides = (order.planning.bom.prices) || {};
+
+            const priceInputsHtml = BOM_PRICE_FIELDS.map(f => {
+                const isOverridden = Object.prototype.hasOwnProperty.call(overrides, f.key);
+                return `
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-0.5 flex items-center gap-1">${escapeHtml(f.label)} <span class="text-slate-400">(${f.unit})</span>${isOverridden ? '<span class="text-[9px] text-amber-600 font-semibold">•เฉพาะออเดอร์นี้</span>' : ''}</label>
+                    <input type="number" min="0" step="0.01" value="${bom.prices[f.key] || ''}" placeholder="0.00" onchange="updateOrderField(${orderIndex}, 'planning.bom.prices.${f.key}', Number(this.value) || 0)" class="w-full p-1.5 bg-white border ${isOverridden ? 'border-amber-300' : 'border-slate-200'} rounded-lg text-xs">
+                </div>`;
+            }).join('');
+
+            const qtyRows = [
+                ['ไหมพรม (Yarn)', bom.quantities.yarnKg, 'กก.', bom.costs.yarnCost],
+                ['ผ้าใบ (Canvas)', bom.quantities.canvasSqm, 'ตร.ม.', bom.costs.canvasCost],
+                ['น้ำยางลาเท็กซ์ (Latex)', bom.quantities.latexKg, 'กก.', bom.costs.latexCost],
+                ['ผ้ารองหลัง (Backing)', bom.quantities.backingSqm, 'ตร.ม.', bom.costs.backingCost],
+                ['ค่าแรงช่างทอ (Labor)', bom.quantities.laborSqm, 'ตร.ม.', bom.costs.laborCost]
+            ].map(([label, qty, unit, cost]) => `
+                <tr class="border-b border-slate-100 last:border-0">
+                    <td class="py-1 pr-2 text-slate-600">${label}</td>
+                    <td class="py-1 pr-2 text-right whitespace-nowrap">${fmtBomNum(qty, 2)} ${unit}</td>
+                    <td class="py-1 text-right font-medium text-slate-700 whitespace-nowrap">${fmtBomNum(cost, 2)} บาท</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="bg-amber-50/60 border border-amber-100 p-2.5 rounded-xl space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-bold text-amber-700 flex items-center gap-1.5"><i class="fa-solid fa-calculator"></i> BOM ต้นทุนประมาณการผลิต</p>
+                        <button type="button" onclick="openYarnCalculatorModal(${orderIndex})" class="text-[10px] bg-white hover:bg-amber-50 text-amber-700 font-semibold px-2 py-1 rounded-lg border border-amber-200 transition flex items-center gap-1"><i class="fa-solid fa-calculator"></i> เปิดเครื่องคำนวณไหมพรม (M/O นี้)</button>
+                    </div>
+                    ${!hasArea ? `<p class="text-[11px] text-amber-700 bg-amber-100/60 border border-amber-200 rounded-lg px-2 py-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>ยังไม่มีพื้นที่รวม (ตร.ม.) ของ M/O นี้ — กรุณากรอกขนาด/จำนวนชิ้นก่อน ระบบจึงจะคำนวณ BOM ได้</p>` : ''}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">รหัส SKU ไหมพรม</label>
+                            <input type="text" placeholder="เช่น YN-AP-WL01-103-WHT01" value="${escapeHtml(bom.yarnSkuCode)}" onchange="updateOrderField(${orderIndex}, 'planning.bom.yarnSkuCode', this.value.trim())" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div class="text-[11px] text-slate-600 flex flex-col justify-center gap-0.5">
+                            ${spec ? `
+                                <span>เกรด: <span class="font-semibold text-amber-700">${escapeHtml(spec.grade)}</span></span>
+                                <span>จำนวนพลาย: <span class="font-semibold text-amber-700">${escapeHtml(spec.ply)}</span> • รหัสสี: <span class="font-semibold text-amber-700">${escapeHtml(spec.colorCode)}</span></span>
+                            ` : `<span class="text-slate-400">กรอกรหัส SKU เพื่อถอดสเปค (เกรด/พลาย/รหัสสี)</span>`}
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500">พื้นที่รวม (จาก M/O): <span class="font-semibold text-slate-700">${fmtBomNum(bom.area, 2)} ตร.ม.</span></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        ${priceInputsHtml}
+                    </div>
+                    <button type="button" onclick="saveBomPricesAsDefault(${orderIndex})" class="text-[10px] text-indigo-600 hover:text-indigo-800 underline">ใช้ราคาชุดนี้เป็นค่าเริ่มต้นกลาง (สำหรับออเดอร์อื่นที่ยังไม่เคยแก้ไขราคาเอง)</button>
+                    <table class="w-full text-xs mt-1">
+                        <tbody>${qtyRows}</tbody>
+                        <tfoot>
+                            <tr class="border-t border-amber-200">
+                                <td class="py-1 pr-2 font-semibold text-amber-700">รวมต้นทุนวัตถุดิบ</td>
+                                <td></td>
+                                <td class="py-1 text-right font-semibold text-amber-700">${fmtBomNum(bom.costs.materialCost, 2)} บาท</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-2 font-bold text-amber-800">รวมต้นทุนประมาณการผลิตสุทธิ</td>
+                                <td></td>
+                                <td class="py-1 text-right font-bold text-amber-800">${fmtBomNum(bom.costs.netTotal, 2)} บาท</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <p class="text-[10px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>รวมต้นทุนวัตถุดิบ = ไหม+ผ้าใบ+ลาเท็กซ์+ผ้ารองหลัง และรวมสุทธิ = วัตถุดิบ+ค่าแรง (ปรับสูตรรวมให้ครบถ้วนกว่าไฟล์ Excel ต้นฉบับที่ตกหล่นผ้ารองหลังและค่าแรงจริงในผลรวม)</p>
+                    ${bom.quantities.yarnKg > 0 ? `<button type="button" onclick="applyBomYarnKgToDyeingPlan(${orderIndex})" class="w-full mt-1 bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-medium py-1.5 rounded-lg transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right-to-bracket"></i> ใช้น้ำหนักไหมนี้ (${fmtBomNum(bom.quantities.yarnKg, 2)} กก.) เป็นแผนสั่งย้อม</button>` : ''}
+                </div>
+            `;
+        }
+
         function renderPlanningChecklistHtml(order, orderIndex) {
             const dyeing = order.dyeing;
             const weaving = order.weaving;
             return `
+                ${renderBomCardHtml(order, orderIndex)}
                 <div class="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
                     <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded w-4 h-4"> คำนวณสเปคแล้ว</label>
                     <input type="text" placeholder="ชื่อผู้คีย์รายการ" value="${escapeHtml(order.planning.specDoneBy || '')}" onchange="updateOrderField(${orderIndex}, 'planning.specDoneBy', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
@@ -12036,11 +12663,36 @@
                          นอกบริษัท ตามโหมดที่เลือกด้านบน) จากข้อมูลที่กรอกไว้ตรงนี้ — หรือใช้ปุ่ม "สร้างใบสั่งย้อม"
                          ในเครื่องคำนวณไหมพรมแทนก็ได้ ถ้าต้องการแยกตามรายการสีที่คำนวณไว้. -->
                     <button type="button" onclick="openDyeingOrderPrintFromOrder(${orderIndex})" class="w-full mt-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-print"></i> พิมพ์ใบสั่งย้อม (${dyeing.mode === 'external' ? 'ใบสั่งจ้างย้อมนอกบริษัท' : 'ใบสั่งย้อมภายใน'})</button>
+                    <!-- NEW (2026-09-16): "แผนกย้อมรับคำสั่งจากแผนกวางแผน ให้ดึงข้อมูล Code สี จำนวนที่สั่ง
+                         มาจากแผนกวางแผน" — sends this same Code สี + จำนวนที่สั่ง (กก.) straight into the
+                         "แผนกย้อม (KPI) → บันทึกสั่งย้อม" log, so the dyeing department fills in only the
+                         execution/withdrawal columns instead of re-typing what Planning already decided. -->
+                    <button type="button" onclick="sendDyeingColorListToKpiLog(${orderIndex})" class="w-full mt-1 bg-white hover:bg-violet-50 text-violet-700 border border-violet-200 text-xs font-medium py-1.5 rounded-lg transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-paper-plane"></i> ส่งรายการสีเข้าบันทึกสั่งย้อม (KPI)</button>
                 </div>
 
                 <div class="bg-teal-50/60 border border-teal-100 p-2.5 rounded-xl space-y-2">
                     <p class="text-xs font-bold text-teal-700 flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart"></i> งานทอ</p>
                     ${renderStageModeToggleHtml(orderIndex, 'weaving', weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ')}
+                    ${(() => {
+                        // NEW (2026-09-16): งานทอในบริษัทให้เอาสเปคจาก BOM มาแสดง / จ้างทอภายนอกต้องมีใบสั่งจ้าง
+                        // ที่พิมพ์เป็น PDF ได้ — reuses the SAME BOM calc as renderBomCardHtml above, mirrors
+                        // the existing external-dyeing print button's layout/pattern per the user's choice.
+                        const bomForWeaving = computeBomForOrder(order);
+                        if (weaving.mode === 'external') {
+                            return `
+                                <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>งานจ้างทอภายนอกต้องมีใบสั่งจ้าง — พิมพ์จากสเปคที่คำนวณไว้ใน BOM ด้านบน</p>
+                                <button type="button" onclick="openWeavingOrderPrintFromOrder(${orderIndex})" class="w-full mt-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-print"></i> พิมพ์ใบสั่งจ้างทอ (PDF)</button>
+                            `;
+                        }
+                        return `
+                            <div class="bg-white/70 border border-teal-100 rounded-lg p-2 text-[11px] text-slate-600 space-y-0.5">
+                                <p class="font-semibold text-teal-700"><i class="fa-solid fa-ruler-combined mr-1"></i>สเปคงานทอในบริษัท (จาก BOM ด้านบน)</p>
+                                <p>พื้นที่รวม: <span class="font-medium text-slate-700">${fmtBomNum(bomForWeaving.area, 2)} ตร.ม.</span></p>
+                                <p>น้ำหนักไหมที่ต้องใช้: <span class="font-medium text-slate-700">${fmtBomNum(bomForWeaving.quantities.yarnKg, 2)} กก.</span></p>
+                                ${bomForWeaving.spec ? `<p>เกรด: <span class="font-medium text-slate-700">${escapeHtml(bomForWeaving.spec.grade)}</span> • พลาย: <span class="font-medium text-slate-700">${escapeHtml(bomForWeaving.spec.ply)}</span> • รหัสสี: <span class="font-medium text-slate-700">${escapeHtml(bomForWeaving.spec.colorCode)}</span></p>` : `<p class="text-slate-400">ยังไม่ได้กรอกรหัส SKU ไหมพรมใน BOM ด้านบน</p>`}
+                            </div>
+                        `;
+                    })()}
                 </div>
             `;
         }
@@ -12770,12 +13422,35 @@
             return new TextDecoder('utf-8').decode(bytes);
         }
 
-        function openYarnCalculatorModal() {
+        // NEW (2026-09-16): optional orderIndex parameter — "แยกเครื่องคำนวณไหมพรมเป็นแต่ละ M/O,S/O" per
+        // the user's clarified request means a per-order entry point into this SAME shared calculator,
+        // auto-prefilled and auto-searched for that order, not a separate persisted calculator per
+        // order. Reuses the calculator's own exposed top-level functions (switchTab/updateOrderField/
+        // handleLookupOrder — the same three calls its own "ค้นหา" button flow already makes) so this
+        // requires zero edits to the embedded third-party tool itself. Existing callers that pass no
+        // argument (the general-purpose calculator buttons) are unaffected.
+        function openYarnCalculatorModal(orderIndex) {
             const modal = document.getElementById('yarnCalculatorModal');
             const iframe = document.getElementById('yarnCalculatorIframe');
+            const prefillForOrder = () => {
+                if (orderIndex === undefined || orderIndex === null) return;
+                const order = productionOrders[orderIndex];
+                const win = iframe && iframe.contentWindow;
+                if (!order || !win) return;
+                try {
+                    if (typeof win.switchTab === 'function') win.switchTab('worksheet');
+                    if (typeof win.updateOrderField === 'function') win.updateOrderField('moNo', order.moSo || '');
+                    if (typeof win.handleLookupOrder === 'function') win.handleLookupOrder();
+                } catch (e) {
+                    // Isolated srcdoc iframe — a prefill failure should never block opening the calculator.
+                }
+            };
             if (!yarnCalculatorLoaded && iframe) {
                 iframe.srcdoc = b64DecodeUnicode(YARN_CALCULATOR_HTML_B64);
                 yarnCalculatorLoaded = true;
+                iframe.addEventListener('load', prefillForOrder, { once: true });
+            } else {
+                prefillForOrder();
             }
             if (modal) modal.classList.remove('hidden');
         }
@@ -14042,6 +14717,9 @@
             <th class="px-2 py-2 text-left">code สี</th>
             <th class="px-2 py-2 text-left">ชนิดไหม</th>
             <th class="px-2 py-2 text-left">LOT ไหม</th>
+            <!-- NEW (2026-09-16): Hang + Remark — matching the "Hang"/"Remark" columns of the attached
+                 รายงานการผลิตแผนกย้อม Excel format ("ให้ใช้รูปแบบรายการตาม excel แนบ"). -->
+            <th class="px-2 py-2 text-left">Hang</th>
             <th class="px-2 py-2 text-right">นน.ในใบสั่งย้อม (Kg.)</th>
             <th class="px-2 py-2 text-right">หมายเลขตู้ย้อม</th>
             <th class="px-2 py-2 text-right">นน.โอนจากใบเบิก (Kg.)</th>
@@ -14050,6 +14728,7 @@
             <th class="px-2 py-2 text-left">วันที่ย้อมเสร็จจริง</th>
             <th class="px-2 py-2 text-center">สรุปตามแผน</th>
             <th class="px-2 py-2 text-left">วันที่กำหนดส่ง</th>
+            <th class="px-2 py-2 text-left">หมายเหตุ</th>
             <th class="px-2 py-2 text-center">ลบ</th>
         `;
 
@@ -14094,6 +14773,7 @@
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'colorCode', item.colorCode, 'w-16')}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'yarnType', item.yarnType, 'w-20')}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'lotNo', item.lotNo, 'w-16')}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'hang', item.hang, 'w-12')}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'orderKg', item.orderKg)}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'dyeTubNo', item.dyeTubNo, 'w-10')}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'requisitionKg', item.requisitionKg)}</td>
@@ -14102,6 +14782,7 @@
                         <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'actualDate', item.actualDate)}</td>
                         <td class="px-2 py-1.5 text-center">${onTimeHtml}</td>
                         <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'dueDate', item.dueDate)}</td>
+                        <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'remark', item.remark, 'w-24')}</td>
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeDyeOrderLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                     </tr>
                 `;
@@ -14109,7 +14790,7 @@
 
             const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
             const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
-            renderSplitOrderTypeTables('dyeingKpiSplitContainer', DYEING_ORDER_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 15);
+            renderSplitOrderTypeTables('dyeingKpiSplitContainer', DYEING_ORDER_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 17);
         }
 
         function addDyeOrderLogFromSelect() {
@@ -14121,8 +14802,8 @@
             if (!order.dyeing) order.dyeing = {};
             if (!Array.isArray(order.dyeing.dyeOrderLog)) order.dyeing.dyeOrderLog = [];
             order.dyeing.dyeOrderLog.push({
-                isExtra: currentDyeingKpiTab === 'extra', orderDate: '', colorNo: '', colorCode: '', yarnType: '', lotNo: '',
-                orderKg: 0, dyeTubNo: '', requisitionKg: 0, actualTransferKg: 0, plannedDate: '', actualDate: '', dueDate: ''
+                isExtra: currentDyeingKpiTab === 'extra', orderDate: '', colorNo: '', colorCode: '', yarnType: '', lotNo: '', hang: '',
+                orderKg: 0, dyeTubNo: '', requisitionKg: 0, actualTransferKg: 0, plannedDate: '', actualDate: '', dueDate: '', remark: ''
             });
             persistOrderChange(order);
             renderDyeOrderLogTable();
@@ -14737,13 +15418,17 @@
             { key: 'colorCode', label: 'code สี' },
             { key: 'yarnType', label: 'ชนิดไหม' },
             { key: 'lotNo', label: 'LOT ไหม' },
+            // NEW (2026-09-16): Hang + หมายเหตุ — matching the attached "รายงานการผลิตแผนกย้อม" Excel's
+            // own Hang/Remark columns, so the exported/imported file lines up with that format.
+            { key: 'hang', label: 'Hang' },
             { key: 'orderKg', label: 'นน.ในใบสั่งย้อม (Kg.)', type: 'number' },
             { key: 'dyeTubNo', label: 'หมายเลขตู้ย้อม' },
             { key: 'requisitionKg', label: 'นน.โอนจากใบเบิก (Kg.)', type: 'number' },
             { key: 'actualTransferKg', label: 'นน.โอนจริง (Kg.)', type: 'number' },
             { key: 'plannedDate', label: 'วันที่กำหนดเสร็จตามแผน', type: 'date' },
             { key: 'actualDate', label: 'วันที่ย้อมเสร็จจริง', type: 'date' },
-            { key: 'dueDate', label: 'วันที่กำหนดส่ง', type: 'date' }
+            { key: 'dueDate', label: 'วันที่กำหนดส่ง', type: 'date' },
+            { key: 'remark', label: 'หมายเหตุ' }
         ];
 
         function exportDyeingKpiOrderLog() {
