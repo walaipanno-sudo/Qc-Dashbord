@@ -11198,7 +11198,7 @@
         let productionCalendarMonthKey = null; // 'YYYY-MM'; lazily set to the current month on first render
         // Legend order follows the same department sequence computeOrderTimelineSegments() assigns
         // dates in (start → planning → design → dyeing → weaving → finishing → ready_to_ship).
-        const PRODUCTION_CALENDAR_STAGE_ORDER = ['planning', 'design', 'dyeing', 'weaving', 'finishing', 'ready_to_ship'];
+        const PRODUCTION_CALENDAR_STAGE_ORDER = ['planning', 'design', 'dyeing', 'weaving', 'finishing'];
 
         function setBoardViewMode(mode) {
             boardViewMode = (mode === 'calendar') ? 'calendar' : 'kanban';
@@ -11245,10 +11245,18 @@
         // covering — reuses computeOrderTimelineSegments() as-is so the calendar can never drift out of
         // sync with what the Gantt timeline shows for the same order.
         function buildProductionCalendarDayMap(ordersWithIndex, rangeStart, rangeEnd) {
-            const dayMap = {};
+            // Keyed by day -> { [orderIndex]: entry } while building, so that when two adjacent
+            // stage segments share a boundary date for the SAME order (computeOrderTimelineSegments
+            // chains them so one segment's end === the next segment's start), the later segment
+            // (processed after, since segments come back in chronological stage order) simply
+            // overwrites the earlier one instead of both being recorded — this is what previously
+            // caused the same M/O,S/O code to appear twice in one day cell. "รอส่ง" (ready_to_ship)
+            // items are excluded entirely — they're not a real production department and shouldn't
+            // show on this calendar.
+            const dayMapByOrder = {};
             ordersWithIndex.forEach(({ order, orderIndex }) => {
                 computeOrderTimelineSegments(order).forEach(seg => {
-                    if (!seg.stage) return; // the initial "order opened" point has no department yet
+                    if (!seg.stage || seg.stage === 'ready_to_ship') return; // no department yet, or ready-to-ship (not shown here)
                     let cursor = parseDateOnly(seg.start);
                     const segEnd = parseDateOnly(seg.end);
                     if (!cursor || !segEnd) return;
@@ -11256,11 +11264,15 @@
                     const cappedEnd = segEnd > rangeEnd ? rangeEnd : segEnd;
                     while (cursor <= cappedEnd) {
                         const key = formatDateKeyUTC(cursor);
-                        if (!dayMap[key]) dayMap[key] = [];
-                        dayMap[key].push({ order, orderIndex, stage: seg.stage });
+                        if (!dayMapByOrder[key]) dayMapByOrder[key] = {};
+                        dayMapByOrder[key][orderIndex] = { order, orderIndex, stage: seg.stage };
                         cursor = addDaysUTC(cursor, 1);
                     }
                 });
+            });
+            const dayMap = {};
+            Object.keys(dayMapByOrder).forEach(key => {
+                dayMap[key] = Object.values(dayMapByOrder[key]);
             });
             return dayMap;
         }
