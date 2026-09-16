@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QC Check Sheet - Comprehensive Textile Workflow</title>
+    <title>Production Plan & Qc Siam Carpets</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -294,7 +294,7 @@
                     <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">ศูนย์ควบคุมคุณภาพและแผนการผลิต</h1>
+                    <h1 class="text-xl font-bold tracking-wide">Production Plan & Qc Siam Carpets</h1>
                     <p class="text-xs text-slate-200 flex items-center gap-1.5">
                         <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
                         <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อข้อมูล...</span>
@@ -699,6 +699,24 @@
                 </button>
             </div>
 
+            <!-- NEW (2026-09-16): "ปฏิทินรายเดือน" — a whole-month calendar-grid view of the production
+                 schedule, showing each day which department every active M/O, S/O is scheduled to be in
+                 (built from computeOrderTimelineSegments(), the same per-order stage date ranges the
+                 "ไทม์ไลน์การผลิต" tab already draws bars from — see renderProductionCalendar()). This
+                 toggle swaps the WHOLE department-tabs/Kanban section below (wrapped as
+                 #boardKanbanSection) for the calendar container (#productionCalendarContainer) and back
+                 — see setBoardViewMode()/updateBoardViewModeVisibility(). Kept as a mode WITHIN
+                 "แผนผังการผลิต" per the user's request, not a separate top-level tab. -->
+            <div class="flex items-center gap-2 mb-4">
+                <button onclick="setBoardViewMode('kanban')" id="boardViewModeBtn-kanban" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <i class="fa-solid fa-table-columns"></i> มุมมองบอร์ด
+                </button>
+                <button onclick="setBoardViewMode('calendar')" id="boardViewModeBtn-calendar" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-calendar-days"></i> ปฏิทินรายเดือน
+                </button>
+            </div>
+
+            <div id="boardKanbanSection">
             <!-- REMOVED (2026-09-16): the "กรองรายงาน QC ตามแผนก" pills that briefly lived here (moved
                  from the QC records tab) were pulled back out — per the user's feedback they duplicated
                  the board's own department layout tabs directly below and weren't needed as a second row.
@@ -1888,6 +1906,57 @@
                         <div id="finishingKpiGlueSplitContainer"></div>
                     </div>
                 </div>
+            </div>
+            </div>
+            <!-- NEW (2026-09-16): calendar container — see the toggle/comment above. Hidden by default;
+                 populated entirely by renderProductionCalendar(). -->
+            <div id="productionCalendarContainer" class="hidden space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-wrap items-center gap-2">
+                    <button onclick="shiftProductionCalendarMonth(-1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="เดือนก่อนหน้า">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <input type="month" id="productionCalendarMonthInput" onchange="onProductionCalendarMonthInputChange()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="shiftProductionCalendarMonth(1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="เดือนถัดไป">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                    <button onclick="goToCurrentProductionCalendarMonth()" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition">เดือนนี้</button>
+                    <div class="relative flex-grow min-w-[160px] max-w-xs">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
+                        <input type="text" id="productionCalendarSearchInput" oninput="renderProductionCalendar()" placeholder="ค้นหา M/O, S/O, ลูกค้า..." class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-500">
+                    <span class="font-semibold text-slate-600">คำอธิบายสี (แผนก):</span>
+                    <span id="productionCalendarLegend" class="flex flex-wrap items-center gap-x-4 gap-y-1.5"></span>
+                </div>
+
+                <!-- CHANGED (2026-09-16): "ให้แยก M/O กับ S/O" — same convention as every other view in
+                     this app (ภาพรวมการผลิต's overviewMoBoxContainer/overviewSoBoxContainer,
+                     ไทม์ไลน์การผลิต's timelineMoSectionContainer/timelineSoSectionContainer): TWO fully
+                     separate calendars, sharing the month/search toolbar above, one per order type —
+                     rather than mixing both types into one grid. Each is hidden entirely (not just
+                     emptied) when the global M/O, S/O switch narrows to the other type. -->
+                <div id="productionCalendarMoSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-tag mr-1"></i> M/O</h4>
+                        <span id="productionCalendarMoCountBadge" class="text-[11px] text-slate-400"></span>
+                    </div>
+                    <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase text-center">
+                        <div class="py-2">จันทร์</div><div class="py-2">อังคาร</div><div class="py-2">พุธ</div><div class="py-2">พฤหัสบดี</div><div class="py-2">ศุกร์</div><div class="py-2 text-rose-400">เสาร์</div><div class="py-2 text-rose-400">อาทิตย์</div>
+                    </div>
+                    <div id="productionCalendarGrid-MO" class="grid grid-cols-7"></div>
+                </div>
+                <div id="productionCalendarSoSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-amber-700"><i class="fa-solid fa-tag mr-1"></i> S/O</h4>
+                        <span id="productionCalendarSoCountBadge" class="text-[11px] text-slate-400"></span>
+                    </div>
+                    <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase text-center">
+                        <div class="py-2">จันทร์</div><div class="py-2">อังคาร</div><div class="py-2">พุธ</div><div class="py-2">พฤหัสบดี</div><div class="py-2">ศุกร์</div><div class="py-2 text-rose-400">เสาร์</div><div class="py-2 text-rose-400">อาทิตย์</div>
+                    </div>
+                    <div id="productionCalendarGrid-SO" class="grid grid-cols-7"></div>
+                </div>
+                <p class="text-[11px] text-slate-400 px-1">แถบสีในแต่ละวันหมายถึงช่วงที่ M/O, S/O นั้นถูกวางแผนให้อยู่แผนกนั้น (จากวันที่ตั้งเป้าหมายของแต่ละแผนก) คลิกที่รายการเพื่อเปิดดู/แก้ไขรายละเอียด</p>
             </div>
         </div>
 
@@ -10575,6 +10644,10 @@
             // above, this function gets called on every productionOrders mutation already.
             if (typeof salesActiveSubTab !== 'undefined' && salesActiveSubTab === 'report') renderSalesReportTables();
             updateBoardDepartmentTabCounts();
+            // NEW (2026-09-16): keep "ปฏิทินรายเดือน" fresh too whenever it's the active view mode —
+            // same reasoning as the design/notify columns and sales report above, this function already
+            // runs on every productionOrders mutation (add/edit/transfer/delete/sync).
+            if (typeof boardViewMode !== 'undefined' && boardViewMode === 'calendar') renderProductionCalendar();
         }
 
         // NEW (2026-09-11): "แจ้งเตือน (รอส่ง)" Kanban column — same non-currentStage pattern as
@@ -11110,6 +11183,181 @@
 
             renderTimelineSection('MO', 'timelineMoGrid', 'emptyTimelineMoState', 'timelineMoCountBadge');
             renderTimelineSection('SO', 'timelineSoGrid', 'emptyTimelineSoState', 'timelineSoCountBadge');
+        }
+
+        // =========================================================================================
+        // "ปฏิทินรายเดือน" (Production Calendar) — a mode WITHIN "แผนผังการผลิต" (see
+        // #productionCalendarContainer / the view-mode toggle above it in the HTML). Re-slices the
+        // SAME per-order stage schedule the "ไทม์ไลน์การผลิต" Gantt view already draws bars from
+        // (computeOrderTimelineSegments()) into a whole-month calendar grid — "which department is
+        // this M/O, S/O scheduled to be in on day X" instead of one long horizontal bar. Split into
+        // separate M/O and S/O calendars, same convention as every other split view in this app.
+        // =========================================================================================
+
+        let boardViewMode = 'kanban'; // 'kanban' | 'calendar' — see setBoardViewMode()
+        let productionCalendarMonthKey = null; // 'YYYY-MM'; lazily set to the current month on first render
+        // Legend order follows the same department sequence computeOrderTimelineSegments() assigns
+        // dates in (start → planning → design → dyeing → weaving → finishing → ready_to_ship).
+        const PRODUCTION_CALENDAR_STAGE_ORDER = ['planning', 'design', 'dyeing', 'weaving', 'finishing', 'ready_to_ship'];
+
+        function setBoardViewMode(mode) {
+            boardViewMode = (mode === 'calendar') ? 'calendar' : 'kanban';
+            updateBoardViewModeVisibility();
+            if (boardViewMode === 'calendar') renderProductionCalendar();
+        }
+
+        function updateBoardViewModeVisibility() {
+            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            const kanbanBtn = document.getElementById('boardViewModeBtn-kanban');
+            const calendarBtn = document.getElementById('boardViewModeBtn-calendar');
+            [kanbanBtn, calendarBtn].forEach(btn => { if (btn) btn.classList.remove(...activeClasses, ...inactiveClasses); });
+            if (kanbanBtn) kanbanBtn.classList.add(...(boardViewMode === 'kanban' ? activeClasses : inactiveClasses));
+            if (calendarBtn) calendarBtn.classList.add(...(boardViewMode === 'calendar' ? activeClasses : inactiveClasses));
+
+            const kanbanSection = document.getElementById('boardKanbanSection');
+            const calendarSection = document.getElementById('productionCalendarContainer');
+            if (kanbanSection) kanbanSection.classList.toggle('hidden', boardViewMode !== 'kanban');
+            if (calendarSection) calendarSection.classList.toggle('hidden', boardViewMode !== 'calendar');
+        }
+
+        function shiftProductionCalendarMonth(delta) {
+            if (!productionCalendarMonthKey) productionCalendarMonthKey = getCurrentMonthKey();
+            const [y, m] = productionCalendarMonthKey.split('-').map(Number);
+            const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+            productionCalendarMonthKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+            renderProductionCalendar();
+        }
+
+        function goToCurrentProductionCalendarMonth() {
+            productionCalendarMonthKey = getCurrentMonthKey();
+            renderProductionCalendar();
+        }
+
+        function onProductionCalendarMonthInputChange() {
+            const el = document.getElementById('productionCalendarMonthInput');
+            if (el && el.value) productionCalendarMonthKey = el.value;
+            renderProductionCalendar();
+        }
+
+        // Builds { 'YYYY-MM-DD': [{ order, orderIndex, stage }] } for every day in [rangeStart, rangeEnd]
+        // (inclusive UTC Date objects) that at least one of the given orders has a planned segment
+        // covering — reuses computeOrderTimelineSegments() as-is so the calendar can never drift out of
+        // sync with what the Gantt timeline shows for the same order.
+        function buildProductionCalendarDayMap(ordersWithIndex, rangeStart, rangeEnd) {
+            const dayMap = {};
+            ordersWithIndex.forEach(({ order, orderIndex }) => {
+                computeOrderTimelineSegments(order).forEach(seg => {
+                    if (!seg.stage) return; // the initial "order opened" point has no department yet
+                    let cursor = parseDateOnly(seg.start);
+                    const segEnd = parseDateOnly(seg.end);
+                    if (!cursor || !segEnd) return;
+                    if (cursor < rangeStart) cursor = rangeStart;
+                    const cappedEnd = segEnd > rangeEnd ? rangeEnd : segEnd;
+                    while (cursor <= cappedEnd) {
+                        const key = formatDateKeyUTC(cursor);
+                        if (!dayMap[key]) dayMap[key] = [];
+                        dayMap[key].push({ order, orderIndex, stage: seg.stage });
+                        cursor = addDaysUTC(cursor, 1);
+                    }
+                });
+            });
+            return dayMap;
+        }
+
+        // Renders ONE order-type's month grid into gridId — same per-type split as
+        // renderTimelineSection('MO'/'SO', ...), sharing the already-computed [gridStart, gridEnd]
+        // 6-week window and search term so both calendars always show the exact same days.
+        function renderProductionCalendarSection(orderType, gridId, countBadgeId, gridStart, gridEnd, monthIndex, searchTerm) {
+            const grid = document.getElementById(gridId);
+            if (!grid) return 0;
+
+            let ordersWithIndex = [];
+            productionOrders.forEach((order, orderIndex) => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                if ((order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== orderType) return;
+                if (!matchesMarketFilter(order)) return;
+                if (searchTerm) {
+                    const haystack = [order.moSo, order.customerName, order.customerPO].map(v => String(v || '').toLowerCase()).join(' ');
+                    if (!haystack.includes(searchTerm)) return;
+                }
+                ordersWithIndex.push({ order, orderIndex });
+            });
+
+            const dayMap = buildProductionCalendarDayMap(ordersWithIndex, gridStart, gridEnd);
+            const todayKey = formatDateKeyUTC(new Date());
+            const totalCells = daysBetweenUTC(gridStart, gridEnd) + 1;
+
+            let cellsHtml = '';
+            for (let i = 0; i < totalCells; i++) {
+                const d = addDaysUTC(gridStart, i);
+                const dateKey = formatDateKeyUTC(d);
+                const inMonth = d.getUTCMonth() === monthIndex;
+                const isToday = dateKey === todayKey;
+                const entries = (dayMap[dateKey] || []).sort((a, b) => String(a.order.moSo).localeCompare(String(b.order.moSo)));
+
+                const MAX_VISIBLE = 4;
+                const visibleEntries = entries.slice(0, MAX_VISIBLE);
+                const hiddenCount = entries.length - visibleEntries.length;
+
+                const chipsHtml = visibleEntries.map(({ order, orderIndex: idx, stage }) => {
+                    const colorCls = (STAGE_COLORS[stage] && STAGE_COLORS[stage].solid) || 'bg-slate-400 border-slate-400';
+                    const tooltip = `${STAGE_LABELS[stage] || stage}: ${order.moSo}${order.customerName ? ' — ' + order.customerName : ''}`;
+                    return `<button onclick="openOrderDetailModal(${idx}, '${stage}')" title="${escapeHtml(tooltip)}" class="w-full text-left ${colorCls.split(' ')[0]} text-white text-[9px] leading-tight rounded px-1 py-0.5 truncate hover:opacity-80 transition">${escapeHtml(order.moSo)}</button>`;
+                }).join('');
+                const moreHtml = hiddenCount > 0 ? `<div class="text-[9px] text-slate-400 px-1">+${hiddenCount} เพิ่มเติม</div>` : '';
+
+                cellsHtml += `
+                    <div class="min-h-[92px] border-b border-r border-slate-100 p-1 space-y-0.5 ${inMonth ? 'bg-white' : 'bg-slate-50/60'}">
+                        <div class="px-0.5">
+                            <span class="text-[10px] inline-flex items-center justify-center ${isToday ? 'w-4 h-4 rounded-full bg-indigo-600 text-white font-bold' : (inMonth ? 'text-slate-500 font-semibold' : 'text-slate-300')}">${d.getUTCDate()}</span>
+                        </div>
+                        ${chipsHtml}
+                        ${moreHtml}
+                    </div>
+                `;
+            }
+            grid.innerHTML = cellsHtml;
+
+            const countBadgeEl = countBadgeId ? document.getElementById(countBadgeId) : null;
+            if (countBadgeEl) countBadgeEl.textContent = `${ordersWithIndex.length} ${orderType === 'SO' ? 'S/O' : 'M/O'} ในสายการผลิต`;
+            return ordersWithIndex.length;
+        }
+
+        function renderProductionCalendar() {
+            const monthInput = document.getElementById('productionCalendarMonthInput');
+            const legendEl = document.getElementById('productionCalendarLegend');
+            const moSection = document.getElementById('productionCalendarMoSection');
+            const soSection = document.getElementById('productionCalendarSoSection');
+            if (!document.getElementById('productionCalendarGrid-MO')) return;
+
+            if (!productionCalendarMonthKey) productionCalendarMonthKey = getCurrentMonthKey();
+            if (monthInput) monthInput.value = productionCalendarMonthKey;
+
+            if (moSection) moSection.classList.toggle('hidden', orderTypeFilter === 'SO');
+            if (soSection) soSection.classList.toggle('hidden', orderTypeFilter === 'MO');
+
+            const [year, month] = productionCalendarMonthKey.split('-').map(Number);
+            const firstOfMonth = new Date(Date.UTC(year, month - 1, 1));
+            const firstDow = firstOfMonth.getUTCDay(); // 0=Sun..6=Sat
+            // Calendar weeks start Monday — same "จันทร์-อาทิตย์" convention as the weekly QC summary.
+            const leadingDays = (firstDow === 0) ? 6 : firstDow - 1;
+            const gridStart = addDaysUTC(firstOfMonth, -leadingDays);
+            const gridEnd = addDaysUTC(gridStart, 41); // fixed 6 weeks so the grid height never jumps month to month
+
+            const searchInputEl = document.getElementById('productionCalendarSearchInput');
+            const searchTerm = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
+
+            renderProductionCalendarSection('MO', 'productionCalendarGrid-MO', 'productionCalendarMoCountBadge', gridStart, gridEnd, month - 1, searchTerm);
+            renderProductionCalendarSection('SO', 'productionCalendarGrid-SO', 'productionCalendarSoCountBadge', gridStart, gridEnd, month - 1, searchTerm);
+
+            if (legendEl) {
+                legendEl.innerHTML = PRODUCTION_CALENDAR_STAGE_ORDER.map(stage => `
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded ${((STAGE_COLORS[stage] && STAGE_COLORS[stage].solid) || 'bg-slate-400').split(' ')[0]}"></span>${escapeHtml(STAGE_LABELS[stage] || stage)}
+                    </span>
+                `).join('');
+            }
         }
 
         // Compact Kanban card for the CURRENT stage of an order: just a live summary (done-count, QC
