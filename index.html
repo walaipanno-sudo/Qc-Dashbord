@@ -88,6 +88,8 @@
                @page ทั่วไปที่ 12mm ร่วมกับแบบฟอร์มอื่น) — แยกเป็น named page ของตัวเองเพื่อไม่กระทบ
                แบบฟอร์มพิมพ์อื่นๆ ที่ยังใช้ margin 12mm เท่าเดิม */
             @page so-portrait { size: A4; margin: 10mm; }
+            /* NEW (2026-09-16): ใบ M/O — A3, margins แคบเกือบชิดขอบตามที่แผนกขายขอ (5mm ทุกด้าน). */
+            @page mo-portrait { size: A3; margin: 5mm; }
             .no-print, .action-col { display: none !important; }
             .overflow-x-auto { overflow: visible !important; }
             body { background: #fff !important; }
@@ -219,6 +221,36 @@
         .so-notes-cell { height: 68px; }
         .so-finishing-subrow td { height: 22px; }
         .so-signature-row { display: flex; justify-content: space-between; margin-top: 22px; font-size: 11px; gap: 20px; line-height: 1.9; }
+
+        /* NEW (2026-09-16): "ใบ M/O" (Manufacturing Order) — 2-page A3 replica of the company's official
+           paper "MANUFACTURING ORDER" work sheet (แผนกขายให้เพิ่มแบบฟอร์มนี้ ดึงข้อมูลแต่ละแผนกมาใส่ให้
+           อัตโนมัติ เท่าที่ระบบมีข้อมูล — ที่เหลือเว้นว่างให้กรอกด้วยมือ). Same #printArea/print-single-
+           mode/window.print() convention and .so-grid-style black-bordered table look as the Sample
+           Order form above, but its own "mo-portrait" named page: A3 paper, margins pulled in almost to
+           the edge (5mm) per the explicit request, vs. the S/O form's A4/10mm. See
+           buildManufacturingOrderPrintHTML()/printManufacturingOrderForm(). Per the source form's own
+           handwritten note ("ตารางช่องนี้ไม่เอา นอกนั้นเอาเหมือนเดิม"), page 1 omits the ทอ Tufting/ซ่อม +
+           ทากาว Latexing/ตกแต่ง Finishing + คลังสินค้า Warehouse start/finish/signature table AND the
+           Design (ขยายแบบ/วาดจอ) start/finish/signature table — every other field on both pages (incl.
+           the Remark/Special Instructions box) is kept. */
+        .mo-print-sheet { font-family: 'Prompt', sans-serif; color: #000; page: mo-portrait; }
+        .mo-page { padding: 3mm 2mm; position: relative; }
+        .mo-page + .mo-page { page-break-before: always; }
+        .mo-page-number { text-align: right; font-size: 10px; margin-bottom: 3px; }
+        .mo-header-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 2px; }
+        .mo-header-row img { height: 46px; }
+        .mo-header-row h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.03em; margin: 0; }
+        .mo-company-name { text-align: center; font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+        table.mo-grid { width: 100%; border-collapse: collapse; margin-bottom: 7px; table-layout: fixed; }
+        table.mo-grid td, table.mo-grid th { border: 1px solid #000; padding: 4px 7px; vertical-align: top; font-size: 12px; overflow-wrap: break-word; }
+        table.mo-grid th.mo-section-header, table.mo-grid td.mo-section-header { text-align: center; font-weight: 700; font-size: 13px; }
+        .mo-fill { font-weight: 600; }
+        .mo-checkbox { display: inline-block; width: 11px; height: 11px; border: 1.4px solid #000; margin-right: 5px; vertical-align: middle; text-align: center; line-height: 9px; font-size: 10px; font-weight: 800; }
+        .mo-checkbox.mo-checked::after { content: '\2713'; }
+        .mo-remark-box { border: 1px solid #000; min-height: 90px; padding: 6px 8px; font-size: 12px; white-space: pre-wrap; }
+        .mo-signature-row { display: flex; justify-content: space-between; margin-top: 26px; font-size: 12px; gap: 24px; line-height: 2; }
+        .mo-footer-code { text-align: right; font-size: 10px; margin-top: 6px; }
+        .mo-note { font-size: 10px; color: #333; }
 
         /* NEW: ใบสั่งเปิดงานผลิต (Production Work Order) print sheet — embeds the M/O's design image
            (order.designImageUrl, the same picture the Design department uploads/sees — see
@@ -2466,6 +2498,14 @@
                          order's type is S/O ("Sample Order"), since the form makes no sense for M/O. -->
                     <button onclick="printSampleOrder(currentDetailOrderIndex)" id="printSampleOrderBtn" title="พิมพ์ใบ Sample Order (S/O) (PDF)" class="text-indigo-200 hover:text-white transition text-sm hidden">
                         <i class="fa-solid fa-file-lines"></i>
+                    </button>
+                    <!-- NEW (2026-09-16): "ใบ M/O" — 2-page A3 replica of the company's official
+                         "MANUFACTURING ORDER" work sheet, requested by แผนกขาย (see
+                         buildManufacturingOrderPrintHTML()/printManufacturingOrderForm()). Hidden by
+                         default; renderOrderDetailModalBody() shows it only for M/O-type orders, since
+                         the form makes no sense for S/O (which already has its own print button above). -->
+                    <button onclick="printManufacturingOrderForm(currentDetailOrderIndex)" id="printMoFormBtn" title="พิมพ์ใบ M/O (PDF)" class="text-indigo-200 hover:text-white transition text-sm hidden">
+                        <i class="fa-solid fa-scroll"></i>
                     </button>
                     <button onclick="openReportIssueModal(productionOrders[currentDetailOrderIndex] ? productionOrders[currentDetailOrderIndex].moSo : '')" title="แจ้งปัญหาสำหรับ M/O, S/O นี้" class="text-indigo-200 hover:text-rose-300 transition text-sm">
                         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -5863,6 +5903,179 @@
         }
 
         // =========================================================================================
+        // NEW (2026-09-16): "ใบ M/O" (Manufacturing Order) — 2-page A3 replica of the company's official
+        // paper "MANUFACTURING ORDER" work sheet, requested by แผนกขาย: "ให้ข้อมูลแต่ละแผนกอยู่ในแบบฟอร์ม
+        // M/O ตามแนบนี้ ถ้าไม่มี ให้ข้อมูลว่างไว้". See the .mo-print-sheet CSS block for the page-size/
+        // margin rationale (A3, 5mm margins — narrower than every other print sheet in this file) and
+        // the note about the two start/finish/signature tables page 1's own handwritten annotation asked
+        // to drop. Every field the system already tracks per order is auto-filled via v() (which prints
+        // '' for anything missing, never a literal "undefined"/"null"); the paper form's checkbox groups
+        // that have no matching discrete field anywhere in the order schema (Type/Yarn Spec/Pile Texture/
+        // Surface detail/Backing/Label) print as empty boxes for staff to tick by hand, exactly as on the
+        // original paper form — the "Latex" group is the one exception, since Finishing's glue usage log
+        // (see sumGlueTypeKgForOrder() + DEFAULT_GLUE_TYPES) DOES track real per-order data for those
+        // same three glue types, so those three boxes auto-check when this order has logged usage.
+        function sumGlueTypeKgForOrder(order, glueKey) {
+            const log = (order.finishing || {}).glueUsageLog;
+            if (!Array.isArray(log)) return 0;
+            return log.reduce((sum, item) => sum + (Number(item[glueKey]) || 0), 0);
+        }
+
+        function buildManufacturingOrderPrintHTML(order) {
+            const v = (val) => val ? escapeHtml(val) : '';
+            const cb = (checked) => `<span class="mo-checkbox${checked ? ' mo-checked' : ''}"></span>`;
+            const kgText = (n) => (Number(n) || 0) > 0 ? (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+
+            const glueTypes = (productionSettings.finishing && Array.isArray(productionSettings.finishing.glueTypes) && productionSettings.finishing.glueTypes.length > 0)
+                ? productionSettings.finishing.glueTypes : DEFAULT_GLUE_TYPES;
+            const glueKeyForLabel = (label) => { const t = glueTypes.find(g => g.label === label); return t ? t.key : null; };
+            const glueUsed = (label) => { const k = glueKeyForLabel(label); return k ? sumGlueTypeKgForOrder(order, k) > 0 : false; };
+
+            const totalSqmText = kgText(order.totalSqm);
+
+            const page1 = `
+                <div class="mo-page">
+                    <div class="mo-page-number">หน้าที่ 1/2</div>
+                    <div class="mo-header-row">
+                        <img src="data:image/jpeg;base64,${SIAM_LOGO_JPEG_B64}" alt="Siam Carpets">
+                        <h1>MANUFACTURING ORDER</h1>
+                    </div>
+                    <div class="mo-company-name">SIAM CARPETS MANUFACTURING CO., LTD./บริษัท อุตสาหกรรมพรมสยาม จำกัด — WORK SHEET/บันทึกการปฏิบัติงาน</div>
+                    <table class="mo-grid">
+                        <tr>
+                            <td style="width:65%;">M/O: <span class="mo-fill">${v(order.moSo)}</span></td>
+                            <td>อ้างถึง/Ref.S/O: <span class="mo-fill"></span></td>
+                        </tr>
+                        <tr>
+                            <td>ลูกค้า/Customer: <span class="mo-fill">${v(order.customerName)}</span></td>
+                            <td rowspan="6" style="vertical-align:top;">
+                                <b>SPECIFICATIONS:</b><br>
+                                TYPE: ${cb(false)}ทอมือ Handtufted &nbsp;&nbsp; ${cb(false)}ทอจักร Passtufted<br>
+                                Yarn Spec: ${cb(false)}WO &nbsp; ${cb(false)}WN &nbsp; ${cb(false)}AB &nbsp; ${cb(false)}NYLON &nbsp; ${cb(false)}อื่นๆ/Other...${order.yarnType ? ` <span class="mo-fill">(${v(order.yarnType)})</span>` : ''}<br>
+                                Pile Texture: ${cb(false)}ขนตัด/CUT &nbsp; ${cb(false)}ขนห่วง/LOOP &nbsp; ${cb(false)}ขนตัด&amp;ขนห่วง/CUT&amp;LOOP<br>
+                                Surface: ${cb(false)}แกะลาย/Carved &nbsp; A)${cb(false)}Hairline &nbsp; B)${cb(false)}Carving &nbsp; C)${cb(false)}Carving&amp;Beveling<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${cb(false)}เต่งเรียบ/Uncarved &nbsp; D)${cb(false)}Embossing &nbsp; E)${cb(false)}Embossing&amp;Beveling &nbsp; F)${cb(false)}Combination${order.surface ? ` <span class="mo-fill">(${v(order.surface)})</span>` : ''}<br>
+                                Backing: ${cb(false)}ปะตาข่าย/Scrim &nbsp; ${cb(false)}ปะกระสอบ/Hessien &nbsp; ${cb(false)}ปะผ้าใบ/Canvas<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${cb(false)}ปล่อยขอบ/Wall to Wall &nbsp; ${cb(false)}พับขอบ/Binding &nbsp; ${cb(false)}เย็บขอบ/Whipping &nbsp; ${cb(false)}ชายครุย/Fringe<br>
+                                Lagel: ${cb(false)}ของบริษัท (Siam Carpets) &nbsp; ${cb(false)}ของลูกค้า(Customer's) &nbsp; ${cb(false)}พ่น (Stencil)<br>
+                                Latex: ${cb(glueUsed('EUR178'))}EUR178 &nbsp; ${cb(glueUsed('66012'))}EUR66012R &nbsp; ${cb(glueUsed('TH31'))}TF31
+                            </td>
+                        </tr>
+                        <tr><td>Product Code: <span class="mo-fill"></span></td></tr>
+                        <tr><td>Project: <span class="mo-fill">${v(order.customerPO)}</span></td></tr>
+                        <tr><td>พื้นที่รวม/Quantity: <span class="mo-fill">${totalSqmText}</span>${totalSqmText ? ' ตร.ม.' : ''} &nbsp;&nbsp; จำนวนชิ้น/No.of Pcs.: <span class="mo-fill">${v(order.totalPieces ? String(order.totalPieces) : '')}</span><br>รายละเอียด/Details: <span class="mo-fill">${v(order.carpetSizeNote)}</span></td></tr>
+                        <tr><td>คุณภาพ/Quality: <span class="mo-fill">${v(order.quality)}</span> &nbsp;&nbsp; Design/PAT.: <span class="mo-fill">${v(order.designRef)}</span></td></tr>
+                        <tr><td>กำหนดส่งของ/Delivery: <span class="mo-fill">${v(order.dueDate)}</span> &nbsp;&nbsp; จำนวนสี/No.of Colors: <span class="mo-fill">${v(order.colorsCount ? String(order.colorsCount) : '')}</span></td></tr>
+                    </table>
+                    <p style="font-weight:700; font-size:12px; margin:6px 0 2px;">Remark/Special Instructions (หมายเหตุ/คำสั่งพิเศษ)</p>
+                    <div class="mo-remark-box">${v(order.orderRemark)}</div>
+                    <div class="mo-signature-row">
+                        <div>จัดทำโดย……………………………………<br>วันที่............./…...…./……….</div>
+                        <div>อนุมัติโดย (Plainning Manager)……………………<br>วันที่............./…...…./……….</div>
+                        <div>Completed by (Manufactufring Manager)……………………<br>วันที่............./…...…./……….</div>
+                    </div>
+                    <div class="mo-footer-code">FM-QP-SL-001/05_Rev.00</div>
+                </div>
+            `;
+
+            // Page 2's left-hand color/dye table pulls from Dyeing's own dyeOrderLog: regular entries
+            // give ย้อม(ก.ก.) (orderKg) and ไหมเข้าจอ(ก.ก.) (actualTransferKg — the kg actually transferred
+            // to the loom, the clearest unambiguous match for "เข้าจอ"); any 'extra' log entries (see
+            // setDyeingKpiTab('extra')/addDyeOrderLogFromSelect()) for the SAME colorCode fold into
+            // ยอมเพิ่ม. Surplus/กก.(ใช้จริง)/คงเหลือ have no unambiguous matching field, so — per "ถ้าไม่มี
+            // ให้ข้อมูลว่างไว้" — they stay blank rather than guess a formula on a real factory-floor
+            // document. Same "don't pad with empty ruled rows" convention as buildSampleOrderPrintHTML()'s
+            // color table: only actual log entries render, nothing more.
+            const dyeLog = ((order.dyeing || {}).dyeOrderLog || []);
+            const regularDyeEntries = dyeLog.filter(e => !e.isExtra);
+            const extraKgByColor = {};
+            dyeLog.filter(e => e.isExtra).forEach(e => {
+                const key = e.colorCode || '';
+                extraKgByColor[key] = (extraKgByColor[key] || 0) + (Number(e.orderKg) || 0);
+            });
+            const dyeRowsHtml = regularDyeEntries.map((e, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${v(e.colorCode)}</td>
+                    <td>${kgText(e.orderKg)}</td>
+                    <td></td>
+                    <td>${kgText(extraKgByColor[e.colorCode || ''])}</td>
+                    <td>${kgText(e.actualTransferKg)}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            `).join('');
+
+            const DEPARTMENT_ROW_LABELS = ['วางแผน/Planning', 'ย้อม/Dyeing', 'กรอ/Winding', 'ตีเกลียว/Twisting', 'ทอ/Tufting', 'ซ่อม/Mending', 'ทากาว/Latexing', 'ตกแต่ง/Finishing', 'ดีไซน์/Design', 'สโตร์/Warehouse', 'รวม/Total', 'อื่นๆ/other'];
+
+            const page2 = `
+                <div class="mo-page">
+                    <div class="mo-page-number">หน้าที่ 2/2</div>
+                    <table class="mo-grid">
+                        <tr>
+                            <td style="width:34%;">PO#: <span class="mo-fill">${v(order.customerPO)}</span></td>
+                            <td style="width:33%;">CUSTOMER: <span class="mo-fill">${v(order.customerName)}</span></td>
+                            <td>M/O#: <span class="mo-fill">${v(order.moSo)}</span></td>
+                        </tr>
+                    </table>
+                    <table class="mo-grid">
+                        <tr><td colspan="8" class="mo-section-header">วางแผน/Planning — ย้อม (ก.ก.) Surplus</td></tr>
+                        <tr>
+                            <th rowspan="2" style="width:5%;">No.</th>
+                            <th rowspan="2" style="width:14%;">สี/Colour</th>
+                            <th colspan="2">จ้างย้อม(ก.ก.)</th>
+                            <th rowspan="2" style="width:11%;">ยอมเพิ่ม</th>
+                            <th rowspan="2" style="width:14%;">ไหมเข้าจอ(ก.ก.)</th>
+                            <th rowspan="2" style="width:11%;">ก.ก./kgs.</th>
+                            <th rowspan="2" style="width:12%;">คงเหลือ/Bal.</th>
+                        </tr>
+                        <tr><th>ย้อม (ก.ก.)</th><th>Surplus</th></tr>
+                        ${dyeRowsHtml || '<tr><td colspan="8">&nbsp;</td></tr>'}
+                    </table>
+                    <table class="mo-grid">
+                        <tr><td colspan="4" class="mo-section-header">ใช้จริง/Actual Used &amp; เวลาที่ใช้ในการผลิตจริง/Actual Time Consumption</td></tr>
+                        <tr><th style="width:34%;">แผนก/Department</th><th>คน/Man</th><th>ชม./Hour</th><th>Man Hour</th></tr>
+                        ${DEPARTMENT_ROW_LABELS.map(dept => `<tr><td>${dept}</td><td></td><td></td><td></td></tr>`).join('')}
+                    </table>
+                    <table class="mo-grid">
+                        <tr><td colspan="3" class="mo-section-header">QUALITY CONTROL</td></tr>
+                        <tr>
+                            <td style="width:38%;">1.วัตถุดิบ/Raw Material<br>&nbsp;&nbsp;Yarn Type: <span class="mo-fill">${v(order.yarnType)}</span></td>
+                            <td rowspan="2" style="width:24%;">APPROVED BY</td>
+                            <td style="width:38%;">3. Latexing: <span class="mo-fill">${v(order.latexing)}</span></td>
+                        </tr>
+                        <tr>
+                            <td>2.ทอ/Tufting<br>&nbsp;&nbsp;Design: <span class="mo-fill">${v(order.designRef)}</span><br>&nbsp;&nbsp;Tufting Spec: <span class="mo-fill">${v(order.tuftingSpec)}</span><br>&nbsp;&nbsp;Surface: <span class="mo-fill">${v(order.surface)}</span><br>&nbsp;&nbsp;Texture: <span class="mo-fill">${v(order.texture)}</span><br>&nbsp;&nbsp;Color&amp; Color Placement: <span class="mo-fill">${v(order.colorPlacement)}</span></td>
+                            <td>4. ตกแต่ง/Finishing<br>&nbsp;&nbsp;Size<br>&nbsp;&nbsp;Tuft Bind: <span class="mo-fill">${v(order.tuftBind)}</span><br>&nbsp;&nbsp;Sprouting:<br>&nbsp;&nbsp;Label: <span class="mo-fill">${v(order.sproutingLabel)}</span></td>
+                        </tr>
+                    </table>
+                    <table class="mo-grid">
+                        <tr><td style="width:34%;">TOTAL</td><td></td></tr>
+                        <tr><td>นน./ตร.ม.(Weight/Sq.m.)</td><td></td></tr>
+                        <tr><td>Spec./ตร.ม.(Spec./Sq.m.)</td><td>Label: <span class="mo-fill"></span></td></tr>
+                    </table>
+                    <div class="mo-signature-row">
+                        <div>Completed by …………………………… Planning Mgr. วันที่............./…...…./……….</div>
+                        <div>Completed by …………………………… Q.A. Sup. วันที่............./…...…./……….</div>
+                    </div>
+                    <div class="mo-footer-code">FM-QP-SL-001/05_Rev.00</div>
+                </div>
+            `;
+
+            return `<div class="mo-print-sheet">${page1}${page2}</div>`;
+        }
+
+        function printManufacturingOrderForm(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = buildManufacturingOrderPrintHTML(order);
+            document.body.classList.add('print-single-mode');
+            showToast('กำลังเปิดหน้าต่างพิมพ์ใบ M/O (A3)... เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์ PDF หรือเลือกเครื่องพิมพ์เพื่อพิมพ์ออกกระดาษ', 'fa-print', 'text-sky-400');
+            setTimeout(() => window.print(), 150);
+        }
+
+        // =========================================================================================
         // NEW (2026-09-11): ใบสั่งย้อม (Dyeing Order) — printable as PDF via the same print-sheet/
         // window.print() convention as buildMarkNosPrintHTML/printMarkNos above. Two documents share one
         // template: ย้อมในบริษัทฯ → "ใบสั่งย้อมภายใน", สั่งย้อมนอกบริษัทฯ → "ใบสั่งจ้างย้อมนอกบริษัท" (adds a
@@ -8501,37 +8714,33 @@
             };
         }
 
+        // NEW (2026-09-16): shared "identity only" block for Kanban cards on the "แผนผังการผลิต" board —
+        // every card across every department column, side column (แจ้งเตือน/เร่งด่วน/ดีไซน์), and the
+        // weaving loom board now shows just M/O,S/O (with its existing type/market/flag/issue badges),
+        // customer name, and PO/Project — everything else (images, due dates, progress stats, QC badges,
+        // deadline-warning badges, per-department detail) moved into the detail modal only, reachable via
+        // the edit button every card keeps. order.customerPO already stores "เลขที่ PO" combined with the
+        // customer's project name (see its label/placeholder elsewhere in the file), so it maps directly
+        // to "PO project" here with no new order field needed. Pass {compact:true} for narrower cards
+        // (the weaving loom board) so the lines truncate instead of wrapping.
+        function renderBoardCardIdentityHtml(order, opts) {
+            const lineCls = (opts && opts.compact) ? 'truncate' : '';
+            return `
+                <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono ${lineCls}">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                ${order.customerName ? `<p class="text-[11px] text-slate-500 ${lineCls}">${escapeHtml(order.customerName)}</p>` : ''}
+                ${order.customerPO ? `<p class="text-[11px] text-slate-400 ${lineCls}">PO/Project: ${escapeHtml(order.customerPO)}</p>` : ''}
+            `;
+        }
+
         function renderOccupiedLoomCardHtml(loomNumber, assignment, toStage) {
-            const { order, orderIndex, entry } = assignment;
-            const stint = getLoomOrderStint(order, loomNumber) || { sqm: 0, hours: 0, days: 0, gradePercent: null };
-            const pctBadge = stint.gradePercent === null || stint.gradePercent === undefined
-                ? '<span class="text-slate-300">-</span>'
-                : `<span class="font-bold ${stint.gradePercent < 90 ? 'text-rose-600' : 'text-emerald-700'}">${stint.gradePercent}%</span>`;
-            const employees = (entry.employees || []).map(escapeHtml).join(', ') || '-';
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            const { order, orderIndex } = assignment;
             return `
                 <div class="bg-white rounded-xl border border-teal-200 shadow-sm p-2.5 space-y-1.5">
                     <div class="flex items-center justify-between">
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-0.5"><i class="fa-solid fa-diagram-project"></i> จอ ${escapeHtml(String(loomNumber))}</span>
                         <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
                     </div>
-                    <div class="flex items-start gap-2">
-                        ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
-                        <div class="min-w-0">
-                            <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
-                            ${order.customerName ? `<p class="text-[10px] text-slate-500 truncate">${escapeHtml(order.customerName)}</p>` : ''}
-                            <p class="text-[10px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-slate-600 truncate"><i class="fa-solid fa-users mr-1 text-teal-500"></i>${employees}</p>
-                    <div class="grid grid-cols-2 gap-1.5 text-center">
-                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">เกรด</p><p class="text-xs font-bold text-slate-700">${escapeHtml(entry.grade || '-')}</p></div>
-                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">% เทียบเกรด (M/O นี้)</p><p class="text-xs">${pctBadge}</p></div>
-                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">ใช้เวลาล่าสุด</p><p class="text-xs font-bold text-slate-700">${(Number(entry.hours) || 0).toFixed(2)} ชม.</p></div>
-                        <div class="bg-slate-50 rounded-lg p-1.5"><p class="text-[9px] text-slate-400">ระยะเวลาทำงาน</p><p class="text-xs font-bold text-slate-700">${stint.days} วัน</p></div>
-                    </div>
-                    <p class="text-[11px] text-slate-600"><i class="fa-solid fa-ruler-combined mr-1 text-teal-500"></i>รวมบนจอนี้ <span class="font-bold">${stint.sqm.toFixed(2)} ตร.ม.</span> (ล่าสุด ${escapeHtml(entry.date || '-')})</p>
-                    ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
+                    <div class="min-w-0">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
                     <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
                 </div>
             `;
@@ -8547,38 +8756,24 @@
         }
 
         function renderWaitingWeavingRowHtml(order, orderIndex, toStage) {
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             return `
                 <div class="bg-white rounded-lg border border-slate-200 px-2.5 py-2 flex items-center justify-between gap-2 text-xs">
-                    <div class="min-w-0 flex-grow">
-                        <p class="font-bold ${moSoTextColorClass(order)} font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
-                        <p class="text-[10px] text-slate-400 truncate">${escapeHtml(order.customerName || '-')} • กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
-                        ${deadlineWarningHtml ? `<div class="mt-0.5">${deadlineWarningHtml}</div>` : ''}
-                    </div>
+                    <div class="min-w-0 flex-grow">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
                     <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="shrink-0 text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
                 </div>
             `;
         }
 
         function renderExternalWeavingRowHtml(order, orderIndex, toStage) {
-            const ext = order.weaving.external || {};
-            const qcBadge = ext.qcResult === 'pass'
-                ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
-                : (ext.qcResult === 'fail' ? '<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>QC ไม่ผ่าน</span>' : '<span class="text-slate-400">รอผล QC</span>');
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             return `
                 <div class="bg-white rounded-lg border border-amber-200 px-2.5 py-2 space-y-1 text-xs">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="font-bold ${moSoTextColorClass(order)} font-mono truncate">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                        <div class="min-w-0 flex-grow">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
                         <div class="flex items-center gap-1 shrink-0">
                             <button onclick="openWeavingOrderPrintFromOrder(${orderIndex})" class="text-slate-400 hover:text-indigo-600 px-1" title="พิมพ์ใบสั่งจ้างทอ"><i class="fa-solid fa-print"></i></button>
                             <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
                         </div>
                     </div>
-                    <p class="text-[10px] text-slate-500">${escapeHtml(order.customerName || '-')} • กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
-                    <p class="text-[10px] text-slate-500">ส่งผ้า+ไหม: ${escapeHtml(ext.sentDate || '-')}${ext.vendorDueDate ? ` • กำหนดส่ง: ${escapeHtml(ext.vendorDueDate)}` : ''}</p>
-                    <p class="text-[10px]">${qcBadge}${ext.receivedDate ? ` • ได้รับพรม: ${escapeHtml(ext.receivedDate)}` : ''}</p>
-                    ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
                     <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
                 </div>
             `;
@@ -10385,25 +10580,16 @@
             const cardBorderCls = warning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200';
             card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2`;
             const stage = order.currentStage;
-            const stageLabel = STAGE_LABELS[stage] || stage;
-            const stageTextCls = (STAGE_COLORS[stage] && STAGE_COLORS[stage].text) || 'text-slate-600';
-            const percent = (order[stage] && order[stage].percent) || 0;
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">
-                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
-                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        <p class="text-[11px] text-slate-400">อยู่ที่แผนก: <span class="font-semibold ${stageTextCls}">${escapeHtml(stageLabel)}</span> (${percent}%)</p>
-                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
-                    </div>
+                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
                     <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
             `;
-            const warningHtml = renderDeadlineWarningBadge(order);
-            card.innerHTML = headerHtml + (warningHtml ? `<div>${warningHtml}</div>` : '');
+            card.innerHTML = headerHtml;
             return card;
         }
 
@@ -10839,86 +11025,20 @@
                 ? (cardWarning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200')
                 : 'border-slate-200';
             card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2.5`;
-            const percent = order[stage].percent || 0;
-            const complete = percent >= 100;
 
+            // CHANGED (2026-09-16): card body simplified to identity-only per the "แผนผังการผลิตรวมทั้งหมด
+            // แต่ละแผนกให้แสดงแค่ M/O,S/O ชื่อลูกค้า เลขที่ PO project" request — see
+            // renderBoardCardIdentityHtml() above buildUrgentProductionCard(). The planning
+            // dyeing-mode/surplus controls, external-dyeing/weaving badges, fabric/yarn checklists,
+            // progress text, QC badge, and deadline-warning badge that used to render here are still
+            // fully editable from the order detail modal (the edit button below), which is unaffected.
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
-                    <div class="flex-grow min-w-0">
-                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
-                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
-                        <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
-                    </div>
+                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
                     <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
-            `;
-
-            let mainHtml = '';
-            if (stage === 'planning') {
-                // NEW (2026-09-16): "แผนกวางแผน ให้มีกดสั่งย้อมภายในบริษัท หรือนอกบริษัท และมีเพิ่มใช้ไหม
-                // Surplus ในการทอกี่สี ใช้กี่สี" — these fields already existed inside the order detail
-                // modal's Planning section (renderPlanningChecklistHtml), but weren't reachable from the
-                // Kanban card itself, so Planning had to open every card just to set them. Surfacing the
-                // same fields (order.dyeing.mode/plannedColorCount/surplusUsed/surplusColorCount) right
-                // here means Planning can decide dyeing mode + how much is covered by surplus without
-                // leaving the board. See dyeingFullyCoveredBySurplus() for the "skip Dyeing" condition
-                // this feeds into (footer button below).
-                const d = order.dyeing || {};
-                mainHtml = `
-                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded"> คำนวณสเปคแล้ว</label>
-                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded"> ลงแผนงานแล้ว</label>
-                    <div class="pt-1.5 mt-0.5 border-t border-slate-100 space-y-1.5">
-                        <p class="text-[10px] font-semibold text-slate-500">การย้อมไหม</p>
-                        ${renderStageModeToggleHtml(orderIndex, 'dyeing', d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท')}
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <div>
-                                <label class="block text-[9px] text-slate-400 mb-0.5">สั่งย้อมกี่สี</label>
-                                <input type="number" min="0" value="${d.plannedColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.plannedColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px]">
-                            </div>
-                            <div>
-                                <label class="block text-[9px] text-slate-400 mb-0.5">ไหม surplus กี่สี</label>
-                                <input type="number" min="0" ${d.surplusUsed ? '' : 'disabled'} value="${d.surplusColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.surplusColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] disabled:opacity-50">
-                            </div>
-                        </div>
-                        <label class="flex items-center gap-2 text-[11px] text-slate-600"><input type="checkbox" ${d.surplusUsed ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'dyeing.surplusUsed', this.checked)" class="rounded"> ใช้ไหม surplus (ไหมที่มีอยู่แล้วในคลัง)</label>
-                        ${dyeingFullyCoveredBySurplus(order) ? `<p class="text-[10px] text-teal-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>ไหม surplus ครอบคลุมทุกสีแล้ว — โอนตรงไปแผนกทอได้เลย</p>` : ''}
-                    </div>
-                `;
-            } else if (stage === 'dyeing' && order.dyeing.mode === 'external') {
-                mainHtml = `<p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> ไหมสั่งย้อมนอกบริษัท</p>`;
-            } else if (stage === 'weaving' && order.weaving.mode === 'external') {
-                const ext = order.weaving.external;
-                const qcBadge = ext.qcResult === 'pass'
-                    ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
-                    : (ext.qcResult === 'fail' ? '<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>QC ไม่ผ่าน</span>' : '<span class="text-slate-400">รอผล QC</span>');
-                mainHtml = `
-                    <p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> จ้างภายนอกทอ</p>
-                    <p class="text-[10px] text-slate-500">ส่งผ้า+ไหม: ${escapeHtml(ext.sentDate || '-')}${ext.vendorDueDate ? ` • กำหนดส่ง: ${escapeHtml(ext.vendorDueDate)}` : ''}</p>
-                    <p class="text-[10px]">${qcBadge}${ext.receivedDate ? ` • ได้รับพรม: ${escapeHtml(ext.receivedDate)}` : ''}</p>
-                `;
-            } else if (stage === 'weaving') {
-                const fabricOk = !!order.weaving.receivedPrintedFabric;
-                const yarnOk = !!order.weaving.yarnComplete;
-                const totalYarnColors = Number(order.weaving.totalYarnColors) || 0;
-                const yarnColorsReceived = Number(order.weaving.yarnColorsReceived) || 0;
-                const yarnColorsRemaining = Math.max(0, totalYarnColors - yarnColorsReceived);
-                mainHtml = `
-                    <p class="text-[10px] ${fabricOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${fabricOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${fabricOk ? 'ได้รับผ้าปั๊มลายแล้ว' : 'ยังไม่ได้รับผ้าปั๊มลาย'}</p>
-                    <p class="text-[10px] ${yarnOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${yarnOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${yarnOk ? 'ไหมครบสำหรับทอแล้ว' : 'ไหมยังไม่ครบสำหรับทอ'}</p>
-                    ${totalYarnColors > 0 ? `<p class="text-[10px] text-slate-500"><i class="fa-solid fa-palette mr-1"></i>ไหม: รับมาแล้ว ${yarnColorsReceived}/${totalYarnColors} สี (เหลือ ${yarnColorsRemaining} สี)</p>` : ''}
-                `;
-            }
-
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
-            const bodyHtml = `
-                ${mainHtml}
-                <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
-                <div>${renderQcBadge(order.moSo, stage)}</div>
-                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             let footerHtml = '';
@@ -10938,7 +11058,7 @@
                 footerHtml = `<button onclick="transferOrderStage(${orderIndex}, '${stage}', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>`;
             }
 
-            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1">${footerHtml}</div>`;
+            card.innerHTML = headerHtml + `<div class="pt-1">${footerHtml}</div>`;
             return card;
         }
 
@@ -10960,26 +11080,15 @@
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
-                    <div class="flex-grow min-w-0">
-                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
-                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        <p class="text-[11px] text-slate-400">ดีไซน์ (รหัสอ้างอิง): ${order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>'}</p>
-                        <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
-                    </div>
+                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
                     <button onclick="openOrderDetailModal(${orderIndex}, 'design')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
             `;
 
-            const planDate = order.planDates && order.planDates.design;
-            const planDateHtml = planDate ? `<p class="text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1"><i class="fa-solid fa-calendar-day mr-1"></i>กำหนดเสร็จแผนกนี้: <span class="font-semibold">${escapeHtml(planDate)}</span></p>` : '';
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             const bodyHtml = `
                 <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${design.done ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'design.done', this.checked)" class="rounded"> ดีไซน์/ขยายลายเสร็จแล้ว</label>
-                ${planDateHtml}
-                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>`;
@@ -11001,22 +11110,11 @@
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">
-                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
-                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        <p class="text-[11px] text-slate-400">ตร.ม.: ${escapeHtml(String(order.totalSqm || '-'))}</p>
-                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
-                    </div>
+                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
                     <button onclick="openOrderDetailModal(${orderIndex})" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
-            `;
-
-            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
-            const bodyHtml = `
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[11px] font-semibold"><i class="fa-solid fa-clock text-[10px]"></i> รอจัดส่ง</span>
-                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             const footerHtml = `
@@ -11025,7 +11123,7 @@
                 </button>
             `;
 
-            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1 border-t border-slate-100">${footerHtml}</div>`;
+            card.innerHTML = headerHtml + `<div class="pt-1 border-t border-slate-100">${footerHtml}</div>`;
             return card;
         }
 
@@ -13306,6 +13404,10 @@
             // — see buildSampleOrderPrintHTML()/printSampleOrder().
             const printSampleOrderBtnEl = document.getElementById('printSampleOrderBtn');
             if (printSampleOrderBtnEl) printSampleOrderBtnEl.classList.toggle('hidden', (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO');
+            // NEW (2026-09-16): "พิมพ์ใบ M/O" icon only makes sense for M/O-type orders — see
+            // buildManufacturingOrderPrintHTML()/printManufacturingOrderForm().
+            const printMoFormBtnEl = document.getElementById('printMoFormBtn');
+            if (printMoFormBtnEl) printMoFormBtnEl.classList.toggle('hidden', (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'MO');
             document.getElementById('orderDetailMarket').value = order.market || '';
             document.getElementById('orderDetailSalesName').value = order.salesName || '';
             document.getElementById('orderDetailCustomerName').value = order.customerName || '';
