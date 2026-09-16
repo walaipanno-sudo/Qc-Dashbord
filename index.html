@@ -698,16 +698,16 @@
                  DEPT_TAB_BTN_IDS/DEPT_TAB_COUNT_IDS are untouched in case this is ever revisited. -->
 
             <!-- NEW (2026-09-09): department tab-pills — click one to focus on just that column
-                 (expanded full-width) instead of scanning all 4 side by side; "ทั้งหมด" restores the
-                 normal 4-column Kanban grid. Purely a visibility/layout toggle on top of the SAME 4
-                 columns below — renderProductionBoard() itself is unchanged, so search/count/order-
-                 card logic all keeps working identically regardless of which pill is active. -->
+                 (expanded full-width). Purely a visibility/layout toggle on top of the SAME columns
+                 below — renderProductionBoard() itself is unchanged, so search/count/order-card logic
+                 all keeps working identically regardless of which pill is active.
+                 CHANGED (2026-09-16, later same day): the combined "ทั้งหมด" pill (and its 6-column
+                 side-by-side grid) has been removed per "ไม่ต้องมีหน้ารวมทั้งหมด" — every department is
+                 now only ever viewed one at a time, full-width, via its own pill below. "วางแผน" is the
+                 new default/active tab on load (see boardDepartmentFilter's declaration + the
+                 setBoardDepartmentTab('planning') call in initApp()). -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
                 <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
-                    <button onclick="setBoardDepartmentTab('')" id="boardTabAllBtn" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
-                        <i class="fa-solid fa-table-columns"></i> ทั้งหมด
-                        <span id="boardTabCountAll" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white/20 text-white text-[10px] font-bold">0</span>
-                    </button>
                     <!-- NEW (2026-09-11): "แผนกขาย" — not a data filter like the other pills (no
                          boardColWrap-sales column). Selecting it swaps the whole boardColumnsGrid/search
                          area out for salesFormContainer, the "เพิ่ม M/O, S/O ใหม่" form moved here inline
@@ -715,7 +715,7 @@
                     <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
                         <i class="fa-solid fa-cart-shopping"></i> แผนกขาย
                     </button>
-                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
                         <i class="fa-solid fa-calendar-days"></i> วางแผน
                         <span id="boardTabCount-planning" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
@@ -1230,7 +1230,7 @@
                     </div>
                 </div>
             </div>
-            <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div id="boardColWrap-planning" class="bg-blue-50/60 border border-blue-100 border-t-4 border-t-blue-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
                     <div class="flex items-center justify-between px-1">
                         <h4 class="font-bold text-blue-700 text-xs uppercase flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-blue-500"></i> วางแผน</h4>
@@ -3872,6 +3872,10 @@
             renderWeeklyQcSummary();
             renderProductionOverview();
             renderProductionBoard();
+            // CHANGED (2026-09-16, later same day): there's no more combined "ทั้งหมด" board view — set
+            // the initial department tab explicitly so column visibility/grid classes/tab-button styling
+            // all start correctly on load instead of relying on the raw HTML's default classes.
+            setBoardDepartmentTab('planning');
             renderProductionTimeline();
             renderQcShippedArchive();
             updateStats();
@@ -8719,48 +8723,14 @@
             };
         }
 
-        // NEW (2026-09-16): shared "identity only" block for Kanban cards on the "แผนผังการผลิต" board —
-        // every card across every department column, side column (แจ้งเตือน/เร่งด่วน/ดีไซน์), and the
-        // weaving loom board now shows just M/O,S/O (with its existing type/market/flag/issue badges),
-        // customer name, and PO/Project — everything else (images, due dates, progress stats, QC badges,
-        // deadline-warning badges, per-department detail) moved into the detail modal only, reachable via
-        // the edit button every card keeps. order.customerPO already stores "เลขที่ PO" combined with the
-        // customer's project name (see its label/placeholder elsewhere in the file), so it maps directly
-        // to "PO project" here with no new order field needed. Pass {compact:true} for narrower cards
-        // (the weaving loom board) so the lines truncate instead of wrapping.
-        function renderBoardCardIdentityHtml(order, opts) {
-            const lineCls = (opts && opts.compact) ? 'truncate' : '';
-            return `
-                <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono ${lineCls}">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
-                ${order.customerName ? `<p class="text-[11px] text-slate-500 ${lineCls}">${escapeHtml(order.customerName)}</p>` : ''}
-                ${order.customerPO ? `<p class="text-[11px] text-slate-400 ${lineCls}">PO/Project: ${escapeHtml(order.customerPO)}</p>` : ''}
-            `;
-        }
-
-        // CHANGED (2026-09-16, later same day): "แผนกทอ ตรงรวมทุกแผนก ไม่ต้องแสดงจอว่าง...ในแผนกทอ ตรง
-        // บอร์ดทอ ให้มีรายละเอียดเหมือนเดิม" — the identity-only simplification from earlier today
-        // (renderBoardCardIdentityHtml()) was too aggressive for the weaving loom board specifically: it
-        // should only apply on the combined "ทั้งหมด" board (every department's column shown together),
-        // not on the dedicated "ทอ" board tab (boardDepartmentFilter === 'weaving', see
-        // setBoardDepartmentTab()), which goes back to showing the same full detail (image, employees,
-        // grade/%/hours/days, cumulative sqm, deadline warning, vendor/QC info) it had before that
-        // simplification. `detailed` — computed once in renderWeavingLoomBoard() from
-        // boardDepartmentFilter — threads through every loom-board row/card builder below so both modes
-        // share one code path instead of drifting apart again.
-        function renderOccupiedLoomCardHtml(loomNumber, assignment, toStage, detailed) {
+        // CHANGED (2026-09-16, later same day): removed the combined "ทั้งหมด" board and the identity-
+        // only card simplification entirely per "ให้มีรายละเอียดที่แสดงทั้งหมดอยู่ในแต่ละแผนกไม่ต้องมีหน้า
+        // รวมทั้งหมด" — every department is now viewed one at a time, full-width, so there's no longer a
+        // 6-column combined screen that compact cards were needed to fit into. Every card/row below is
+        // back to always showing full detail (the old renderBoardCardIdentityHtml() shared helper and
+        // every `detailed` parameter it fed have been removed as dead code).
+        function renderOccupiedLoomCardHtml(loomNumber, assignment, toStage) {
             const { order, orderIndex, entry } = assignment;
-            if (!detailed) {
-                return `
-                    <div class="bg-white rounded-xl border border-teal-200 shadow-sm p-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-0.5"><i class="fa-solid fa-diagram-project"></i> จอ ${escapeHtml(String(loomNumber))}</span>
-                            <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
-                        </div>
-                        <div class="min-w-0">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
-                        <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
-                    </div>
-                `;
-            }
             const stint = getLoomOrderStint(order, loomNumber) || { sqm: 0, hours: 0, days: 0, gradePercent: null };
             const pctBadge = stint.gradePercent === null || stint.gradePercent === undefined
                 ? '<span class="text-slate-300">-</span>'
@@ -8804,15 +8774,7 @@
             `;
         }
 
-        function renderWaitingWeavingRowHtml(order, orderIndex, toStage, detailed) {
-            if (!detailed) {
-                return `
-                    <div class="bg-white rounded-lg border border-slate-200 px-2.5 py-2 flex items-center justify-between gap-2 text-xs">
-                        <div class="min-w-0 flex-grow">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
-                        <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="shrink-0 text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
-                    </div>
-                `;
-            }
+        function renderWaitingWeavingRowHtml(order, orderIndex, toStage) {
             const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             return `
                 <div class="bg-white rounded-lg border border-slate-200 px-2.5 py-2 flex items-center justify-between gap-2 text-xs">
@@ -8826,21 +8788,7 @@
             `;
         }
 
-        function renderExternalWeavingRowHtml(order, orderIndex, toStage, detailed) {
-            if (!detailed) {
-                return `
-                    <div class="bg-white rounded-lg border border-amber-200 px-2.5 py-2 space-y-1 text-xs">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="min-w-0 flex-grow">${renderBoardCardIdentityHtml(order, { compact: true })}</div>
-                            <div class="flex items-center gap-1 shrink-0">
-                                <button onclick="openWeavingOrderPrintFromOrder(${orderIndex})" class="text-slate-400 hover:text-indigo-600 px-1" title="พิมพ์ใบสั่งจ้างทอ"><i class="fa-solid fa-print"></i></button>
-                                <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="text-indigo-500 hover:text-indigo-700 px-1" title="ดู/แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
-                            </div>
-                        </div>
-                        <button onclick="transferOrderStage(${orderIndex}, 'weaving', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>
-                    </div>
-                `;
-            }
+        function renderExternalWeavingRowHtml(order, orderIndex, toStage) {
             const ext = order.weaving.external || {};
             const qcBadge = ext.qcResult === 'pass'
                 ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
@@ -8874,13 +8822,6 @@
         function renderWeavingLoomBoard(ordersHere, searchTerm) {
             const column = document.getElementById('boardColumn-weaving');
             if (!column) return;
-
-            // CHANGED (2026-09-16, later same day): "รวมทุกแผนก ไม่ต้องแสดงจอว่าง...บอร์ดทอ ให้มี
-            // รายละเอียดเหมือนเดิม" — full card/row detail (and idle-loom placeholders) only on the
-            // dedicated "ทอ" board tab; the combined "ทั้งหมด" board (every department shown together)
-            // gets the identity-only cards AND skips idle looms entirely, so it doesn't grow long with
-            // empty slots that add nothing next to every other department's compact column.
-            const detailed = boardDepartmentFilter === 'weaving';
 
             const internalOrders = ordersHere.filter(o => o.weaving.mode !== 'external');
             const externalOrders = ordersHere.filter(o => o.weaving.mode === 'external');
@@ -8916,10 +8857,8 @@
             loomLabelsToRender.forEach(loomLabel => {
                 const list = occupanciesByLoom.get(loomLabel);
                 if (list && list.length > 0) {
-                    list.forEach(occ => loomCardsHtml.push(renderOccupiedLoomCardHtml(loomLabel, occ, toStage, detailed)));
-                } else if (detailed) {
-                    // NEW (2026-09-16, later same day): idle-loom placeholders only render on the dedicated
-                    // "ทอ" board tab now — see the `detailed` comment above.
+                    list.forEach(occ => loomCardsHtml.push(renderOccupiedLoomCardHtml(loomLabel, occ, toStage)));
+                } else {
                     loomCardsHtml.push(renderIdleLoomCardHtml(loomLabel));
                 }
             });
@@ -8938,11 +8877,11 @@
                 });
 
             const waitingHtml = waitingOrders.length > 0
-                ? waitingOrders.map(o => renderWaitingWeavingRowHtml(o, productionOrders.indexOf(o), toStage, detailed)).join('')
+                ? waitingOrders.map(o => renderWaitingWeavingRowHtml(o, productionOrders.indexOf(o), toStage)).join('')
                 : `<p class="text-[11px] text-slate-400 px-1">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการรอขึ้นทอ'}</p>`;
 
             const externalHtml = externalOrders.length > 0
-                ? externalOrders.map(o => renderExternalWeavingRowHtml(o, productionOrders.indexOf(o), toStage, detailed)).join('')
+                ? externalOrders.map(o => renderExternalWeavingRowHtml(o, productionOrders.indexOf(o), toStage)).join('')
                 : `<p class="text-[11px] text-slate-400 px-1">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีงานจ้างทอภายนอก'}</p>`;
 
             column.innerHTML = `
@@ -10674,16 +10613,25 @@
             const cardBorderCls = warning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200';
             card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2`;
             const stage = order.currentStage;
+            const stageLabel = STAGE_LABELS[stage] || stage;
+            const stageTextCls = (STAGE_COLORS[stage] && STAGE_COLORS[stage].text) || 'text-slate-600';
+            const percent = (order[stage] && order[stage].percent) || 0;
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">อยู่ที่แผนก: <span class="font-semibold ${stageTextCls}">${escapeHtml(stageLabel)}</span> (${percent}%)</p>
+                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
                     <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
             `;
-            card.innerHTML = headerHtml;
+            const warningHtml = renderDeadlineWarningBadge(order);
+            card.innerHTML = headerHtml + (warningHtml ? `<div>${warningHtml}</div>` : '');
             return card;
         }
 
@@ -10745,12 +10693,18 @@
         // untouched everywhere it drives the real transfer/percent state machine (transferOrderStage(),
         // NEXT_STAGE, buildOrderCard(), etc.).
         const BOARD_TABS = ['design', 'planning', 'dyeing', 'weaving', 'finishing', 'ready_to_ship'];
-        let boardDepartmentFilter = ''; // '' = ทั้งหมด (all columns visible); otherwise one of BOARD_TABS
+        // CHANGED (2026-09-16, later same day): removed the combined "ทั้งหมด" state entirely per
+        // "ไม่ต้องมีหน้ารวมทั้งหมด" — every department is now viewed one at a time, full-width, so this
+        // always holds either 'sales' or one of BOARD_TABS, never ''. Defaults to 'planning' (the first
+        // department pill in the tab bar); see the setBoardDepartmentTab('planning') call in initApp().
+        let boardDepartmentFilter = 'planning';
 
         function setBoardDepartmentTab(stage) {
             // NEW (2026-09-11): 'sales' isn't in BOARD_TABS — it has no boardColWrap-sales column, it
             // swaps the whole grid out for salesFormContainer instead (see updateBoardColumnVisibility()).
-            boardDepartmentFilter = (stage === 'sales' || BOARD_TABS.includes(stage)) ? stage : '';
+            // CHANGED (2026-09-16, later same day): '' is no longer a valid state — an unrecognized stage
+            // now falls back to 'planning' instead of the removed combined view.
+            boardDepartmentFilter = (stage === 'sales' || BOARD_TABS.includes(stage)) ? stage : 'planning';
             updateBoardDepartmentTabStyles();
             updateBoardColumnVisibility();
             // NEW (2026-09-11): refresh the "รายการทั้งหมด" report in case productionOrders changed
@@ -10758,22 +10712,16 @@
             if (stage === 'sales' && typeof salesActiveSubTab !== 'undefined' && salesActiveSubTab === 'report') {
                 renderSalesReportTables();
             }
-            // NEW (2026-09-16, later same day): the weaving loom board's card/row detail level now
-            // depends on boardDepartmentFilter itself (see renderWeavingLoomBoard()'s `detailed` flag) —
-            // switching a tab only toggles CSS visibility on already-rendered columns, so without this
-            // re-render, flipping between "ทั้งหมด" and "ทอ" wouldn't actually swap the loom board between
-            // its identity-only and full-detail card content until something else triggered a re-render.
-            // Unconditional (not just when stage === 'weaving') because leaving the weaving tab needs the
-            // same refresh, back down to identity-only, as entering it.
+            // Re-render so switching tabs always reflects the latest productionOrders state (e.g. an
+            // order transferred/shipped from a different tab) — cheap since renderProductionBoard()
+            // itself does not depend on which tab is active.
             renderProductionBoard();
         }
 
         function updateBoardDepartmentTabStyles() {
             const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
             const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
-            const allBtn = document.getElementById('boardTabAllBtn');
             const buttons = [
-                { el: allBtn, isActive: boardDepartmentFilter === '' },
                 { el: document.getElementById('boardTabBtn-sales'), isActive: boardDepartmentFilter === 'sales' }
             ].concat(BOARD_TABS.map(stage => ({
                     el: document.getElementById(`boardTabBtn-${stage}`),
@@ -10827,33 +10775,20 @@
             const grid = document.getElementById('boardColumnsGrid');
             if (grid) {
                 grid.classList.toggle('hidden', isSales || isWeavingLog || isAnyDeptKpi);
-                if (boardDepartmentFilter === '') {
-                    grid.classList.remove('md:grid-cols-1');
-                    grid.classList.add('md:grid-cols-6');
-                } else {
-                    grid.classList.remove('md:grid-cols-6');
-                    grid.classList.add('md:grid-cols-1');
-                }
             }
             BOARD_TABS.forEach(stage => {
                 const wrap = document.getElementById(`boardColWrap-${stage}`);
                 if (!wrap) return;
-                const shouldShow = !isSales && !isWeavingLog && !isAnyDeptKpi && (boardDepartmentFilter === '' || boardDepartmentFilter === stage);
+                const shouldShow = !isSales && !isWeavingLog && !isAnyDeptKpi && boardDepartmentFilter === stage;
                 wrap.classList.toggle('hidden', !shouldShow);
             });
         }
 
         function updateBoardDepartmentTabCounts() {
-            // "ทั้งหมด" = total production orders — kept as the sum of ONLY the 4 mutually-exclusive
-            // currentStage columns (every order is in exactly one of them), same as before. ดีไซน์/
-            // ขยายลาย is deliberately NOT added into this sum: an order can appear there AND in its real
-            // stage column at once, so summing it in would double-count and inflate "ทั้งหมด".
-            let total = 0;
             ORDER_STAGES.forEach(stage => {
                 const countEl = document.getElementById(`boardCount-${stage}`);
                 const tabCountEl = document.getElementById(`boardTabCount-${stage}`);
                 const n = countEl ? (parseInt(countEl.textContent, 10) || 0) : 0;
-                total += n;
                 if (tabCountEl) tabCountEl.textContent = String(n);
             });
             const designCountEl = document.getElementById('boardCount-design');
@@ -10870,8 +10805,6 @@
             const readyToShipN = readyToShipCountEl ? (parseInt(readyToShipCountEl.textContent, 10) || 0) : 0;
             const urgentN = urgentCountEl ? (parseInt(urgentCountEl.textContent, 10) || 0) : 0;
             if (readyToShipTabCountEl) readyToShipTabCountEl.textContent = String(readyToShipN + urgentN);
-            const allCountEl = document.getElementById('boardTabCountAll');
-            if (allCountEl) allCountEl.textContent = String(total);
         }
 
         // =========================================================================================
@@ -11127,20 +11060,78 @@
                 ? (cardWarning.level === 'overdue' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-amber-300 ring-1 ring-amber-200')
                 : 'border-slate-200';
             card.className = `bg-white rounded-xl border ${cardBorderCls} shadow-sm p-3 space-y-2.5`;
+            const percent = order[stage].percent || 0;
+            const complete = percent >= 100;
 
-            // CHANGED (2026-09-16): card body simplified to identity-only per the "แผนผังการผลิตรวมทั้งหมด
-            // แต่ละแผนกให้แสดงแค่ M/O,S/O ชื่อลูกค้า เลขที่ PO project" request — see
-            // renderBoardCardIdentityHtml() above buildUrgentProductionCard(). The planning
-            // dyeing-mode/surplus controls, external-dyeing/weaving badges, fabric/yarn checklists,
-            // progress text, QC badge, and deadline-warning badge that used to render here are still
-            // fully editable from the order detail modal (the edit button below), which is unaffected.
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
+                    ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
                     <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
+            `;
+
+            let mainHtml = '';
+            if (stage === 'planning') {
+                const d = order.dyeing || {};
+                mainHtml = `
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded"> คำนวณสเปคแล้ว</label>
+                    <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.planning.planEntered ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.planEntered', this.checked)" class="rounded"> ลงแผนงานแล้ว</label>
+                    <div class="pt-1.5 mt-0.5 border-t border-slate-100 space-y-1.5">
+                        <p class="text-[10px] font-semibold text-slate-500">การย้อมไหม</p>
+                        ${renderStageModeToggleHtml(orderIndex, 'dyeing', d.mode, 'ย้อมในบริษัท', 'ไหมสั่งย้อมนอกบริษัท')}
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div>
+                                <label class="block text-[9px] text-slate-400 mb-0.5">สั่งย้อมกี่สี</label>
+                                <input type="number" min="0" value="${d.plannedColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.plannedColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px]">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-slate-400 mb-0.5">ไหม surplus กี่สี</label>
+                                <input type="number" min="0" ${d.surplusUsed ? '' : 'disabled'} value="${d.surplusColorCount || ''}" onchange="updateOrderField(${orderIndex}, 'dyeing.surplusColorCount', Number(this.value))" class="w-full p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] disabled:opacity-50">
+                            </div>
+                        </div>
+                        <label class="flex items-center gap-2 text-[11px] text-slate-600"><input type="checkbox" ${d.surplusUsed ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'dyeing.surplusUsed', this.checked)" class="rounded"> ใช้ไหม surplus (ไหมที่มีอยู่แล้วในคลัง)</label>
+                        ${dyeingFullyCoveredBySurplus(order) ? `<p class="text-[10px] text-teal-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>ไหม surplus ครอบคลุมทุกสีแล้ว — โอนตรงไปแผนกทอได้เลย</p>` : ''}
+                    </div>
+                `;
+            } else if (stage === 'dyeing' && order.dyeing.mode === 'external') {
+                mainHtml = `<p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> ไหมสั่งย้อมนอกบริษัท</p>`;
+            } else if (stage === 'weaving' && order.weaving.mode === 'external') {
+                const ext = order.weaving.external;
+                const qcBadge = ext.qcResult === 'pass'
+                    ? '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>QC ผ่าน</span>'
+                    : (ext.qcResult === 'fail' ? '<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>QC ไม่ผ่าน</span>' : '<span class="text-slate-400">รอผล QC</span>');
+                mainHtml = `
+                    <p class="text-[10px] inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-semibold w-fit"><i class="fa-solid fa-truck-ramp-box"></i> จ้างภายนอกทอ</p>
+                    <p class="text-[10px] text-slate-500">ส่งผ้า+ไหม: ${escapeHtml(ext.sentDate || '-')}${ext.vendorDueDate ? ` • กำหนดส่ง: ${escapeHtml(ext.vendorDueDate)}` : ''}</p>
+                    <p class="text-[10px]">${qcBadge}${ext.receivedDate ? ` • ได้รับพรม: ${escapeHtml(ext.receivedDate)}` : ''}</p>
+                `;
+            } else if (stage === 'weaving') {
+                const fabricOk = !!order.weaving.receivedPrintedFabric;
+                const yarnOk = !!order.weaving.yarnComplete;
+                const totalYarnColors = Number(order.weaving.totalYarnColors) || 0;
+                const yarnColorsReceived = Number(order.weaving.yarnColorsReceived) || 0;
+                const yarnColorsRemaining = Math.max(0, totalYarnColors - yarnColorsReceived);
+                mainHtml = `
+                    <p class="text-[10px] ${fabricOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${fabricOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${fabricOk ? 'ได้รับผ้าปั๊มลายแล้ว' : 'ยังไม่ได้รับผ้าปั๊มลาย'}</p>
+                    <p class="text-[10px] ${yarnOk ? 'text-emerald-600' : 'text-amber-600'}"><i class="fa-solid ${yarnOk ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-1"></i>${yarnOk ? 'ไหมครบสำหรับทอแล้ว' : 'ไหมยังไม่ครบสำหรับทอ'}</p>
+                    ${totalYarnColors > 0 ? `<p class="text-[10px] text-slate-500"><i class="fa-solid fa-palette mr-1"></i>ไหม: รับมาแล้ว ${yarnColorsReceived}/${totalYarnColors} สี (เหลือ ${yarnColorsRemaining} สี)</p>` : ''}
+                `;
+            }
+
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            const bodyHtml = `
+                ${mainHtml}
+                <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
+                <div>${renderQcBadge(order.moSo, stage)}</div>
+                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             let footerHtml = '';
@@ -11160,7 +11151,7 @@
                 footerHtml = `<button onclick="transferOrderStage(${orderIndex}, '${stage}', '${toStage}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> โอนงานไปแผนก${STAGE_LABELS[toStage]}</button>`;
             }
 
-            card.innerHTML = headerHtml + `<div class="pt-1">${footerHtml}</div>`;
+            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1">${footerHtml}</div>`;
             return card;
         }
 
@@ -11182,15 +11173,26 @@
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
+                    ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">ดีไซน์ (รหัสอ้างอิง): ${order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>'}</p>
+                        <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
                     <button onclick="openOrderDetailModal(${orderIndex}, 'design')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
             `;
 
+            const planDate = order.planDates && order.planDates.design;
+            const planDateHtml = planDate ? `<p class="text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1"><i class="fa-solid fa-calendar-day mr-1"></i>กำหนดเสร็จแผนกนี้: <span class="font-semibold">${escapeHtml(planDate)}</span></p>` : '';
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
             const bodyHtml = `
                 <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${design.done ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'design.done', this.checked)" class="rounded"> ดีไซน์/ขยายลายเสร็จแล้ว</label>
+                ${planDateHtml}
+                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>`;
@@ -11212,11 +11214,22 @@
 
             const headerHtml = `
                 <div class="flex justify-between items-start gap-2">
-                    <div class="flex-grow min-w-0">${renderBoardCardIdentityHtml(order)}</div>
+                    <div class="flex-grow min-w-0">
+                        <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
+                        ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">ตร.ม.: ${escapeHtml(String(order.totalSqm || '-'))}</p>
+                        <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
+                    </div>
                     <button onclick="openOrderDetailModal(${orderIndex})" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
+            `;
+
+            const deadlineWarningHtml = renderDeadlineWarningBadge(order);
+            const bodyHtml = `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[11px] font-semibold"><i class="fa-solid fa-clock text-[10px]"></i> รอจัดส่ง</span>
+                ${deadlineWarningHtml ? `<div>${deadlineWarningHtml}</div>` : ''}
             `;
 
             const footerHtml = `
@@ -11225,7 +11238,7 @@
                 </button>
             `;
 
-            card.innerHTML = headerHtml + `<div class="pt-1 border-t border-slate-100">${footerHtml}</div>`;
+            card.innerHTML = headerHtml + `<div class="space-y-2">${bodyHtml}</div>` + `<div class="pt-1 border-t border-slate-100">${footerHtml}</div>`;
             return card;
         }
 
