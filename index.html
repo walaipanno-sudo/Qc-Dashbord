@@ -8406,37 +8406,51 @@
 
         // =========================================================================================
         // NEW (2026-09-16): "จอทอพรมจริง" (real-loom weaving board) — replaces the generic per-order
-        // Kanban cards in the "ทอ" board column with one card PER PHYSICAL LOOM (1..getStageConcurrency
-        // ('weaving')), so anyone looking at the board sees the actual production floor: which M/O is on
-        // which loom right now, who's weaving it, what grade, how long, a picture of the carpet, how many
-        // days it's been running, and the cumulative ตร.ม. done on THAT loom (its current stint there) —
-        // plus a "รอขึ้นทอ" list for internal-mode orders not currently occupying any loom, and a separate
-        // "จ้างทอภายนอก" list for
-        // orders woven by an outside vendor (those were never on a physical loom of ours, so they never
-        // belong in the loom grid). Every number here is derived from order.weaving.dailyLog, which
-        // already exists — no new data model, no .gs backend change.
+        // Kanban cards in the "ทอ" board column with one card PER LOOM OCCUPANCY actually logged in
+        // order.weaving.dailyLog, so anyone looking at the board sees the actual production floor: which
+        // M/O is on which loom right now, who's weaving it, what grade, how long, a picture of the carpet,
+        // how many days it's been running, and the cumulative ตร.ม. done on THAT loom (its current stint
+        // there) — plus a "รอขึ้นทอ" list for internal-mode orders not currently occupying any loom, and a
+        // separate "จ้างทอภายนอก" list for orders woven by an outside vendor (those were never on a
+        // physical loom of ours, so they never belong in the loom grid). Every number here is derived from
+        // order.weaving.dailyLog, which already exists — no new data model, no .gs backend change.
+        //
+        // CHANGED (2026-09-16, later same day): per the user's follow-up request "ให้แสดงจอตามบันทึกการทอ
+        // รายวัน จริง ถึงเลขจอจะซ้ำกันก็แยกออกมา" — this used to render exactly one card per configured
+        // physical loom number (1..getStageConcurrency('weaving')), picking only the most-recently-dated
+        // order when two orders' latest entries happened to name the same loom number. Now every order
+        // with a current loom occupancy gets its own card, grouped by loom LABEL — a label with more than
+        // one occupant (a real duplicate in the log) simply shows multiple cards side by side under that
+        // same "จอ N" badge, and a loom number logged outside the configured count still gets a group of
+        // its own instead of being silently dropped. See getCurrentLoomOccupancies()/renderWeavingLoomBoard().
         // =========================================================================================
 
-        // "Current occupant" of one physical loom, scoped to the orders already filtered/sorted for the
+        // Every order's "current loom occupancy", scoped to the orders already filtered/sorted for the
         // weaving board column (ordersHere from renderProductionBoard()'s loop — respects the order-type/
         // market/search filters already applied there). Each order's "current loom" is the loom named on
         // its OWN single most-recent dailyLog entry (across every loom it's ever used) — so an order that
         // moved from loom 2 to loom 1 is only ever shown on loom 1, never lingering as a stale occupant of
-        // loom 2 just because it logged something there once. Returns null when no order's latest entry
-        // points at this loom (i.e. the loom is free, or was only ever used by orders that have since
-        // moved on).
-        function getLoomBoardAssignment(loomNumber, ordersHere) {
-            let best = null;
+        // loom 2 just because it logged something there once.
+        //
+        // CHANGED (2026-09-16): per the user's request "ให้แสดงจอตามบันทึกการทอรายวัน จริง ถึงเลขจอจะซ้ำกัน
+        // ก็แยกออกมา" ("show the looms per what's actually in the daily log — even if the loom number
+        // repeats, show them separately") — this used to keep only the single most-recently-dated order
+        // when two orders' latest entries named the same loom number, silently bumping the other into
+        // "รอขึ้นทอ" as if it had never been assigned a loom. That "one winner per loom number" merge is
+        // gone: every order with a currently-assigned loom gets its own card now, grouped by loom label in
+        // renderWeavingLoomBoard() below, however many orders share that label. Only an order with an
+        // empty dailyLog, or whose latest entry has no loom recorded at all, has NO current occupancy.
+        function getCurrentLoomOccupancies(ordersHere) {
+            const occupancies = [];
             ordersHere.forEach(order => {
                 const entries = order.weaving.dailyLog || [];
                 if (entries.length === 0) return;
                 const latest = entries.reduce((a, b) => (b.date > a.date ? b : a));
-                if (String(latest.loom || '') !== String(loomNumber)) return;
-                if (!best || latest.date > best.entry.date) {
-                    best = { order, orderIndex: productionOrders.indexOf(order), entry: latest };
-                }
+                const loom = String(latest.loom || '').trim();
+                if (!loom) return;
+                occupancies.push({ order, orderIndex: productionOrders.indexOf(order), entry: latest, loom });
             });
-            return best;
+            return occupancies;
         }
 
         // Everything this ONE order has ever logged on this ONE loom, rolled up: cumulative ตร.ม.,
@@ -8571,10 +8585,12 @@
         }
 
         // Replaces the generic per-order Kanban card loop for the "ทอ" board column with one card PER
-        // PHYSICAL LOOM — see the block comment above getLoomBoardAssignment() for the full rationale.
-        // `ordersHere` is exactly what renderProductionBoard()'s loop already filtered/sorted (order-type/
-        // market/search filters + currentStage === 'weaving'), so this board respects the same filters as
-        // every other Kanban column without re-implementing them.
+        // ACTUAL LOOM OCCUPANCY from the daily weaving log — see the block comment above
+        // getCurrentLoomOccupancies() for the full rationale (CHANGED 2026-09-16: duplicate loom numbers
+        // across different orders now render as separate side-by-side cards instead of being merged down
+        // to one "winner"). `ordersHere` is exactly what renderProductionBoard()'s loop already
+        // filtered/sorted (order-type/market/search filters + currentStage === 'weaving'), so this board
+        // respects the same filters as every other Kanban column without re-implementing them.
         function renderWeavingLoomBoard(ordersHere, searchTerm) {
             const column = document.getElementById('boardColumn-weaving');
             if (!column) return;
@@ -8584,21 +8600,45 @@
             const loomCount = getStageConcurrency('weaving');
             const toStage = NEXT_STAGE['weaving'];
 
-            const occupantOrderIndexes = new Set();
-            const loomCardsHtml = [];
-            for (let loom = 1; loom <= loomCount; loom++) {
-                const assignment = getLoomBoardAssignment(loom, internalOrders);
-                if (assignment) {
-                    occupantOrderIndexes.add(assignment.orderIndex);
-                    loomCardsHtml.push(renderOccupiedLoomCardHtml(loom, assignment, toStage));
-                } else {
-                    loomCardsHtml.push(renderIdleLoomCardHtml(loom));
-                }
-            }
+            // Group every order's current loom occupancy by loom LABEL (a string, since a loom number can
+            // repeat across different orders now) instead of picking one occupant per numeric slot.
+            const occupancies = getCurrentLoomOccupancies(internalOrders);
+            const occupantOrderIndexes = new Set(occupancies.map(o => o.orderIndex));
+            const occupanciesByLoom = new Map();
+            occupancies.forEach(o => {
+                if (!occupanciesByLoom.has(o.loom)) occupanciesByLoom.set(o.loom, []);
+                occupanciesByLoom.get(o.loom).push(o);
+            });
+            // Most-recently-logged order first within a shared loom label, so the busiest/newest reads first.
+            occupanciesByLoom.forEach(list => list.sort((a, b) => String(b.entry.date || '').localeCompare(String(a.entry.date || ''))));
 
-            // "รอขึ้นทอ": any internal-mode order at this stage that is NOT currently the latest occupant
-            // of any loom — covers both never-started orders AND orders bumped off their last loom by a
-            // newer entry, so nothing silently disappears from the board (see the block comment above).
+            // Loom labels to render: the configured physical looms 1..loomCount (shown even when idle, so
+            // total capacity stays visible), PLUS any OTHER loom label actually logged that falls outside
+            // that configured range — real log data is never hidden just because it doesn't fit the count.
+            const configuredLooms = [];
+            for (let i = 1; i <= loomCount; i++) configuredLooms.push(String(i));
+            const extraLooms = Array.from(occupanciesByLoom.keys())
+                .filter(label => !configuredLooms.includes(label))
+                .sort((a, b) => {
+                    const na = Number(a), nb = Number(b);
+                    return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
+                });
+            const loomLabelsToRender = configuredLooms.concat(extraLooms);
+
+            const loomCardsHtml = [];
+            loomLabelsToRender.forEach(loomLabel => {
+                const list = occupanciesByLoom.get(loomLabel);
+                if (list && list.length > 0) {
+                    list.forEach(occ => loomCardsHtml.push(renderOccupiedLoomCardHtml(loomLabel, occ, toStage)));
+                } else {
+                    loomCardsHtml.push(renderIdleLoomCardHtml(loomLabel));
+                }
+            });
+
+            // "รอขึ้นทอ": internal-mode orders with NO current loom occupancy at all — never logged
+            // anything yet, or their latest entry has no loom recorded. No longer includes orders that
+            // merely share a loom number with another order — those now get their own card above instead
+            // (see getCurrentLoomOccupancies()'s block comment).
             const waitingOrders = internalOrders
                 .filter(o => !occupantOrderIndexes.has(productionOrders.indexOf(o)))
                 .sort((a, b) => {
