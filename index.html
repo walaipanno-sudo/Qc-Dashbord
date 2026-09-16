@@ -545,7 +545,16 @@
                     <input type="text" id="searchInput" oninput="filterTable()" placeholder="ค้นหา ID, M/O, แผนก..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                 </div>
                 <div id="deptFilterWrapper" class="flex items-center gap-2 flex-wrap">
-                    <input type="month" id="monthFilter" onchange="filterTable()" title="กรองตามเดือน" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <!-- CHANGED (2026-09-16): "ทำรายงานเป็นเดือนๆ ถ้าไม่ใช่เดือนปัจจุบันให้ซ่อนไว้...จะดูค่อย
+                         เรียกดู" — this <select>/<input> pair already narrowed the table by month, but
+                         defaulted to blank (= every month shown at once). Now defaults to the CURRENT
+                         month on every page load (see the DOMContentLoaded handler) and again on
+                         "รีเซ็ต" (see resetFilters()), so other months stay hidden until explicitly
+                         requested — either by picking a specific month here, or the "ดูทุกเดือน" button. -->
+                    <input type="month" id="monthFilter" onchange="filterTable()" title="เดือนที่ต้องการดู (ค่าเริ่มต้น: เดือนปัจจุบัน — เปลี่ยนเดือน หรือกด &quot;ดูทุกเดือน&quot; เพื่อดูของเดือนอื่น)" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="button" onclick="showAllQcMonths()" id="qcShowAllMonthsBtn" title="แสดงรายการ QC ของทุกเดือน (ปกติจะซ่อนเดือนอื่นไว้ แสดงเฉพาะเดือนปัจจุบัน)" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition whitespace-nowrap">
+                        <i class="fa-solid fa-calendar-days mr-1"></i> ดูทุกเดือน
+                    </button>
                     <select id="moSoFilterSelect" onchange="filterTable()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[160px]">
                         <option value="">ทุก M/O, S/O</option>
                     </select>
@@ -2007,6 +2016,10 @@
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <!-- NEW (2026-09-16): tells the user WHY the table looks shorter than expected — the
+                     table now defaults to showing only the current month (see monthFilter's comment
+                     above) — and how many records are hiding in other months, updated by filterTable(). -->
+                <div id="qcMonthFilterHint" class="hidden px-4 py-2.5 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-700"></div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -3154,6 +3167,17 @@
         }
 
         let qcData = [];
+        // NEW (2026-09-16): "คีย์วันที่แล้ววันที่หาย" fix — record ids saved locally but not yet confirmed
+        // round-tripped through the Google Sheet (see saveQCItem()'s no-cors POST, whose response is
+        // opaque so success can never be confirmed directly). fetchDataFromGoogleSheet() used to do a
+        // hard `qcData = result.map(...)` overwrite — if a page reload or another sync happened before
+        // the Apps Script write had actually landed on the Sheet, that GET returned the OLD sheet
+        // contents and wiped out the just-saved record (including the date the user just keyed in)
+        // entirely. Now: any local record whose id is in this set AND is missing from a fetch result is
+        // preserved instead of dropped; once that id actually comes back from the Sheet, it's cleared
+        // and the Sheet becomes authoritative for it again (so a genuine remote delete still works once
+        // synced). Persisted to localStorage so it survives the very reload this bug happens around.
+        let qcPendingSyncIds = new Set();
         let productionOrders = [];
         // NEW (2026-09-16): true once fetchOrdersFromGoogleSheet() has completed at least one successful
         // response (even if it came back with zero orders) — lets the yarn calculator's "ค้นหา" lookup
@@ -3773,6 +3797,12 @@
             if (savedLocal) {
                 try { qcData = JSON.parse(savedLocal); } catch(e) {}
             }
+            // NEW (2026-09-16): see qcPendingSyncIds' declaration comment — must load before the
+            // fetchDataFromGoogleSheet(false) call further down in this handler runs.
+            const savedPendingSyncIds = localStorage.getItem('qc_pending_sync_ids_v1');
+            if (savedPendingSyncIds) {
+                try { qcPendingSyncIds = new Set(JSON.parse(savedPendingSyncIds)); } catch(e) {}
+            }
             const savedOrders = localStorage.getItem('qc_production_orders_v1');
             if (savedOrders) {
                 try { productionOrders = JSON.parse(savedOrders); } catch(e) {}
@@ -3809,6 +3839,12 @@
             }
             const printDateEl = document.getElementById('printDateNow');
             if (printDateEl) printDateEl.textContent = new Date().toLocaleString('th-TH');
+            // NEW (2026-09-16): "รายงาน QC ทั้งหมด" defaults to showing only the current month on every
+            // fresh page load (see filterTable()'s comment) — set once here, BEFORE initApp()'s first
+            // filterTable() call, rather than every time initApp() re-runs (which happens after every
+            // save/edit/delete/sync), so it never overrides a month the user already picked mid-session.
+            const monthFilterEl = document.getElementById('monthFilter');
+            if (monthFilterEl) monthFilterEl.value = getCurrentMonthKey();
             initApp();
             switchView('overview');
             startMascotBlinkLoop();
@@ -3828,6 +3864,12 @@
 
         function saveToLocal() {
             localStorage.setItem('qc_comprehensive_data_v2', JSON.stringify(qcData));
+        }
+
+        // NEW (2026-09-16): persists qcPendingSyncIds — see its declaration comment above for why this
+        // needs to survive a reload, not just live in memory.
+        function savePendingQcSyncIdsToLocal() {
+            localStorage.setItem('qc_pending_sync_ids_v1', JSON.stringify(Array.from(qcPendingSyncIds)));
         }
 
         function saveOrdersToLocal() {
@@ -4034,7 +4076,7 @@
                 }
 
                 if (Array.isArray(result)) {
-                    qcData = result.map(item => {
+                    const fetchedRows = result.map(item => {
                         let parsedExtra = {};
                         try {
                             parsedExtra = typeof item.extraData === 'string' ? JSON.parse(item.extraData) : (item.extraData || {});
@@ -4057,6 +4099,27 @@
                             extraData: parsedExtra
                         };
                     });
+
+                    // NEW (2026-09-16): "คีย์วันที่แล้ววันที่หาย" fix — merge instead of hard-overwrite.
+                    // The Sheet is authoritative for any id it returns, but a local record still marked
+                    // "pending sync" (saved locally, not yet confirmed round-tripped — see
+                    // qcPendingSyncIds' declaration comment) that this fetch doesn't contain is kept
+                    // rather than dropped, since its absence here just as likely means the write hasn't
+                    // landed on the Sheet yet as it means it was deleted.
+                    const fetchedIds = new Set(fetchedRows.map(row => String(row.id)));
+                    const stillPending = new Set();
+                    const preservedLocalRows = [];
+                    qcData.forEach(localItem => {
+                        const id = String(localItem.id);
+                        if (qcPendingSyncIds.has(id) && !fetchedIds.has(id)) {
+                            preservedLocalRows.push(localItem);
+                            stillPending.add(id);
+                        }
+                    });
+                    qcPendingSyncIds = stillPending;
+                    savePendingQcSyncIdsToLocal();
+
+                    qcData = preservedLocalRows.concat(fetchedRows);
                     saveToLocal();
                     initApp();
                     updateSyncStatus(true, `ซิงค์สำเร็จ (${qcData.length} รายการ)`);
@@ -13682,6 +13745,21 @@
             });
         }
 
+        // NEW (2026-09-16): "YYYY-MM" for the current month, in the browser's local time — matches the
+        // <input type="month"> value format exactly, so it can be written straight into #monthFilter.
+        function getCurrentMonthKey() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        // NEW (2026-09-16): "ดูทุกเดือน" button next to #monthFilter — clears the month narrowing so
+        // every month shows again, for whenever the user actually wants to look back through history.
+        function showAllQcMonths() {
+            const monthEl = document.getElementById('monthFilter');
+            if (monthEl) monthEl.value = '';
+            filterTable();
+        }
+
         function filterTable() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const statusVal = document.getElementById('statusFilter').value;
@@ -13689,7 +13767,7 @@
             const monthVal = document.getElementById('monthFilter') ? document.getElementById('monthFilter').value : '';
             const moSoVal = document.getElementById('moSoFilterSelect') ? document.getElementById('moSoFilterSelect').value : '';
 
-            const filtered = qcData.filter(item => {
+            const matchesEverythingButMonth = item => {
                 const matchQuery = String(item.id).toLowerCase().includes(query) ||
                                    String(item.moSo).toLowerCase().includes(query) ||
                                    String(item.department).toLowerCase().includes(query) ||
@@ -13698,16 +13776,43 @@
 
                 const matchStatus = statusVal === '' || item.status === statusVal;
                 const matchDept = deptVal === '' || item.department === deptVal;
-                const matchMonth = monthVal === '' || String(item.date || '').startsWith(monthVal);
                 const matchMoSo = moSoVal === '' || (item.moSo || '').trim() === moSoVal;
                 const matchOrderType = orderTypeFilter === 'all' || getOrderTypeByMoSo(item.moSo) === orderTypeFilter;
                 const matchMarket = marketFilter === 'all' || getMarketByMoSo(item.moSo) === marketFilter;
 
-                return matchQuery && matchStatus && matchDept && matchMonth && matchMoSo && matchOrderType && matchMarket;
-            });
+                return matchQuery && matchStatus && matchDept && matchMoSo && matchOrderType && matchMarket;
+            };
+
+            const matchingButForMonth = qcData.filter(matchesEverythingButMonth);
+            const filtered = monthVal === ''
+                ? matchingButForMonth
+                : matchingButForMonth.filter(item => String(item.date || '').startsWith(monthVal));
 
             renderTable(filtered);
-            renderShippingTable(filtered);
+            // IMPORTANT (2026-09-16): renderShippingTable() derives "รายการรอส่ง" from the latest
+            // packaging-department QC record per M/O, S/O (see getShippingReadyList()) — an order QC'd
+            // and ready to ship in an EARLIER month, but not yet shipped, must keep showing up there.
+            // Feeding it the month-narrowed `filtered` (now that the records table defaults to the
+            // current month) would make it vanish from the ready-to-ship queue the moment the calendar
+            // rolls over to a new month, which is a real production-tracking regression, not just a
+            // display preference — so it always gets `matchingButForMonth` (every other filter, no month
+            // narrowing), matching its behavior before this month-default feature existed.
+            renderShippingTable(matchingButForMonth);
+
+            // NEW (2026-09-16): "ทำรายงานเป็นเดือนๆ...ไม่ต้องแสดง จะดูค่อยเรียกดู" — the table defaults to
+            // showing only the current month (see getCurrentMonthKey()'s callers below), so tell the user
+            // plainly when other months' records are hidden rather than let the table just look short.
+            const monthHintEl = document.getElementById('qcMonthFilterHint');
+            if (monthHintEl) {
+                const hiddenByMonthCount = matchingButForMonth.length - filtered.length;
+                if (monthVal !== '' && hiddenByMonthCount > 0) {
+                    const monthLabel = formatBucketLabel(monthVal, 'month');
+                    monthHintEl.textContent = `กำลังแสดงเฉพาะเดือน ${monthLabel} (${filtered.length} รายการ) — ซ่อนอยู่อีก ${hiddenByMonthCount} รายการในเดือนอื่น กด "ดูทุกเดือน" เพื่อดูทั้งหมด`;
+                    monthHintEl.classList.remove('hidden');
+                } else {
+                    monthHintEl.classList.add('hidden');
+                }
+            }
 
             // Keep the department tab-pills' active styling and live counts in sync on every filter
             // change (typing a search term, changing status/month/M-O-S-O, or flipping the global
@@ -13721,7 +13826,10 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('deptFilter').value = '';
-            if (document.getElementById('monthFilter')) document.getElementById('monthFilter').value = '';
+            // CHANGED (2026-09-16): resets back to the CURRENT month (the table's default view) rather
+            // than blank/every-month — "ดูทุกเดือน" next to the filter is the explicit way to see
+            // everything, so "รีเซ็ต" shouldn't quietly do that too.
+            if (document.getElementById('monthFilter')) document.getElementById('monthFilter').value = getCurrentMonthKey();
             if (document.getElementById('moSoFilterSelect')) document.getElementById('moSoFilterSelect').value = '';
             departmentFilter = '';
             filterTable(); // keeps the global M/O, S/O switch in effect — this button only clears the Records-tab search/status/dept/month fields
@@ -14038,6 +14146,14 @@
                 mascotCelebrateQcEntry(); // only for brand-new records, not edits — keeps the cheer tied to "ลงรายการ" specifically
             }
 
+            // NEW (2026-09-16): mark this record "pending sync" BEFORE the network call below (and
+            // persist immediately) so it's protected even if the page reloads before the POST — or its
+            // eventual sheet write — actually completes. See qcPendingSyncIds' declaration comment.
+            if (newItem.id) {
+                qcPendingSyncIds.add(newItem.id);
+                savePendingQcSyncIdsToLocal();
+            }
+
             saveToLocal();
             initApp();
             closeModal();
@@ -14137,6 +14253,13 @@
 
             const deletedItem = qcData[index];
             qcData.splice(index, 1);
+            // NEW (2026-09-16): clear any leftover "pending sync" flag for a now-deleted record — see
+            // qcPendingSyncIds' declaration comment. Without this it would just sit there unused (it can
+            // never be preserved again since it's no longer in qcData), a harmless but pointless leak.
+            if (deletedItem.id && qcPendingSyncIds.has(deletedItem.id)) {
+                qcPendingSyncIds.delete(deletedItem.id);
+                savePendingQcSyncIdsToLocal();
+            }
             saveToLocal();
             initApp();
             showToast('ลบรายการสำเร็จ', 'fa-circle-xmark', 'text-rose-400');
