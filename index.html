@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -1776,6 +1773,18 @@
                 </div>
 
                 <div id="finishingKpiEfficiencySection">
+                    <!-- NEW (2026-09-16): "จัดการรายชื่อพนักงานตกแต่ง" — same manager pattern as
+                         weavingStaffManagerList (แผนกทอ) — see renderFinishingStaffManagerHtml()/
+                         addFinishingStaffMember() near the finishing KPI code. -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-2 mb-3">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-users mr-2 text-indigo-600"></i> จัดการรายชื่อพนักงานตกแต่ง</h3>
+                        <div id="finishingStaffManagerList" class="flex flex-wrap gap-1.5"></div>
+                        <div class="flex items-center gap-1.5 pt-1">
+                            <input type="text" id="finishingStaffNewName" placeholder="ชื่อ-นามสกุล" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="finishingStaffNewNickname" placeholder="ชื่อเล่น" class="w-28 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button type="button" onclick="addFinishingStaffMember()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition"><i class="fa-solid fa-user-plus mr-1"></i>เพิ่ม</button>
+                        </div>
+                    </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div class="p-4 bg-indigo-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-gauge-high mr-2 text-indigo-600"></i> % ประสิทธิภาพการตกแต่งพรมโดยรวม</h3>
@@ -2997,6 +3006,28 @@
                         <input type="number" min="0" step="0.5" id="prodSettingFinishingOt" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
                     </div>
                 </div>
+                <!-- NEW (2026-09-16): การเบิกใช้กาว — "เบิกตามมาตรฐาน" มาตรฐานให้ใส่สูตร (พื้นที่ตร.ม. ทั้งหมด
+                     x ตัวคูณ, ตัวคูณแก้ไขได้) + กาวแต่ละชนิดสามารถเพิ่มได้ ตามคำขอ — see
+                     computeGlueStandardKg()/renderGlueTypesManagerHtml()/addGlueType()/removeGlueType()
+                     near the finishing glue KPI code. -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                    <div class="sm:col-span-3 text-xs font-bold text-slate-500 uppercase">การเบิกใช้กาว (มาตรฐาน)</div>
+                    <div>
+                        <label class="block text-[11px] text-slate-500 mb-0.5">ตัวคูณมาตรฐาน (x พื้นที่ตร.ม.)</label>
+                        <input type="number" min="0" step="0.1" id="prodSettingGlueStandardMultiplier" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div class="sm:col-span-2 flex items-end">
+                        <p class="text-[11px] text-slate-500">เบิกตามมาตรฐาน = พื้นที่ตร.ม. ทั้งหมด × ตัวคูณนี้ (คำนวณอัตโนมัติในตารางเบิกกาว)</p>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-[11px] text-slate-500 mb-1">ชนิดกาว (เพิ่ม/ลบได้)</label>
+                        <div id="prodSettingGlueTypesList" class="flex flex-wrap gap-1.5 mb-1.5"></div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="text" id="prodSettingGlueTypeNewLabel" placeholder="ชื่อกาว เช่น EUR178" class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs">
+                            <button type="button" id="prodSettingGlueTypeAddBtn" onclick="addGlueType()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition"><i class="fa-solid fa-plus mr-1"></i>เพิ่มชนิดกาว</button>
+                        </div>
+                    </div>
+                </div>
                 <p class="text-[11px] text-slate-400">AI ใช้ค่าแรงงาน/กำลังผลิตชุดนี้เป็นค่าประมาณ ผู้วางแผนสามารถปรับจำนวนวันของทุกแผนกด้วยตนเองได้เสมอ</p>
             </div>
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
@@ -3097,6 +3128,10 @@
         // own-Google-Sheet-tab convention as specTemplates/issuesData above — see
         // fetchWeavingStaffFromGoogleSheet()/renderWeavingStaffManagerHtml() near the weaving log code.
         let weavingStaffList = [];
+        // NEW (2026-09-16): "รายชื่อพนักงานตกแต่ง" — same purpose/shape as weavingStaffList above, but for
+        // the ประสิทธิภาพการตกแต่ง (finishing efficiency) log — see renderFinishingStaffManagerHtml() near
+        // the finishing KPI code. Local-only for now (no Google Sheet tab), same as surplusYarnLedger below.
+        let finishingStaffList = [];
         // NEW (2026-09-16): "รายงาน KPI แผนกวางแผน" — monthly ไหม Surplus warehouse ledger (ใบ "5.ไหม
         // Surplusคงเหลือ" ในไฟล์ Excel ที่แนบมา). This one is company-wide per MONTH, not tied to any one
         // M/O, S/O, so — unlike the per-order KPI fields added under order.weaving/order.dyeing/
@@ -3304,13 +3339,27 @@
         // Loaded from localStorage immediately (so the calculator works offline / before the first
         // sync) and refreshed from the shared Google Sheet on every fetchProductionSettingsFromSheet()
         // call, same "local cache + Sheet is the shared source of truth" pattern as gasWebAppUrl/orders.
+        // NEW (2026-09-16): the finishing department's default glue types (used to seed productionSettings.
+        // finishing.glueTypes below whenever no saved value exists) — kept as its own constant so every
+        // "seed defaults" spot (this IIFE, fetchProductionSettingsFromSheet(), saveProductionSettings())
+        // stays in sync. Keys match the pre-existing glueUsageLog[] fields exactly, so orders saved before
+        // this feature (dynamic glue types + formula-based standardKg) keep loading/exporting correctly.
+        const DEFAULT_GLUE_TYPES = [
+            { key: 'eur178Kg', label: 'EUR178' },
+            { key: 'kg66012', label: '66012' },
+            { key: 'th31Kg', label: 'TH31' }
+        ];
         let productionSettings = (function() {
             const defaults = {
                 regularHoursPerDay: 8,
                 tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
                 design: { staffCount: 1, otHours: 0 },
                 dyeing: { staffCount: 1, kgPerDay: 12, setupHoursPerColor: 0.5 },
-                finishing: { staffCount: 1, otHours: 0 }
+                // NEW (2026-09-16): glueStandardMultiplier — "เบิกตามมาตรฐาน" (standardKg) is now a formula,
+                // พื้นที่ตร.ม. ทั้งหมด × ตัวคูณนี้, instead of a manually-typed number (see
+                // computeGlueStandardKg() near the finishing glue KPI code) — default 2 per the user's
+                // request, editable in the Production Settings modal. glueTypes — see DEFAULT_GLUE_TYPES above.
+                finishing: { staffCount: 1, otHours: 0, glueStandardMultiplier: 2, glueTypes: DEFAULT_GLUE_TYPES.map(t => Object.assign({}, t)) }
             };
             let saved = {};
             try { saved = JSON.parse(localStorage.getItem('qc_production_settings') || '{}'); } catch(e) { saved = {}; }
@@ -3319,7 +3368,10 @@
                 tufting: Object.assign({}, defaults.tufting, saved.tufting || {}),
                 design: Object.assign({}, defaults.design, saved.design || {}),
                 dyeing: Object.assign({}, defaults.dyeing, saved.dyeing || {}),
-                finishing: Object.assign({}, defaults.finishing, saved.finishing || {})
+                finishing: Object.assign({}, defaults.finishing, saved.finishing || {}, {
+                    glueTypes: (saved.finishing && Array.isArray(saved.finishing.glueTypes) && saved.finishing.glueTypes.length > 0)
+                        ? saved.finishing.glueTypes : defaults.finishing.glueTypes
+                })
             };
         })();
         let isDisplayMode = false;
@@ -3695,6 +3747,11 @@
             if (savedWeavingStaff) {
                 try { weavingStaffList = JSON.parse(savedWeavingStaff); } catch(e) {}
             }
+            // NEW (2026-09-16): รายชื่อพนักงานตกแต่ง — local-only, see the declaration comment above.
+            const savedFinishingStaff = localStorage.getItem('qc_finishing_staff_v1');
+            if (savedFinishingStaff) {
+                try { finishingStaffList = JSON.parse(savedFinishingStaff); } catch(e) {}
+            }
             // NEW (2026-09-16): ไหม Surplus ledger รายเดือน — local-only for now, see the declaration comment above.
             const savedSurplusLedger = localStorage.getItem('qc_surplus_ledger_v1');
             if (savedSurplusLedger) {
@@ -3745,6 +3802,12 @@
         // NEW (2026-09-12): persists weavingStaffList locally, same convention as saveSpecTemplatesToLocal() above.
         function saveWeavingStaffToLocal() {
             localStorage.setItem('qc_weaving_staff_v1', JSON.stringify(weavingStaffList));
+        }
+
+        // NEW (2026-09-16): persists finishingStaffList locally, same convention as saveWeavingStaffToLocal()
+        // above, minus the Google Sheet sync (local-only, see the declaration comment).
+        function saveFinishingStaffToLocal() {
+            localStorage.setItem('qc_finishing_staff_v1', JSON.stringify(finishingStaffList));
         }
 
         // NEW (2026-09-16): persists surplusYarnLedger locally — same convention as saveWeavingStaffToLocal()
@@ -4545,7 +4608,10 @@
                 });
                 ((o.finishing && o.finishing.glueUsageLog) || []).forEach(item => {
                     glueTotalCount++;
-                    const total = (Number(item.eur178Kg) || 0) + (Number(item.kg66012) || 0) + (Number(item.th31Kg) || 0);
+                    // NEW (2026-09-16): sumGlueUsageKg() reads productionSettings.finishing.glueTypes[]
+                    // instead of the old hardcoded eur178Kg/kg66012/th31Kg trio — see the finishing glue
+                    // KPI code for why (dynamic glue types).
+                    const total = sumGlueUsageKg(item);
                     const std = Number(item.standardKg) || 0;
                     if (std > 0 && total > std) glueOverStandardCount++;
                 });
@@ -6381,14 +6447,29 @@
                         tufting: { staffCount: 1, otHours: 0, loomCount: 1 },
                         design: { staffCount: 1, otHours: 0 },
                         dyeing: { staffCount: 1, kgPerDay: 12, setupHoursPerColor: 0.5 },
-                        finishing: { staffCount: 1, otHours: 0 }
+                        finishing: { staffCount: 1, otHours: 0, glueStandardMultiplier: 2, glueTypes: DEFAULT_GLUE_TYPES.map(t => Object.assign({}, t)) }
                     };
+                    // NEW (2026-09-16): glueStandardMultiplier/glueTypes aren't part of this .gs endpoint's
+                    // response yet (untested backend change, deliberately not made this round — see the
+                    // app's other local-only lists like surplusYarnLedger) — so a sheet fetch must NOT wipe
+                    // out whatever the user already configured on THIS device back to the hardcoded
+                    // defaults. Prefer, in order: what the sheet actually sent -> what's already in memory
+                    // (loaded from localStorage or edited this session) -> the hardcoded default.
+                    const priorFinishing = productionSettings.finishing || {};
+                    const sheetFinishing = result.finishing || {};
                     productionSettings = {
                         regularHoursPerDay: (result.regularHoursPerDay !== undefined) ? result.regularHoursPerDay : defaults.regularHoursPerDay,
                         tufting: Object.assign({}, defaults.tufting, result.tufting || {}),
                         design: Object.assign({}, defaults.design, result.design || {}),
                         dyeing: Object.assign({}, defaults.dyeing, result.dyeing || {}),
-                        finishing: Object.assign({}, defaults.finishing, result.finishing || {})
+                        finishing: Object.assign({}, defaults.finishing, priorFinishing, sheetFinishing, {
+                            glueTypes: (Array.isArray(sheetFinishing.glueTypes) && sheetFinishing.glueTypes.length > 0) ? sheetFinishing.glueTypes
+                                : (Array.isArray(priorFinishing.glueTypes) && priorFinishing.glueTypes.length > 0) ? priorFinishing.glueTypes
+                                : defaults.finishing.glueTypes,
+                            glueStandardMultiplier: (sheetFinishing.glueStandardMultiplier !== undefined) ? sheetFinishing.glueStandardMultiplier
+                                : (priorFinishing.glueStandardMultiplier !== undefined) ? priorFinishing.glueStandardMultiplier
+                                : defaults.finishing.glueStandardMultiplier
+                        })
                     };
                     saveProductionSettingsToLocal();
                     // Every open M/O's suggested grade/hours/days depends on these settings — refresh
@@ -8418,7 +8499,7 @@
                 <div class="bg-white rounded-xl border border-teal-200 shadow-sm p-2.5 space-y-1.5">
                     <div class="flex items-center justify-between">
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-0.5"><i class="fa-solid fa-diagram-project"></i> จอ ${escapeHtml(String(loomNumber))}</span>
-                        <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
+                        <button onclick="openOrderDetailModal(${orderIndex}, 'weaving')" class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
                     </div>
                     <div class="flex items-start gap-2">
                         ${order.designImageUrl ? `<img src="${escapeHtml(order.designImageUrl)}" class="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0" alt="รูปดีไซน์" loading="lazy">` : ''}
@@ -9117,15 +9198,17 @@
         // other field in this modal. Deliberately excludes price/amount/billing columns (Unit Price,
         // Amount, Grand Total, PI NO., INV. NO., payment terms) per the user's request.
         // MERGED (2026-09-16): this used to be two separate cards — "ข้อมูลเพิ่มเติม (จากใบเปิด M/O)" and
-        // "ข้อกำหนดสำหรับฝ่ายผลิต" — shown back-to-back in the order detail modal. Per the user's request
-        // ("รายละเอียดรายการซ้ำกัน ให้ตัดออก ... รวมเป็นข้อมูลเพิ่มเติมจากใบ M/O") they're now ONE card under
-        // this single heading, with the former production-requirements fields as a labeled subsection
-        // inside it, and the two overlapping free-text notes fields (หมายเหตุ/Remarks and คำสั่งพิเศษถึง
-        // ฝ่ายผลิต/QC — both general free-text notes on the order) placed together at the end so they read
-        // as one "notes" area instead of being split across two separate cards. No field was deleted —
-        // every input here is still the same order.<field>, still saved via updateOrderField() exactly as
-        // before, so nothing about persistence/printing (buildProductionWorkOrderPrintHTML reads these same
-        // order fields directly, not through this function) changed.
+        // "ข้อกำหนดสำหรับฝ่ายผลิต" — shown back-to-back in the order detail modal, later merged into one
+        // card with the production-requirements fields as an inner subsection.
+        // SPLIT AGAIN (2026-09-16, later same day): per the user's follow-up request, the "ข้อกำหนดสำหรับ
+        // ฝ่ายผลิต" subsection is removed from here entirely — ชนิดไหม (Yarn type) stays as a plain field
+        // in this master card (it's basic order-opening info), and the rest (สเปกทอ/ผิวงาน/ผิวสัมผัส/
+        // ตำแหน่งสี/แผนไหม/งานทากาว/Tuft bind/Sprouting) moved into the แผนกทอ section (see
+        // renderOrderDetailStageSection()'s weaving branch) since they're actually weaving/production
+        // specs, not master order info. No field was deleted — every input is still the same order.<field>,
+        // still saved via updateOrderField() exactly as before, so persistence/printing
+        // (buildProductionWorkOrderPrintHTML reads these order fields directly, not through this function)
+        // is unaffected — only WHERE each field is shown changed.
         function renderOrderExtraInfoBlock(order, orderIndex) {
             const f = (field, value) => `updateOrderField(${orderIndex}, '${field}', this.value)`;
             return `
@@ -9151,6 +9234,13 @@
                         <div>
                             <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">จำนวนสี (Colors)</label>
                             <input type="number" min="0" step="1" value="${order.colorsCount || ''}" onchange="updateOrderField(${orderIndex}, 'colorsCount', Number(this.value))" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <!-- MOVED (2026-09-16): was inside the now-removed production-requirements subsection
+                             below — kept here since it's basic order-opening info, while the rest of that
+                             subsection's fields moved into the แผนกทอ section (see renderOrderDetailStageSection()). -->
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชนิดไหม (Yarn type)</label>
+                            <input type="text" value="${escapeHtml(order.yarnType || '')}" onchange="${f('yarnType')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
                         </div>
                         <div>
                             <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ดีไซน์ (รหัสอ้างอิง)</label>
@@ -9182,51 +9272,6 @@
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ขนาดพรม (Carpet Size, ข้อความอิสระ)</label>
                         <textarea rows="2" onchange="${f('carpetSizeNote')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.carpetSizeNote || '')}</textarea>
-                    </div>
-
-                    <!-- MERGED-IN subsection (was its own separate card: "ข้อกำหนดสำหรับฝ่ายผลิต") -->
-                    <div class="pt-2 mt-1 border-t border-slate-200 space-y-2.5">
-                        <span class="text-[11px] font-bold text-indigo-700"><i class="fa-solid fa-clipboard-list mr-1"></i> ข้อกำหนดสำหรับฝ่ายผลิต</span>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ชนิดไหม (Yarn type)</label>
-                                <input type="text" value="${escapeHtml(order.yarnType || '')}" onchange="${f('yarnType')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">สเปกทอ (Tufting spec)</label>
-                                <input type="text" value="${escapeHtml(order.tuftingSpec || '')}" onchange="${f('tuftingSpec')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวงาน (Surface)</label>
-                                <input type="text" value="${escapeHtml(order.surface || '')}" onchange="${f('surface')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวสัมผัส (Texture)</label>
-                                <input type="text" value="${escapeHtml(order.texture || '')}" onchange="${f('texture')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตำแหน่งและรายละเอียดสี</label>
-                            <textarea rows="2" onchange="${f('colorPlacement')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.colorPlacement || '')}</textarea>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">แผนไหม/สีสำหรับผลิต</label>
-                            <textarea rows="3" onchange="${f('yarnPlan')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.yarnPlan || '')}</textarea>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">งานทากาว (Latexing)</label>
-                                <input type="text" value="${escapeHtml(order.latexing || '')}" onchange="${f('latexing')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Tuft bind</label>
-                                <input type="text" value="${escapeHtml(order.tuftBind || '')}" onchange="${f('tuftBind')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Sprouting / Label</label>
-                                <input type="text" value="${escapeHtml(order.sproutingLabel || '')}" onchange="${f('sproutingLabel')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
-                            </div>
-                        </div>
                     </div>
 
                     <!-- The two overlapping free-text notes fields, kept together as one "notes" area
@@ -9442,6 +9487,14 @@
                 const log = (o.weaving && Array.isArray(o.weaving.dailyLog)) ? o.weaving.dailyLog : [];
                 log.forEach(l => { if (l.date === todayKey) sqmWovenToday += Number(l.sqm) || 0; });
             });
+            // NEW (2026-09-16): "ผลรวม M/O,S/O ที่ตกแต่งเสร็จวันนี้" — count of orders whose cumulative
+            // finishing efficiency sqm reached totalSqm TODAY (see getFinishingCompletionDate() /
+            // computeFinishingLogWithCumulative() near the finishing KPI code). Deliberately separate from
+            // finishingMoPerDay below, which is a manually-set CAPACITY TARGET, not an actual daily count.
+            let finishingCompletedMoToday = 0;
+            productionOrders.forEach(o => {
+                if (getFinishingCompletionDate(o) === todayKey) finishingCompletedMoToday++;
+            });
             return {
                 totalSqmRemainingInLine,
                 stageCounts,
@@ -9450,6 +9503,7 @@
                 dyeingColorsPerDay: getDyeingColorsPerDayTotal(),
                 weavingSqmPerDay: getWeavingSqmPerDayTotal(),
                 finishingMoPerDay: getFinishingCapacityPerDay(),
+                finishingCompletedMoToday,
                 transferCount: getTransferCount(),
                 readyToShipCount: stageCounts.ready_to_ship,
                 shippedCount: stageCounts.shipped
@@ -9945,7 +9999,7 @@
                     <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-chart-simple mr-2 text-indigo-600"></i>สรุปภาพรวมทั้งบริษัท</h3>
                     <span class="text-[11px] text-slate-400">อัปเดตอัตโนมัติตามข้อมูลปัจจุบัน</span>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-8 gap-2">
+                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-9 gap-2">
                     ${overviewStatTileHtml('fa-ruler-combined', 'text-indigo-500', 'ตร.ม. คงเหลือในไลน์ผลิต (ไม่รวมรอส่ง)', `${s.totalSqmRemainingInLine.toLocaleString('th-TH')} ตร.ม.`)}
                     ${overviewStatTileHtml('fa-droplet', 'text-violet-500', 'ย้อมได้/วัน (ที่กำลังย้อม)', `${s.dyeingColorsPerDay.toLocaleString('th-TH')} สี/วัน`)}
                     ${overviewStatTileHtml('fa-hand-holding-heart', 'text-teal-500', 'ทอได้/วัน (ที่กำลังทอ)', `${s.weavingSqmPerDay.toLocaleString('th-TH')} ตร.ม./วัน`)}
@@ -9956,6 +10010,7 @@
                             <span class="text-xs font-semibold text-slate-500">M/O/วัน</span>
                         </span>
                     `)}
+                    ${overviewStatTileHtml('fa-flag-checkered', 'text-rose-500', 'M/O, S/O ตกแต่งเสร็จวันนี้ (จริง)', `${s.finishingCompletedMoToday.toLocaleString('th-TH')} M/O, S/O`)}
                     ${overviewStatTileHtml('fa-arrow-right-arrow-left', 'text-sky-500', 'ยอดรวมโอนงานทั้งหมด', `${s.transferCount.toLocaleString('th-TH')} ครั้ง`)}
                     ${overviewStatTileHtml('fa-truck-fast', 'text-orange-500', 'รายการรอส่ง', `${s.readyToShipCount.toLocaleString('th-TH')} M/O, S/O`)}
                     ${overviewStatTileHtml('fa-circle-check', 'text-emerald-500', 'ส่งแล้ว', `${s.shippedCount.toLocaleString('th-TH')} M/O, S/O`)}
@@ -10302,7 +10357,7 @@
                         <p class="text-[11px] text-slate-400">อยู่ที่แผนก: <span class="font-semibold ${stageTextCls}">${escapeHtml(stageLabel)}</span> (${percent}%)</p>
                         <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
-                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
@@ -10756,7 +10811,7 @@
                         ${(order.totalSqm || order.totalPieces) ? `<p class="text-[11px] text-slate-400">${order.totalSqm ? `${order.totalSqm} ตร.ม.` : ''}${order.totalSqm && order.totalPieces ? ' • ' : ''}${order.totalPieces ? `${order.totalPieces} ชิ้น` : ''}</p>` : ''}
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
-                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                    <button onclick="openOrderDetailModal(${orderIndex}, '${stage}')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
@@ -10872,7 +10927,7 @@
                         <p class="text-[11px] text-slate-400">ดีไซน์ (รหัสอ้างอิง): ${order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>'}</p>
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
-                    <button onclick="openOrderDetailModal(${orderIndex}, 'design')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                    <button onclick="openOrderDetailModal(${orderIndex}, 'design')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
@@ -10912,7 +10967,7 @@
                         <p class="text-[11px] text-slate-400">ตร.ม.: ${escapeHtml(String(order.totalSqm || '-'))}</p>
                         <p class="text-[11px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
-                    <button onclick="openOrderDetailModal(${orderIndex})" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียดทุกแผนก">
+                    <button onclick="openOrderDetailModal(${orderIndex})" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                 </div>
@@ -12984,6 +13039,56 @@
             `;
         }
 
+        // MOVED (2026-09-16): was the "ข้อกำหนดสำหรับฝ่ายผลิต" subsection of the master info card
+        // (renderOrderExtraInfoBlock) — relocated into แผนกทอ's own section since these fields describe
+        // the weaving/production spec of the carpet itself, not master order-opening info (ชนิดไหม/
+        // Yarn type stayed in the master card — see renderOrderExtraInfoBlock()'s comment). Same
+        // order.<field> + updateOrderField() persistence as before, only the location changed.
+        function renderWeavingProductionSpecFieldsHtml(order, orderIndex) {
+            const f = (field) => `updateOrderField(${orderIndex}, '${field}', this.value)`;
+            return `
+                <div class="mb-2 bg-white p-2.5 rounded-xl border border-slate-200 space-y-2.5">
+                    <span class="text-[11px] font-bold text-teal-700"><i class="fa-solid fa-ruler-combined mr-1"></i> สเปคการผลิต (จากแผนกวางแผน)</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">สเปกทอ (Tufting spec)</label>
+                            <input type="text" value="${escapeHtml(order.tuftingSpec || '')}" onchange="${f('tuftingSpec')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวงาน (Surface)</label>
+                            <input type="text" value="${escapeHtml(order.surface || '')}" onchange="${f('surface')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ผิวสัมผัส (Texture)</label>
+                            <input type="text" value="${escapeHtml(order.texture || '')}" onchange="${f('texture')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">ตำแหน่งและรายละเอียดสี</label>
+                        <textarea rows="2" onchange="${f('colorPlacement')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.colorPlacement || '')}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">แผนไหม/สีสำหรับผลิต</label>
+                        <textarea rows="3" onchange="${f('yarnPlan')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.yarnPlan || '')}</textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">งานทากาว (Latexing)</label>
+                            <input type="text" value="${escapeHtml(order.latexing || '')}" onchange="${f('latexing')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Tuft bind</label>
+                            <input type="text" value="${escapeHtml(order.tuftBind || '')}" onchange="${f('tuftBind')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Sprouting / Label</label>
+                            <input type="text" value="${escapeHtml(order.sproutingLabel || '')}" onchange="${f('sproutingLabel')}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderOrderDetailStageSection(order, orderIndex, stage) {
             const percent = order[stage].percent || 0;
             const complete = percent >= 100;
@@ -13006,15 +13111,23 @@
                 modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage);
             }
 
+            // MOVED (2026-09-16): production-spec fields (สเปกทอ/ผิวงาน/ผิวสัมผัส/ตำแหน่งสี/แผนไหม/
+            // งานทากาว/Tuft bind/Sprouting) that used to live in the shared "ข้อกำหนดสำหรับฝ่ายผลิต"
+            // subsection of the master info card at the top of the modal — moved here since they're
+            // actually weaving/production specs, not master order info, per the user's request that
+            // "รายละเอียดของแต่ละแผนก ให้มีเฉพาะของแผนกตัวเอง". Shown for แผนกทอ regardless of internal/
+            // external mode (see below), since these describe the physical product either way.
+            const weavingSpecFieldsHtml = stage === 'weaving' ? renderWeavingProductionSpecFieldsHtml(order, orderIndex) : '';
+
             let weavingChecks = '';
             if (isWeavingExternal) {
-                weavingChecks = renderWeavingExternalJobHtml(order, orderIndex);
+                weavingChecks = weavingSpecFieldsHtml + renderWeavingExternalJobHtml(order, orderIndex);
             } else if (stage === 'weaving') {
                 const totalYarnColors = Number(order.weaving.totalYarnColors) || 0;
                 const yarnColorsReceived = Number(order.weaving.yarnColorsReceived) || 0;
                 const yarnColorsRemaining = Math.max(0, totalYarnColors - yarnColorsReceived);
                 const totalSqm = Number(order.totalSqm) || 0;
-                weavingChecks = `
+                weavingChecks = weavingSpecFieldsHtml + `
                     <div class="flex flex-wrap gap-4 mb-2">
                         <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.receivedPrintedFabric ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.receivedPrintedFabric', this.checked)" class="rounded"> ได้รับผ้าปั๊มลายแล้ว</label>
                         <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" ${order.weaving.yarnComplete ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'weaving.yarnComplete', this.checked)" class="rounded"> ไหมครบสำหรับทอ</label>
@@ -13112,6 +13225,37 @@
             `;
         }
 
+        // NEW (2026-09-16): the order detail modal used to stack EVERY department's section (วางแผน +
+        // ดีไซน์ + ย้อม + ทอ + ตกแต่ง) together in one continuous scroll, always, regardless of which
+        // board tab it was opened from. Per the user's request ("รายละเอียดของแต่ละแผนก ให้มีเฉพาะของ
+        // แผนกตัวเอง ไม่ต้องมีแผนกอื่นมารวม"), it now shows only ONE department's section at a time —
+        // whichever one it was opened from (openOrderDetailModal's focusStage), or the order's own
+        // current stage as a fallback when opened from a non-department context (Overview/Shipment/QC
+        // Records/etc.) — with a small tab bar (renderDetailStageTabsHtml()) so any department is still
+        // reachable from the same modal without closing and reopening it. The shared master fields (size
+        // items, design image, extra info, specifications) still always show, since those describe the
+        // M/O itself, not any one department's work.
+        const DETAIL_STAGE_TABS = ['planning', 'design', 'dyeing', 'weaving', 'finishing'];
+        let currentDetailFocusStage = null; // which single department's section is shown right now; null = fall back to the order's own effective stage
+
+        function switchOrderDetailStage(stage) {
+            if (!DETAIL_STAGE_TABS.includes(stage) || currentDetailOrderIndex === null) return;
+            currentDetailFocusStage = stage;
+            renderOrderDetailModalBody(currentDetailOrderIndex);
+        }
+
+        function renderDetailStageTabsHtml(activeStage) {
+            return `
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    ${DETAIL_STAGE_TABS.map(stage => {
+                        const isActive = stage === activeStage;
+                        const colors = STAGE_COLORS[stage];
+                        return `<button type="button" onclick="switchOrderDetailStage('${stage}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isActive ? `${colors.solid} text-white border-transparent shadow-sm` : `bg-white ${colors.text} border-slate-200 hover:border-slate-300`}"><i class="fa-solid ${STAGE_ICONS[stage]} mr-1"></i>${escapeHtml(STAGE_LABELS[stage])}</button>`;
+                    }).join('')}
+                </div>
+            `;
+        }
+
         function renderOrderDetailModalBody(orderIndex) {
             const order = productionOrders[orderIndex];
             if (!order) return;
@@ -13157,35 +13301,43 @@
             // renderProductionRequirementsBlock() card as an inner subsection — see its own comment.
             const orderExtraInfoHtml = renderOrderExtraInfoBlock(order, orderIndex);
             const orderSpecificationsHtml = renderSpecificationsBlock(order, orderIndex);
-            // "แผนกดีไซน์/ขยายลาย" is inserted right after "แผนกวางแผน" (ต่อจากแผนกวางแผน per the request),
-            // not appended to ORDER_STAGES — see renderDesignSectionHtml()'s comment for why.
-            const stageSectionsHtml = ORDER_STAGES.map(stage => {
-                const html = renderOrderDetailStageSection(order, orderIndex, stage);
-                return stage === 'planning' ? html + renderDesignSectionHtml(order, orderIndex) : html;
-            }).join('');
+            // Resolve which ONE department's section to show — see the block comment above
+            // DETAIL_STAGE_TABS for the full rationale. currentDetailFocusStage wins when set (either
+            // from openOrderDetailModal's focusStage or a click on the tab bar); otherwise falls back to
+            // the order's own effective stage, mapping the two non-department "รอส่ง"/"ส่งแล้ว" states
+            // onto "finishing" (the department that owns shipping) since neither is a real tab here.
+            const fallbackStage = (() => {
+                const eff = getEffectiveStage(order);
+                return DETAIL_STAGE_TABS.includes(eff) ? eff : 'finishing';
+            })();
+            const activeStage = DETAIL_STAGE_TABS.includes(currentDetailFocusStage) ? currentDetailFocusStage : fallbackStage;
+            const stageTabsHtml = renderDetailStageTabsHtml(activeStage);
+            const stageSectionsHtml = activeStage === 'design'
+                ? renderDesignSectionHtml(order, orderIndex)
+                : renderOrderDetailStageSection(order, orderIndex, activeStage);
             // NEW (2026-09-11): wrapped in a named container so applyDeptPermissionGating() (see the
             // "Supabase — Login + สิทธิ์" block above) has one place to lock down when the signed-in
             // user isn't วางแผน/Admin — everything here (size items, design image, PO/customer/due date
             // etc.) is master M/O info, not any one department's working data.
             document.getElementById('orderDetailBody').innerHTML =
-                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}${orderSpecificationsHtml}</div>` + stageSectionsHtml;
+                `<div id="orderDetailMasterFieldsBlock" class="space-y-3">${orderSizeItemsHtml}${orderDesignImageHtml}${orderExtraInfoHtml}${orderSpecificationsHtml}</div>` +
+                stageTabsHtml + stageSectionsHtml;
             applyDeptPermissionGating();
         }
 
         function openOrderDetailModal(orderIndex, focusStage) {
             currentDetailOrderIndex = orderIndex;
+            // NEW (2026-09-16): explicit focusStage (e.g. clicked from a specific board tab's card) pins
+            // the modal to that department; omitted (e.g. opened from Overview/Shipment/QC Records) lets
+            // renderOrderDetailModalBody fall back to the order's own current stage instead.
+            currentDetailFocusStage = DETAIL_STAGE_TABS.includes(focusStage) ? focusStage : null;
             renderOrderDetailModalBody(orderIndex);
             document.getElementById('orderDetailModal').classList.remove('hidden');
-            if (focusStage) {
-                setTimeout(() => {
-                    const el = document.getElementById(`orderDetailSection-${focusStage}`);
-                    if (el) el.scrollIntoView({ block: 'nearest' });
-                }, 50);
-            }
         }
 
         function closeOrderDetailModal() {
             currentDetailOrderIndex = null;
+            currentDetailFocusStage = null;
             document.getElementById('orderDetailModal').classList.add('hidden');
         }
 
@@ -13360,6 +13512,10 @@
             document.getElementById('prodSettingDyeingSetupHours').value = productionSettings.dyeing.setupHoursPerColor;
             document.getElementById('prodSettingFinishingStaff').value = productionSettings.finishing.staffCount;
             document.getElementById('prodSettingFinishingOt').value = productionSettings.finishing.otHours;
+            // NEW (2026-09-16): glue formula multiplier + dynamic glue types list — see
+            // renderGlueTypesManagerHtml()/addGlueType()/removeGlueType() near the finishing glue KPI code.
+            document.getElementById('prodSettingGlueStandardMultiplier').value = productionSettings.finishing.glueStandardMultiplier;
+            renderGlueTypesManagerHtml();
             document.getElementById('productionSettingsModal').classList.remove('hidden');
 
             // NEW (2026-09-11): ค่าตั้งต้นการคำนวณเวลาผลิตเป็นค่ากลางระดับบริษัท — จำกัดให้ Admin แก้ไข
@@ -13373,6 +13529,14 @@
                 saveBtn.classList.toggle('opacity-40', isReadOnly);
                 saveBtn.classList.toggle('cursor-not-allowed', isReadOnly);
                 saveBtn.title = isReadOnly ? 'เฉพาะ Admin เท่านั้นที่แก้ไขค่านี้ได้' : '';
+            }
+            // NEW (2026-09-16): glue type add/remove happens immediately (own persistence, like
+            // weavingStaffList) rather than through the "บันทึก" form-submit flow — gate it the same way.
+            const glueAddBtn = document.getElementById('prodSettingGlueTypeAddBtn');
+            if (glueAddBtn) {
+                glueAddBtn.disabled = isReadOnly;
+                glueAddBtn.classList.toggle('opacity-40', isReadOnly);
+                glueAddBtn.classList.toggle('cursor-not-allowed', isReadOnly);
             }
         }
 
@@ -13390,7 +13554,17 @@
                 tufting: { staffCount: num('prodSettingTuftingStaff', 1), otHours: num('prodSettingTuftingOt', 0), loomCount: num('prodSettingTuftingLoomCount', 1) },
                 design: { staffCount: num('prodSettingDesignStaff', 1), otHours: num('prodSettingDesignOt', 0) },
                 dyeing: { staffCount: num('prodSettingDyeingStaff', 1), kgPerDay: num('prodSettingDyeingKgPerDay', 12), setupHoursPerColor: num('prodSettingDyeingSetupHours', 0.5) },
-                finishing: { staffCount: num('prodSettingFinishingStaff', 1), otHours: num('prodSettingFinishingOt', 0) }
+                // NEW (2026-09-16): glueStandardMultiplier comes from its own numeric input like every other
+                // field here, but glueTypes[] is a dynamically-managed list (add/remove buttons, not a
+                // simple <input>) that already persisted itself immediately via addGlueType()/removeGlueType()
+                // — carry the CURRENT in-memory value forward here instead of reconstructing it from a form
+                // field that doesn't exist, so pressing "บันทึก" never discards it.
+                finishing: {
+                    staffCount: num('prodSettingFinishingStaff', 1),
+                    otHours: num('prodSettingFinishingOt', 0),
+                    glueStandardMultiplier: num('prodSettingGlueStandardMultiplier', 2),
+                    glueTypes: productionSettings.finishing.glueTypes
+                }
             };
             syncProductionSettingsToSheet();
             closeProductionSettingsModal();
@@ -14828,9 +15002,110 @@
         // "แผนกทากาวตกแต่ง (KPI)" — see finishingKpiContainer's HTML comment above.
         // ============================================================================================
 
+        // NEW (2026-09-16): "รายชื่อพนักงานตกแต่ง" — same add/delete-manager + checkbox-picker pattern as
+        // weavingStaffList/renderWeavingStaffManagerHtml() above, but simpler (finishing efficiency entries
+        // don't have separate เวลาปกติ/OT shifts the way the weaving daily log does — one flat employees[]
+        // list per log entry is enough per the user's request "ให้มีรายชื่อของพนักงานตกแต่งด้วย").
+        function finishingStaffDisplayName(s) {
+            return s.nickname ? `${s.name} (${s.nickname})` : s.name;
+        }
+
+        function renderFinishingStaffManagerHtml() {
+            const wrap = document.getElementById('finishingStaffManagerList');
+            if (!wrap) return;
+            wrap.innerHTML = finishingStaffList.map(s => `
+                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-slate-50 border border-slate-200 rounded-full text-[11px]">
+                    ${escapeHtml(finishingStaffDisplayName(s))}
+                    <button type="button" onclick="deleteFinishingStaffMember('${escapeHtml(s.id)}')" title="ลบพนักงานคนนี้" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('') || `<p class="text-[10px] text-slate-400">ยังไม่มีรายชื่อพนักงาน — เพิ่มได้ด้านล่าง</p>`;
+        }
+
+        function addFinishingStaffMember() {
+            const nameInput = document.getElementById('finishingStaffNewName');
+            const nicknameInput = document.getElementById('finishingStaffNewNickname');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const nickname = nicknameInput ? nicknameInput.value.trim() : '';
+            if (!name) {
+                showToast('กรุณากรอกชื่อพนักงาน', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const member = { id: 'fs_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name, nickname };
+            finishingStaffList.push(member);
+            saveFinishingStaffToLocal();
+            renderFinishingStaffManagerHtml();
+            renderFinishingEfficiencyTable();
+            if (nameInput) nameInput.value = '';
+            if (nicknameInput) nicknameInput.value = '';
+            showToast(`เพิ่ม "${name}" เข้ารายชื่อพนักงานตกแต่งแล้ว`, 'fa-user-plus', 'text-emerald-400');
+        }
+
+        function deleteFinishingStaffMember(id) {
+            const member = finishingStaffList.find(s => s.id === id);
+            if (!member) return;
+            if (!window.confirm(`ลบ "${finishingStaffDisplayName(member)}" ออกจากรายชื่อพนักงานตกแต่งถาวรหรือไม่?`)) return;
+            finishingStaffList = finishingStaffList.filter(s => s.id !== id);
+            saveFinishingStaffToLocal();
+            renderFinishingStaffManagerHtml();
+            renderFinishingEfficiencyTable();
+            showToast(`ลบ "${finishingStaffDisplayName(member)}" ออกจากรายชื่อแล้ว`, 'fa-circle-xmark', 'text-rose-400');
+        }
+
+        // Toggles one employee's name in/out of a specific efficiency-log entry's employees[] list —
+        // called from the checkbox rendered per row in renderFinishingEfficiencyTable().
+        function toggleFinishingEfficiencyLogEmployee(orderIndex, itemIndex, employeeName, checked) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.finishing || !Array.isArray(order.finishing.efficiencyLog) || !order.finishing.efficiencyLog[itemIndex]) return;
+            const item = order.finishing.efficiencyLog[itemIndex];
+            if (!Array.isArray(item.employees)) item.employees = [];
+            if (checked) {
+                if (!item.employees.includes(employeeName)) item.employees.push(employeeName);
+            } else {
+                item.employees = item.employees.filter(n => n !== employeeName);
+            }
+            persistOrderChange(order);
+        }
+
+        // Returns { carriedIn, doneToday, cumulative, remaining, isCompletingEntry } for every entry in one
+        // order's finishing efficiencyLog, sorted chronologically (ties keep original array order) — the
+        // shared calc behind both the per-row "ยกมา/คงเหลือยกไป" columns in renderFinishingEfficiencyTable()
+        // and getFinishingCompletionDate() below. Mirrors the weaving daily log's "loggedSoFar" carry-
+        // forward pattern (handleWeavingLogMoSoChange()), but computed for every row (not just a live
+        // entry-form preview) since the user asked to see it per M/O, S/O history row.
+        function computeFinishingLogWithCumulative(order) {
+            const totalSqm = Number(order.totalSqm) || 0;
+            const log = Array.isArray((order.finishing || {}).efficiencyLog) ? order.finishing.efficiencyLog : [];
+            const withIndex = log.map((item, itemIndex) => ({ item, itemIndex }));
+            withIndex.sort((a, b) => {
+                const d = String(a.item.date || '').localeCompare(String(b.item.date || ''));
+                return d !== 0 ? d : a.itemIndex - b.itemIndex;
+            });
+            let cumulative = 0;
+            let alreadyCompleted = false;
+            return withIndex.map(({ item, itemIndex }) => {
+                const carriedIn = cumulative;
+                const doneToday = Number(item.areaSqm) || 0;
+                cumulative = Math.round((cumulative + doneToday) * 100) / 100;
+                const remaining = Math.max(0, Math.round((totalSqm - cumulative) * 100) / 100);
+                const isCompletingEntry = totalSqm > 0 && !alreadyCompleted && cumulative >= totalSqm;
+                if (isCompletingEntry) alreadyCompleted = true;
+                return { item, itemIndex, carriedIn, doneToday, cumulative, remaining, isCompletingEntry };
+            });
+        }
+
+        // The date (YYYY-MM-DD) this order's cumulative finishing sqm first reached its total sqm — i.e.
+        // when it counts as "1 M/O, S/O" done in Finishing per the user's request — or null if it hasn't
+        // reached that yet (or the order has no totalSqm to compare against).
+        function getFinishingCompletionDate(order) {
+            const rows = computeFinishingLogWithCumulative(order);
+            const hit = rows.find(r => r.isCompletingEntry);
+            return hit ? (hit.item.date || null) : null;
+        }
+
         let currentFinishingKpiTab = 'efficiency'; // 'efficiency' | 'glue'
 
         function renderFinishingKpiReports() {
+            renderFinishingStaffManagerHtml();
             renderFinishingEfficiencyTable();
             renderGlueUsageTable();
         }
@@ -14855,10 +15130,15 @@
             <th class="px-2 py-2 text-left">วันที่</th>
             <th class="px-2 py-2 text-left">M/O</th>
             <th class="px-2 py-2 text-left">เกรด</th>
-            <th class="px-2 py-2 text-right">พ.ท แต่งได้ (ตร.ม.)</th>
+            <th class="px-2 py-2 text-left">พนักงาน</th>
+            <th class="px-2 py-2 text-right">พ.ท ทั้งหมด (ตร.ม.)</th>
+            <th class="px-2 py-2 text-right">ยกมาจากวันก่อน (ตร.ม.)</th>
+            <th class="px-2 py-2 text-right">พ.ท แต่งได้วันนี้ (ตร.ม.)</th>
+            <th class="px-2 py-2 text-right">คงเหลือยกไป (ตร.ม.)</th>
             <th class="px-2 py-2 text-right">เวลา (ชม.)</th>
             <th class="px-2 py-2 text-right">Productivity (m2/hr)</th>
             <th class="px-2 py-2 text-left">หมายเหตุ</th>
+            <th class="px-2 py-2 text-center">สถานะ</th>
             <th class="px-2 py-2 text-center">ลบ</th>
         `;
 
@@ -14872,9 +15152,16 @@
                 select.innerHTML = productionOrders.map(o => `<option value="${escapeHtml(o.moSo)}">${escapeHtml(o.moSo)}</option>`).join('');
                 if (productionOrders.some(o => o.moSo === currentVal)) select.value = currentVal;
             }
+            // NEW (2026-09-16): carry-forward/cumulative sqm per order — see computeFinishingLogWithCumulative()
+            // above — computed once per order here and looked up by itemIndex in rowHtml() below, rather than
+            // recomputed per row, since every row of the same order shares the same cumulative sequence.
             let flatRows = [];
+            const cumulativeByOrder = new Map();
             productionOrders.forEach((order, orderIndex) => {
                 const log = Array.isArray((order.finishing || {}).efficiencyLog) ? order.finishing.efficiencyLog : [];
+                if (log.length === 0) return;
+                const cumByItemIndex = new Map(computeFinishingLogWithCumulative(order).map(r => [r.itemIndex, r]));
+                cumulativeByOrder.set(orderIndex, cumByItemIndex);
                 log.forEach((item, itemIndex) => flatRows.push({ order, orderIndex, item, itemIndex }));
             });
 
@@ -14889,17 +15176,44 @@
             const dt = (oi, ii, field, val) => `<input type="date" value="${val || ''}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', this.value)" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs">`;
             const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateFinishingEfficiencyLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
+            // NEW (2026-09-16): checkbox picker for this row's employees — reads/writes item.employees[]
+            // (display names, same "store the name shown, not an id" convention as the weaving daily log's
+            // employees[] — see readWeavingLogShiftsFromForm()) via toggleFinishingEfficiencyLogEmployee().
+            const employeesCellHtml = (orderIndex, itemIndex, item) => {
+                if (finishingStaffList.length === 0) {
+                    return `<span class="text-[10px] text-slate-400 whitespace-nowrap">เพิ่มรายชื่อด้านบน</span>`;
+                }
+                const selected = Array.isArray(item.employees) ? item.employees : [];
+                return `<div class="flex flex-wrap gap-1 max-w-[170px] max-h-16 overflow-y-auto">${finishingStaffList.map(s => {
+                    const dispName = finishingStaffDisplayName(s);
+                    const checked = selected.includes(dispName);
+                    return `<label class="inline-flex items-center gap-0.5 px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" ${checked ? 'checked' : ''} data-name="${escapeHtml(dispName)}" onchange="toggleFinishingEfficiencyLogEmployee(${orderIndex}, ${itemIndex}, this.dataset.name, this.checked)" class="rounded">
+                        ${escapeHtml(s.nickname || s.name)}
+                    </label>`;
+                }).join('')}</div>`;
+            };
+
             const rowHtml = ({ order, orderIndex, item, itemIndex }) => {
                 const productivity = (Number(item.hours) || 0) > 0 ? ((Number(item.areaSqm) || 0) / (Number(item.hours) || 1)).toFixed(2) : '-';
+                const cum = cumulativeByOrder.get(orderIndex).get(itemIndex);
+                const statusHtml = cum.isCompletingEntry
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-flag-checkered"></i> เสร็จ 1 M/O,S/O</span>`
+                    : '-';
                 return `
                     <tr class="hover:bg-slate-50/80">
                         <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
                         <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'grade', item.grade, 'w-10')}</td>
+                        <td class="px-2 py-1.5">${employeesCellHtml(orderIndex, itemIndex, item)}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500">${(Number(order.totalSqm) || 0).toLocaleString('th-TH')}</td>
+                        <td class="px-2 py-1.5 text-right text-slate-500">${cum.carriedIn.toLocaleString('th-TH')}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm)}</td>
+                        <td class="px-2 py-1.5 text-right font-semibold ${cum.remaining <= 0 ? 'text-emerald-600' : 'text-slate-600'}">${cum.remaining.toLocaleString('th-TH')}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'hours', item.hours)}</td>
                         <td class="px-2 py-1.5 text-right text-slate-500">${productivity}</td>
                         <td class="px-2 py-1.5">${t(orderIndex, itemIndex, 'note', item.note, 'w-24')}</td>
+                        <td class="px-2 py-1.5 text-center">${statusHtml}</td>
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeFinishingEfficiencyLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
                     </tr>
                 `;
@@ -14907,7 +15221,7 @@
 
             const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
             const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
-            renderSplitOrderTypeTables('finishingKpiEfficiencySplitContainer', FINISHING_EFFICIENCY_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 8);
+            renderSplitOrderTypeTables('finishingKpiEfficiencySplitContainer', FINISHING_EFFICIENCY_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 13);
         }
 
         function addFinishingEfficiencyLogFromSelect() {
@@ -14918,7 +15232,7 @@
             const order = productionOrders[orderIndex];
             if (!order.finishing) order.finishing = {};
             if (!Array.isArray(order.finishing.efficiencyLog)) order.finishing.efficiencyLog = [];
-            order.finishing.efficiencyLog.push({ date: '', grade: 'A', areaSqm: 0, hours: 0, note: '' });
+            order.finishing.efficiencyLog.push({ date: '', grade: 'A', areaSqm: 0, hours: 0, note: '', employees: [] });
             persistOrderChange(order);
             renderFinishingEfficiencyTable();
         }
@@ -14946,18 +15260,75 @@
             renderGlueUsageTable();
         }
 
-        const FINISHING_GLUE_THEAD_HTML = `
-            <th class="px-2 py-2 text-left">ว.ด.ป.</th>
-            <th class="px-2 py-2 text-left">M/O</th>
-            <th class="px-2 py-2 text-right">พื้นที่ (ตร.ม.)</th>
-            <th class="px-2 py-2 text-right">เบิกตามมาตรฐาน (Kg.)</th>
-            <th class="px-2 py-2 text-right">กาว EUR178 (Kg.)</th>
-            <th class="px-2 py-2 text-right">กาว 66012 (Kg.)</th>
-            <th class="px-2 py-2 text-right">กาว TH31 (Kg.)</th>
-            <th class="px-2 py-2 text-right">รวมเบิกกาว (Kg.)</th>
-            <th class="px-2 py-2 text-right">% การเบิกกาวจริง</th>
-            <th class="px-2 py-2 text-center">ลบ</th>
-        `;
+        // NEW (2026-09-16): "เบิกตามมาตรฐาน" formula — พื้นที่ตร.ม. ทั้งหมด × ตัวคูณ (default 2, editable
+        // in Production Settings, productionSettings.finishing.glueStandardMultiplier) — replaces the old
+        // manually-typed standardKg field per the user's request "เบิกตามมาตรฐานให้ใส่สูตร".
+        function computeGlueStandardKg(areaSqm) {
+            const multiplier = Number(productionSettings.finishing.glueStandardMultiplier);
+            return Math.round((Number(areaSqm) || 0) * (isNaN(multiplier) ? 2 : multiplier) * 100) / 100;
+        }
+
+        // Sums every currently-configured glue type's kg on one glueUsageLog item — reads
+        // productionSettings.finishing.glueTypes[] instead of the old hardcoded eur178Kg/kg66012/th31Kg
+        // trio, so it stays correct as glue types are added/removed (see addGlueType()/removeGlueType()).
+        function sumGlueUsageKg(item) {
+            return (productionSettings.finishing.glueTypes || []).reduce((sum, t) => sum + (Number(item[t.key]) || 0), 0);
+        }
+
+        // NEW (2026-09-16): "กาวแต่ละชนิดสามารถเพิ่มได้" — manager for productionSettings.finishing.glueTypes,
+        // same immediate-persist pattern as the weaving/finishing staff managers above (own list, applies
+        // right away, not gated behind the settings modal's "บันทึก" button).
+        function renderGlueTypesManagerHtml() {
+            const wrap = document.getElementById('prodSettingGlueTypesList');
+            if (!wrap) return;
+            const isReadOnly = supabaseClient && !(currentUser && currentUser.role === 'admin');
+            const types = productionSettings.finishing.glueTypes || [];
+            wrap.innerHTML = types.map(t => `
+                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-slate-50 border border-slate-200 rounded-full text-[11px]">
+                    ${escapeHtml(t.label)}
+                    <button type="button" ${isReadOnly ? 'disabled' : ''} onclick="removeGlueType('${escapeHtml(t.key)}')" title="ลบชนิดกาวนี้" class="text-rose-400 hover:text-rose-600 px-1 ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('') || `<p class="text-[10px] text-slate-400">ยังไม่มีชนิดกาว — เพิ่มได้ด้านล่าง</p>`;
+        }
+
+        function addGlueType() {
+            const labelInput = document.getElementById('prodSettingGlueTypeNewLabel');
+            const label = labelInput ? labelInput.value.trim() : '';
+            if (!label) { showToast('กรุณากรอกชื่อกาว', 'fa-circle-exclamation', 'text-amber-400'); return; }
+            if (!Array.isArray(productionSettings.finishing.glueTypes)) productionSettings.finishing.glueTypes = [];
+            const key = 'glue_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+            productionSettings.finishing.glueTypes.push({ key, label });
+            syncProductionSettingsToSheet();
+            renderGlueTypesManagerHtml();
+            renderGlueUsageTable();
+            if (labelInput) labelInput.value = '';
+            showToast(`เพิ่มชนิดกาว "${label}" แล้ว`, 'fa-check', 'text-emerald-400');
+        }
+
+        function removeGlueType(key) {
+            const type = (productionSettings.finishing.glueTypes || []).find(t => t.key === key);
+            if (!type) return;
+            if (!window.confirm(`ลบชนิดกาว "${type.label}" ออกจากรายการหรือไม่? (ตัวเลขที่เคยบันทึกไว้ในประวัติจะไม่ถูกลบ แค่ไม่แสดงคอลัมน์นี้อีก)`)) return;
+            productionSettings.finishing.glueTypes = productionSettings.finishing.glueTypes.filter(t => t.key !== key);
+            syncProductionSettingsToSheet();
+            renderGlueTypesManagerHtml();
+            renderGlueUsageTable();
+            showToast(`ลบชนิดกาว "${type.label}" แล้ว`, 'fa-circle-xmark', 'text-rose-400');
+        }
+
+        function finishingGlueTheadHtml() {
+            const glueTypeThs = (productionSettings.finishing.glueTypes || []).map(t => `<th class="px-2 py-2 text-right">${escapeHtml(t.label)} (Kg.)</th>`).join('');
+            return `
+                <th class="px-2 py-2 text-left">ว.ด.ป.</th>
+                <th class="px-2 py-2 text-left">M/O</th>
+                <th class="px-2 py-2 text-right">พื้นที่ (ตร.ม.)</th>
+                <th class="px-2 py-2 text-right">เบิกตามมาตรฐาน (Kg.)</th>
+                ${glueTypeThs}
+                <th class="px-2 py-2 text-right">รวมเบิกกาว (Kg.)</th>
+                <th class="px-2 py-2 text-right">% การเบิกกาวจริง</th>
+                <th class="px-2 py-2 text-center">ลบ</th>
+            `;
+        }
 
         function renderGlueUsageTable() {
             const selectWrap = document.getElementById('finishingKpiGluePeriodSelectWrap');
@@ -14979,7 +15350,7 @@
             const periodSummaryEl = document.getElementById('finishingKpiGluePeriodSummary');
             if (periodSummaryEl) {
                 periodSummaryEl.innerHTML = renderPeriodSummaryTableHtml(flatRows.map(r => Object.assign({}, r.item, {
-                    totalKg: (Number(r.item.eur178Kg) || 0) + (Number(r.item.kg66012) || 0) + (Number(r.item.th31Kg) || 0)
+                    totalKg: sumGlueUsageKg(r.item)
                 })), 'date', finishingKpiGluePeriodGranularity, [
                     { key: 'areaSqm', label: 'พื้นที่รวม (ตร.ม.)' }, { key: 'totalKg', label: 'รวมเบิกกาวรวม (Kg.)' }
                 ]);
@@ -14989,19 +15360,20 @@
             const n = (oi, ii, field, val, width = 'w-16') => `<input type="number" step="0.01" value="${val || ''}" onchange="updateGlueUsageLogItemField(${oi}, ${ii}, '${field}', Number(this.value))" class="${width} px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-right">`;
 
             const rowHtml = ({ order, orderIndex, item, itemIndex }) => {
-                const totalKg = (Number(item.eur178Kg) || 0) + (Number(item.kg66012) || 0) + (Number(item.th31Kg) || 0);
+                const totalKg = sumGlueUsageKg(item);
                 const standard = Number(item.standardKg) || 0;
                 const percent = standard > 0 ? ((totalKg / standard) * 100).toFixed(1) + '%' : '-';
                 const percentCls = standard > 0 && totalKg > standard ? 'text-rose-600 font-bold' : 'text-slate-500';
+                const glueTypeCellsHtml = (productionSettings.finishing.glueTypes || []).map(t =>
+                    `<td class="px-2 py-1.5">${n(orderIndex, itemIndex, t.key, item[t.key])}</td>`
+                ).join('');
                 return `
                     <tr class="hover:bg-slate-50/80">
                         <td class="px-2 py-1.5">${dt(orderIndex, itemIndex, 'date', item.date)}</td>
                         <td class="px-2 py-1.5 font-semibold ${moSoTextColorClass(order)} whitespace-nowrap">${escapeHtml(order.moSo)}</td>
                         <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'areaSqm', item.areaSqm)}</td>
-                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'standardKg', item.standardKg)}</td>
-                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'eur178Kg', item.eur178Kg)}</td>
-                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'kg66012', item.kg66012)}</td>
-                        <td class="px-2 py-1.5">${n(orderIndex, itemIndex, 'th31Kg', item.th31Kg)}</td>
+                        <td class="px-2 py-1.5 text-right font-semibold text-slate-600" title="คำนวณอัตโนมัติ = พื้นที่ x ตัวคูณมาตรฐาน (ตั้งค่าได้ที่ Production Settings)">${standard.toLocaleString('th-TH')}</td>
+                        ${glueTypeCellsHtml}
                         <td class="px-2 py-1.5 text-right font-semibold">${totalKg.toFixed(2)}</td>
                         <td class="px-2 py-1.5 text-right ${percentCls}">${percent}</td>
                         <td class="px-2 py-1.5 text-center"><button type="button" onclick="removeGlueUsageLogItem(${orderIndex}, ${itemIndex})" class="text-rose-400 hover:text-rose-600 px-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
@@ -15011,7 +15383,8 @@
 
             const moRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) !== 'SO');
             const soRows = flatRows.filter(r => (r.order.orderType || detectOrderTypeFromMoSo(r.order.moSo)) === 'SO');
-            renderSplitOrderTypeTables('finishingKpiGlueSplitContainer', FINISHING_GLUE_THEAD_HTML, moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, 10);
+            const colspan = 7 + (productionSettings.finishing.glueTypes || []).length;
+            renderSplitOrderTypeTables('finishingKpiGlueSplitContainer', finishingGlueTheadHtml(), moRows.map(rowHtml).join(''), soRows.map(rowHtml).join(''), moRows.length, soRows.length, colspan);
         }
 
         function addGlueUsageLogFromSelect() {
@@ -15022,7 +15395,11 @@
             const order = productionOrders[orderIndex];
             if (!order.finishing) order.finishing = {};
             if (!Array.isArray(order.finishing.glueUsageLog)) order.finishing.glueUsageLog = [];
-            order.finishing.glueUsageLog.push({ date: '', areaSqm: 0, standardKg: 0, eur178Kg: 0, kg66012: 0, th31Kg: 0 });
+            // NEW (2026-09-16): standardKg starts at computeGlueStandardKg(0) = 0 and every currently-
+            // configured glue type gets its own 0 field — dynamic instead of the old hardcoded 3 keys.
+            const newItem = { date: '', areaSqm: 0, standardKg: 0 };
+            (productionSettings.finishing.glueTypes || []).forEach(t => { newItem[t.key] = 0; });
+            order.finishing.glueUsageLog.push(newItem);
             persistOrderChange(order);
             renderGlueUsageTable();
         }
@@ -15038,7 +15415,11 @@
         function updateGlueUsageLogItemField(orderIndex, itemIndex, field, value) {
             const order = productionOrders[orderIndex];
             if (!order || !order.finishing || !Array.isArray(order.finishing.glueUsageLog) || !order.finishing.glueUsageLog[itemIndex]) return;
-            order.finishing.glueUsageLog[itemIndex][field] = value;
+            const item = order.finishing.glueUsageLog[itemIndex];
+            item[field] = value;
+            // NEW (2026-09-16): "เบิกตามมาตรฐานให้ใส่สูตร" — keep standardKg in sync with the formula
+            // whenever areaSqm changes, instead of leaving it as a stale manually-typed number.
+            if (field === 'areaSqm') item.standardKg = computeGlueStandardKg(value);
             persistOrderChange(order);
             renderGlueUsageTable();
         }
@@ -15085,19 +15466,23 @@
                 const v = row[c.key];
                 if (v === undefined || v === null) return '';
                 if (c.type === 'bool') return v ? 'TRUE' : 'FALSE';
+                // NEW (2026-09-16): 'list' columns (e.g. FINISHING_EFFICIENCY_COLUMNS' employees[]) round-trip
+                // as one comma-separated cell — see coerceImportedValue()'s matching 'list' branch below.
+                if (c.type === 'list') return Array.isArray(v) ? v.join(', ') : v;
                 return v;
             })));
             downloadExcelFromAoa(filename, sheetName, aoa);
         }
 
         function coerceImportedValue(raw, type) {
-            if (raw === undefined || raw === null || raw === '') return '';
+            if (raw === undefined || raw === null || raw === '') return type === 'list' ? [] : '';
             if (type === 'number') { const n = Number(raw); return isNaN(n) ? '' : n; }
             if (type === 'date') return normalizeDateString(raw);
             if (type === 'bool') {
                 const s = String(raw).trim().toLowerCase();
                 return ['true', '1', 'yes', 'y', 'ใช่', 'จริง'].includes(s);
             }
+            if (type === 'list') return String(raw).split(',').map(s => s.trim()).filter(Boolean);
             return String(raw).trim();
         }
 
@@ -15469,6 +15854,7 @@
             { key: 'moSo', label: 'M/O' },
             { key: 'date', label: 'วันที่', type: 'date' },
             { key: 'grade', label: 'เกรด' },
+            { key: 'employees', label: 'พนักงาน (คั่นด้วย ,)', type: 'list' },
             { key: 'areaSqm', label: 'พ.ท แต่งได้ (ตร.ม.)', type: 'number' },
             { key: 'hours', label: 'เวลา (ชม.)', type: 'number' },
             { key: 'note', label: 'หมายเหตุ' }
@@ -15507,22 +15893,29 @@
         }
 
         // ---- 9. ทากาวตกแต่ง: การเบิกใช้กาว (ผูกกับ M/O เพิ่มแถวใหม่เสมอ) ------------------------------
-        const FINISHING_GLUE_COLUMNS = [
-            { key: 'moSo', label: 'M/O' },
-            { key: 'date', label: 'ว.ด.ป.', type: 'date' },
-            { key: 'areaSqm', label: 'พื้นที่ (ตร.ม.)', type: 'number' },
-            { key: 'standardKg', label: 'เบิกตามมาตรฐาน (Kg.)', type: 'number' },
-            { key: 'eur178Kg', label: 'กาว EUR178 (Kg.)', type: 'number' },
-            { key: 'kg66012', label: 'กาว 66012 (Kg.)', type: 'number' },
-            { key: 'th31Kg', label: 'กาว TH31 (Kg.)', type: 'number' }
-        ];
+        // NEW (2026-09-16): built from the CURRENT productionSettings.finishing.glueTypes[] instead of a
+        // static list, so exporting/importing always matches whatever glue types are configured right now
+        // (see addGlueType()/removeGlueType()) — a function, not a const, since glueTypes can change at
+        // runtime.
+        function getFinishingGlueColumns() {
+            const cols = [
+                { key: 'moSo', label: 'M/O' },
+                { key: 'date', label: 'ว.ด.ป.', type: 'date' },
+                { key: 'areaSqm', label: 'พื้นที่ (ตร.ม.)', type: 'number' },
+                { key: 'standardKg', label: 'เบิกตามมาตรฐาน (Kg.)', type: 'number' }
+            ];
+            (productionSettings.finishing.glueTypes || []).forEach(t => {
+                cols.push({ key: t.key, label: `กาว ${t.label} (Kg.)`, type: 'number' });
+            });
+            return cols;
+        }
 
         function exportFinishingKpiGlueLog() {
             let flatRows = [];
             productionOrders.forEach(order => {
                 (((order.finishing || {}).glueUsageLog) || []).forEach(item => flatRows.push(Object.assign({ moSo: order.moSo }, item)));
             });
-            exportFlatRowsToExcel('การเบิกใช้กาว.xlsx', 'เบิกกาว', FINISHING_GLUE_COLUMNS, flatRows);
+            exportFlatRowsToExcel('การเบิกใช้กาว.xlsx', 'เบิกกาว', getFinishingGlueColumns(), flatRows);
         }
 
         function importFinishingKpiGlueLog(fileInput) {
@@ -15531,7 +15924,7 @@
             readExcelAoaFromFile(file, (err, aoa) => {
                 fileInput.value = '';
                 if (err) { showToast('อ่านไฟล์ไม่สำเร็จ: ' + err.message, 'fa-triangle-exclamation', 'text-rose-400'); return; }
-                const rows = parseFlatRowsFromAoa(aoa, FINISHING_GLUE_COLUMNS);
+                const rows = parseFlatRowsFromAoa(aoa, getFinishingGlueColumns());
                 let added = 0, unmatched = 0;
                 rows.forEach(r => {
                     const orderIndex = productionOrders.findIndex(o => o.moSo === String(r.moSo || '').trim());
