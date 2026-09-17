@@ -1,0 +1,119 @@
+const fs = require('fs');
+const vm = require('vm');
+
+const html = fs.readFileSync('index.html', 'utf8');
+const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+
+function extractFunction(name) {
+    const start = script.indexOf(`function ${name}(`);
+    if (start === -1) throw new Error(`Missing function ${name}`);
+    let brace = script.indexOf('{', start);
+    let depth = 0;
+    for (let i = brace; i < script.length; i++) {
+        if (script[i] === '{') depth++;
+        if (script[i] === '}') depth--;
+        if (depth === 0) return script.slice(start, i + 1);
+    }
+    throw new Error(`Unclosed function ${name}`);
+}
+
+const calls = [];
+const context = {
+    console,
+    ORDER_STAGES: ['planning', 'dyeing', 'weaving', 'finishing'],
+    NEXT_STAGE: { planning: 'dyeing', dyeing: 'weaving', weaving: 'finishing' },
+    STAGE_LABELS: { planning: 'วางแผน', dyeing: 'ย้อม', weaving: 'ทอ', finishing: 'ตกแต่ง/บรรจุ', ready_to_ship: 'รอส่ง' },
+    productionOrders: [],
+    normalizeOrder: order => ({ ...order, readyToShip: !!order.readyToShip, shipped: !!order.shipped }),
+    normalizeDateString: value => String(value || ''),
+    showToast: message => calls.push(['toast', message]),
+    rerenderOrderViews: index => calls.push(['render', index]),
+    persistOrderChange: order => calls.push(['persist', order.currentStage]),
+    incrementTransferCount: () => calls.push(['count']),
+    mascotCelebrate: () => calls.push(['mascot']),
+    notifyLineStageTransfer: () => calls.push(['line']),
+    dyeingFullyCoveredBySurplus: () => false,
+    computeOrderTimelineSegments: order => order.testSegments || [],
+    parseDateOnly: value => {
+        const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null;
+    },
+    formatDateKeyUTC: date => [
+        date.getUTCFullYear(),
+        String(date.getUTCMonth() + 1).padStart(2, '0'),
+        String(date.getUTCDate()).padStart(2, '0')
+    ].join('-')
+};
+vm.createContext(context);
+[
+    'normalizeMoSoKey',
+    'deduplicateProductionOrders',
+    'getEffectiveStage',
+    'transferOrderStage',
+    'addDaysUTC',
+    'deduplicateCalendarOrdersWithIndex',
+    'buildProductionCalendarDayMap'
+].forEach(name => vm.runInContext(extractFunction(name), context));
+
+const duplicateInput = [
+    { moSo: 'm/o 100 ', currentStage: 'planning', lastUpdated: '2026-09-16' },
+    { moSo: ' M/O   100', currentStage: 'weaving', lastUpdated: '2026-09-17' }
+];
+const deduped = context.deduplicateProductionOrders(duplicateInput);
+if (deduped.length !== 1 || deduped[0].currentStage !== 'weaving') {
+    throw new Error('Deduplication did not keep one most-recent order');
+}
+
+context.productionOrders = [{
+    moSo: 'M/O 200',
+    currentStage: 'weaving',
+    readyToShip: false,
+    shipped: false,
+    planning: { percent: 100 },
+    dyeing: { percent: 100 },
+    weaving: { percent: 100, mode: 'internal', receivedPrintedFabric: true, yarnComplete: true },
+    finishing: { percent: 0 }
+}];
+context.transferOrderStage(0, 'planning', 'dyeing');
+if (context.productionOrders[0].currentStage !== 'weaving' || calls.some(call => call[0] === 'persist')) {
+    throw new Error('Stale transfer action changed the current stage');
+}
+
+calls.length = 0;
+context.transferOrderStage(0, 'weaving', 'finishing');
+if (context.productionOrders[0].currentStage !== 'finishing' || !calls.some(call => call[0] === 'persist')) {
+    throw new Error('Valid transfer did not change and persist the current stage');
+}
+
+const calendarDuplicates = [
+    {
+        orderIndex: 3,
+        order: {
+            moSo: ' M/O 300 ',
+            currentStage: 'planning',
+            testSegments: [{ start: '2026-09-17', end: '2026-09-18', stage: 'planning', stageSkipped: false }]
+        }
+    },
+    {
+        orderIndex: 8,
+        order: {
+            moSo: 'm/o   300',
+            currentStage: 'planning',
+            testSegments: [{ start: '2026-09-17', end: '2026-09-18', stage: 'planning', stageSkipped: false }]
+        }
+    }
+];
+const uniqueCalendarOrders = context.deduplicateCalendarOrdersWithIndex(calendarDuplicates);
+if (uniqueCalendarOrders.length !== 1) {
+    throw new Error('Calendar order list retained duplicate M/O rows');
+}
+const calendarMap = context.buildProductionCalendarDayMap(
+    calendarDuplicates,
+    new Date(Date.UTC(2026, 8, 17)),
+    new Date(Date.UTC(2026, 8, 18))
+);
+if ((calendarMap['2026-09-17'] || []).length !== 1 || (calendarMap['2026-09-18'] || []).length !== 1) {
+    throw new Error('Calendar rendered duplicate M/O entries in a day cell');
+}
+
+console.log('Order deduplication, calendar deduplication, and transfer guards passed.');

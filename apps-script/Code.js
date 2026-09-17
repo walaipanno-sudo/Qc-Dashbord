@@ -812,17 +812,21 @@ function ensureOrdersMigratedOnce_() {
 // Searches all 4 order sheets for a row whose MoSo (column A) matches — used by delete/design-image
 // paths that only have the moSo string on hand, not which of the 4 sheets it lives on.
 function findOrderRowAcrossSheets_(moSo) {
-  var key = String(moSo || '').trim();
+  var key = normalizeOrderKey_(moSo);
   var infos = getAllOrderSheetInfos_();
   for (var s = 0; s < infos.length; s++) {
     var rows = infos[s].sheet.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
-      if (String(rows[i][0]).trim() === key) {
+      if (normalizeOrderKey_(rows[i][0]) === key) {
         return { sheet: infos[s].sheet, rowIndex: i + 1, key: infos[s].key };
       }
     }
   }
   return null;
+}
+
+function normalizeOrderKey_(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
 }
 
 var ORDERS_NEW_HEADERS = ["CreatedAt", "IsInserted", "ShippingMark",
@@ -1045,7 +1049,8 @@ function extractOrderFromRow_(row, headerNames) {
 
 function getOrdersJsonResponse() {
   ensureOrdersMigratedOnce_();
-  var data = [];
+  var byMoSo = {};
+  var duplicateCount = 0;
   getAllOrderSheetInfos_().forEach(function(info) {
     // CreatedAt/IsInserted/ShippingMark (and every other appended field) are read by header name
     // (not a fixed column number) since ensureOrdersHeaders() appends them wherever this sheet's
@@ -1055,20 +1060,51 @@ function getOrdersJsonResponse() {
     for (var i = 1; i < rows.length; i++) {
       var row = rows[i];
       if (!row[0]) continue; // skip blank rows
-      data.push(extractOrderFromRow_(row, headerNames));
+      var order = extractOrderFromRow_(row, headerNames);
+      var key = normalizeOrderKey_(order.moSo);
+      if (!key) continue;
+      var expectedSheetKey = resolveOrdersSheetKey_(order.orderType, order.market);
+      var candidate = {
+        order: order,
+        matchesOwnSheet: expectedSheetKey === info.key,
+        rowIndex: i + 1
+      };
+      var existing = byMoSo[key];
+      if (!existing) {
+        byMoSo[key] = candidate;
+        continue;
+      }
+      duplicateCount++;
+      // The current upsert path always writes the first matching row in the correct category sheet.
+      // Prefer that authoritative row over stale copies in another sheet or later duplicate rows.
+      if ((!existing.matchesOwnSheet && candidate.matchesOwnSheet) ||
+          (existing.matchesOwnSheet === candidate.matchesOwnSheet && candidate.rowIndex < existing.rowIndex)) {
+        byMoSo[key] = candidate;
+      }
     }
   });
+  var data = Object.keys(byMoSo).map(function(key) { return byMoSo[key].order; });
+  if (duplicateCount > 0) Logger.log('getOrdersJsonResponse: suppressed ' + duplicateCount + ' duplicate order row(s).');
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
 function deleteOrderRowByMoSo(moSo) {
   ensureOrdersMigratedOnce_();
-  var found = findOrderRowAcrossSheets_(moSo);
-  if (!found) {
+  var key = normalizeOrderKey_(moSo);
+  var deletedCount = 0;
+  getAllOrderSheetInfos_().forEach(function(info) {
+    var rows = info.sheet.getDataRange().getValues();
+    for (var i = rows.length - 1; i >= 1; i--) {
+      if (normalizeOrderKey_(rows[i][0]) === key) {
+        info.sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+  });
+  if (deletedCount === 0) {
     return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
   }
-  found.sheet.deleteRow(found.rowIndex);
-  return ContentService.createTextOutput(JSON.stringify({ result: "success", deletedMoSo: moSo })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ result: "success", deletedMoSo: moSo, deletedRows: deletedCount })).setMimeType(ContentService.MimeType.JSON);
 }
 
 // FIX (2026-09b): wrapped in the same script-lock pattern as the QC upsert in doPost() — see the
@@ -1093,7 +1129,7 @@ function upsertOrder(order) {
 // this inner function deliberately does NOT lock itself — nesting LockService locks within a single
 // script execution is unnecessary here and this keeps the call graph simple).
 function upsertOrderIntoSheets_(order) {
-  var moSoKey = String(order.moSo || '').trim();
+  var moSoKey = normalizeOrderKey_(order.moSo);
   var targetKey = resolveOrdersSheetKey_(order.orderType, order.market);
   var infos = getAllOrderSheetInfos_();
 
@@ -1104,10 +1140,9 @@ function upsertOrderIntoSheets_(order) {
   infos.forEach(function(info) {
     if (info.key === targetKey) return;
     var otherRows = info.sheet.getDataRange().getValues();
-    for (var r = 1; r < otherRows.length; r++) {
-      if (String(otherRows[r][0]).trim() === moSoKey) {
+    for (var r = otherRows.length - 1; r >= 1; r--) {
+      if (normalizeOrderKey_(otherRows[r][0]) === moSoKey) {
         info.sheet.deleteRow(r + 1);
-        break;
       }
     }
   });
@@ -1115,12 +1150,16 @@ function upsertOrderIntoSheets_(order) {
   var sheet = infos.filter(function(info) { return info.key === targetKey; })[0].sheet;
   var headerNames = ensureOrdersHeaders(sheet).map(function(h) { return h.toLowerCase(); });
   var rows = sheet.getDataRange().getValues();
-  var existingRowIndex = -1;
+  var matchingRowIndexes = [];
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === moSoKey) {
-      existingRowIndex = i + 1;
-      break;
+    if (normalizeOrderKey_(rows[i][0]) === moSoKey) {
+      matchingRowIndexes.push(i + 1);
     }
+  }
+  var existingRowIndex = matchingRowIndexes.length ? matchingRowIndexes[0] : -1;
+  // Keep the first row as the canonical row and remove every later duplicate before saving.
+  for (var d = matchingRowIndexes.length - 1; d >= 1; d--) {
+    sheet.deleteRow(matchingRowIndexes[d]);
   }
 
   var rowValues = [
