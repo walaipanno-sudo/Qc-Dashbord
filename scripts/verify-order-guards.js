@@ -52,8 +52,12 @@ vm.createContext(context);
     'transferOrderStage',
     'addDaysUTC',
     'deduplicateCalendarOrdersWithIndex',
-    'buildProductionCalendarDayMap'
+    'buildProductionCalendarDayMap',
+    'newDyeingColorOrderRow',
+    'mergeYarnCalculatorColorsIntoOrder',
+    'getSurplusAvailableKg'
 ].forEach(name => vm.runInContext(extractFunction(name), context));
+vm.runInContext(extractFunction('dyeingFullyCoveredBySurplus'), context);
 
 const duplicateInput = [
     { moSo: 'm/o 100 ', currentStage: 'planning', lastUpdated: '2026-09-16' },
@@ -116,4 +120,47 @@ if ((calendarMap['2026-09-17'] || []).length !== 1 || (calendarMap['2026-09-18']
     throw new Error('Calendar rendered duplicate M/O entries in a day cell');
 }
 
-console.log('Order deduplication, calendar deduplication, and transfer guards passed.');
+const dyePlan = {
+    dyeing: {
+        colorOrders: [{
+            id: 'existing',
+            colorCode: 'RED-01',
+            kg: 5,
+            useSurplus: true,
+            surplusKg: 5,
+            surplusLedgerId: 'stock-1',
+            source: 'manual'
+        }]
+    }
+};
+context.mergeYarnCalculatorColorsIntoOrder(dyePlan, [
+    { colorCode: ' red-01 ', dyeKg: 6 },
+    { colorCode: 'BLUE-02', dyeKg: 4 }
+]);
+context.mergeYarnCalculatorColorsIntoOrder(dyePlan, [
+    { colorCode: 'RED-01', dyeKg: 7 },
+    { colorCode: 'BLUE-02', dyeKg: 4 }
+]);
+if (dyePlan.dyeing.colorOrders.length !== 2) {
+    throw new Error('Repeated yarn-calculator import created duplicate color rows');
+}
+if (dyePlan.dyeing.colorOrders[0].kg !== 7 ||
+    dyePlan.dyeing.colorOrders[0].surplusLedgerId !== 'stock-1' ||
+    dyePlan.dyeing.colorOrders[0].source !== 'calculator') {
+    throw new Error('Yarn-calculator merge did not update kg while preserving the Surplus link');
+}
+
+const linkedRow = { surplusLedgerId: 'stock-1', surplusKg: 3 };
+const stockEntry = { id: 'stock-1', weightInKg: 10, weightOutKg: 8 };
+if (context.getSurplusAvailableKg(stockEntry, linkedRow) !== 5) {
+    throw new Error('Surplus availability did not restore the current row deduction');
+}
+
+if (context.dyeingFullyCoveredBySurplus({ dyeing: { colorOrders: [{ kg: 5, useSurplus: true, surplusKg: 4.99 }] } })) {
+    throw new Error('Planning could skip Dyeing without enough Surplus kg');
+}
+if (!context.dyeingFullyCoveredBySurplus({ dyeing: { colorOrders: [{ kg: 5, useSurplus: true, surplusKg: 5 }] } })) {
+    throw new Error('Fully covered Surplus plan was not recognized');
+}
+
+console.log('Order deduplication, calendar deduplication, transfer guards, and dye-plan guards passed.');

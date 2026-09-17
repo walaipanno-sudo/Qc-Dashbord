@@ -104,6 +104,20 @@
             body.print-single-mode #printArea { display: block !important; }
         }
 
+        /* Operational tabs use a restrained rectangular treatment for daily factory use. */
+        #weavingSubTabBar button,
+        #planningKpiSubTabBar button,
+        #designKpiSubTabBar button,
+        #dyeingKpiSubTabBar button,
+        #finishingKpiSubTabBar button,
+        #planningKpiContainer button[id^="kpiTab"],
+        #designKpiContainer button[id^="designKpiTab"],
+        #dyeingKpiContainer button[id^="dyeingKpiTab"],
+        #finishingKpiContainer button[id^="finishingKpiTab"] {
+            border-radius: 0.375rem !important;
+            border-width: 1px;
+        }
+
         /* ===== Overview mascot: "น้องไหม" — carpet/yarn-factory themed corner companion =====
            Idle bob loop + periodic blink keep it feeling alive without being distracting; the
            bigger "excited" bounce and speech bubble only fire on meaningful data updates. */
@@ -365,7 +379,7 @@
              so it stays visible on EVERY tab, not just "ภาพรวมการผลิต" — switchView()'s hidden-class
              toggle only ever targets the tab containers listed in its own `tabs` map, so a fixed
              element living outside all of them is never touched by it. -->
-        <div id="mascotWidget" class="fixed bottom-4 left-4 z-40 flex flex-col items-start pointer-events-none select-none no-print" aria-hidden="true">
+        <div id="mascotWidget" class="hidden fixed bottom-4 left-4 z-40 flex-col items-start pointer-events-none select-none no-print" aria-hidden="true">
             <div id="mascotBubble" class="mascot-bubble mb-1 max-w-[190px] bg-white border border-amber-200 shadow-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] leading-snug text-amber-900 font-medium">
                 <span id="mascotBubbleText">ยินดีต้อนรับค่ะ! น้องไหมคอยดูอยู่นะ 🧶</span>
             </div>
@@ -729,16 +743,16 @@
                  now only ever viewed one at a time, full-width, via its own pill below. "วางแผน" is the
                  new default/active tab on load (see boardDepartmentFilter's declaration + the
                  setBoardDepartmentTab('planning') call in initApp()). -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+            <div class="bg-white shadow-sm border border-slate-200 p-3 mb-4">
+                <div class="flex items-center gap-1 overflow-x-auto pb-1 -mb-1" role="tablist" aria-label="เลือกแผนก">
                     <!-- NEW (2026-09-11): "แผนกขาย" — not a data filter like the other pills (no
                          boardColWrap-sales column). Selecting it swaps the whole boardColumnsGrid/search
                          area out for salesFormContainer, the "เพิ่ม M/O, S/O ใหม่" form moved here inline
                          from its old popup — see updateBoardColumnVisibility() and openNewOrderModal(). -->
-                    <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-cart-shopping"></i> แผนกขาย
                     </button>
-                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-indigo-700 text-xs font-semibold bg-indigo-700 text-white shadow-sm transition">
                         <i class="fa-solid fa-calendar-days"></i> วางแผน
                         <span id="boardTabCount-planning" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
@@ -748,19 +762,19 @@
                          STAGE_LABELS.design's comment) — it counts/lists orders whose design/ขยายลาย
                          checklist isn't done yet (order.design.done === false), regardless of which real
                          stage the order is currently in. See BOARD_TABS / buildDesignOrderCard() below. -->
-                    <button onclick="setBoardDepartmentTab('design')" id="boardTabBtn-design" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('design')" id="boardTabBtn-design" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-pen-ruler"></i> ดีไซน์/ขยายลาย
                         <span id="boardTabCount-design" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('dyeing')" id="boardTabBtn-dyeing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('dyeing')" id="boardTabBtn-dyeing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-droplet"></i> ย้อม
                         <span id="boardTabCount-dyeing" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('weaving')" id="boardTabBtn-weaving" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('weaving')" id="boardTabBtn-weaving" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-hand-holding-heart"></i> ทอ
                         <span id="boardTabCount-weaving" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('finishing')" id="boardTabBtn-finishing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('finishing')" id="boardTabBtn-finishing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-box-archive"></i> ตกแต่ง/บรรจุ
                         <span id="boardTabCount-finishing" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
@@ -771,7 +785,7 @@
                          the SAME markOrderShipped() the รายการรอส่ง tab uses — sqm-in-line deduction and
                          moving to จัดส่งเรียบร้อยแล้ว both already happen correctly via that one function,
                          no duplicate logic needed. See renderNotifyBoardColumn() / buildReadyToShipOrderCard(). -->
-                    <button onclick="setBoardDepartmentTab('ready_to_ship')" id="boardTabBtn-ready_to_ship" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    <button onclick="setBoardDepartmentTab('ready_to_ship')" id="boardTabBtn-ready_to_ship" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-bell"></i> แจ้งเตือน
                         <span id="boardTabCount-ready_to_ship" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
                     </button>
@@ -6530,31 +6544,8 @@
                 const matchedOrder = findOrderForYarnCalcLookup(p.moNo);
                 if (matchedOrder) {
                     const orderIndex = productionOrders.indexOf(matchedOrder);
-                    const colorCount = (p.colors || []).filter(c => (Number(c.dyeKg) || 0) > 0).length;
                     const totalKg = Number(p.grandTotalDyeKg) || 0;
-                    matchedOrder.dyeing.plannedColorCount = colorCount;
-                    matchedOrder.dyeing.plannedKg = Math.round(totalKg * 100) / 100;
-                    // NEW (2026-09-17): merge the calculator's per-color result into the Planning-editable
-                    // colorOrders table (see renderDyeingColorOrdersHtml) — match existing rows by colorCode
-                    // (trimmed/case-insensitive) and just update their kg, so any surplus checkbox/kg/ledger
-                    // link a planner already set on that row is preserved; unmatched codes become new rows.
-                    if (!Array.isArray(matchedOrder.dyeing.colorOrders)) matchedOrder.dyeing.colorOrders = [];
-                    const existingRows = matchedOrder.dyeing.colorOrders;
-                    (p.colors || []).forEach(c => {
-                        const code = (c.colorCode || '').trim();
-                        const kg = Number(c.dyeKg) || 0;
-                        if (!code && kg <= 0) return;
-                        const norm = code.toLowerCase();
-                        const match = existingRows.find(r => (r.colorCode || '').trim().toLowerCase() === norm);
-                        if (match) {
-                            match.kg = kg;
-                        } else {
-                            existingRows.push({
-                                id: 'co_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-                                colorCode: code, kg, useSurplus: false, surplusKg: 0, surplusLedgerId: ''
-                            });
-                        }
-                    });
+                    mergeYarnCalculatorColorsIntoOrder(matchedOrder, p.colors || []);
                     // NEW (2026-09-15): keep the FULL per-color breakdown too (not just the aggregate
                     // count/kg above), so the ใบ Sample Order (S/O) print form's page 1 — the "รหัสสี/
                     // Code" table, left blank whenever there's nothing to show (see
@@ -7508,19 +7499,28 @@
             // (dyeing.lastDyeingOrder.colors) when present, otherwise fall back to a single synthetic row
             // built from the old aggregate fields so an existing plan doesn't just disappear.
             if (!Array.isArray(dyeing.colorOrders)) dyeing.colorOrders = [];
+            dyeing.colorOrders = dyeing.colorOrders.map((row, index) => Object.assign({
+                id: 'co_normalized_' + index,
+                colorCode: '',
+                kg: 0,
+                useSurplus: false,
+                surplusKg: 0,
+                surplusLedgerId: '',
+                source: 'manual'
+            }, row || {}));
             if (dyeing.colorOrders.length === 0) {
                 const lastColors = (dyeing.lastDyeingOrder && Array.isArray(dyeing.lastDyeingOrder.colors)) ? dyeing.lastDyeingOrder.colors : [];
                 if (lastColors.length > 0) {
                     dyeing.colorOrders = lastColors.filter(c => (Number(c.dyeKg) || 0) > 0 || c.colorCode).map((c, i) => ({
                         id: 'co_migrated_' + i, colorCode: c.colorCode || '', kg: Number(c.dyeKg) || 0,
-                        useSurplus: false, surplusKg: 0, surplusLedgerId: ''
+                        useSurplus: false, surplusKg: 0, surplusLedgerId: '', source: 'calculator'
                     }));
                     dyeingMigrated = true;
                 } else if ((dyeing.plannedColorCount || 0) > 0 || (dyeing.plannedKg || 0) > 0) {
                     dyeing.colorOrders = [{
                         id: 'co_migrated_0', colorCode: `(ข้อมูลเดิม) ${dyeing.plannedColorCount || 0} สี`, kg: Number(dyeing.plannedKg) || 0,
                         useSurplus: !!dyeing.surplusUsed, surplusKg: dyeing.surplusUsed ? (Number(dyeing.surplusKg) || 0) : 0,
-                        surplusLedgerId: ''
+                        surplusLedgerId: '', source: 'manual'
                     }];
                     dyeingMigrated = true;
                 }
@@ -10898,22 +10898,33 @@
         }
 
         function updateBoardDepartmentTabStyles() {
-            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
-            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            const toneByTab = {
+                sales: ['bg-slate-700', 'border-slate-700'],
+                planning: ['bg-indigo-700', 'border-indigo-700'],
+                design: ['bg-cyan-700', 'border-cyan-700'],
+                dyeing: ['bg-violet-700', 'border-violet-700'],
+                weaving: ['bg-teal-700', 'border-teal-700'],
+                finishing: ['bg-emerald-700', 'border-emerald-700'],
+                ready_to_ship: ['bg-amber-600', 'border-amber-600']
+            };
+            const allToneClasses = Object.values(toneByTab).flat();
+            const inactiveClasses = ['bg-slate-50', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-100'];
             const buttons = [
-                { el: document.getElementById('boardTabBtn-sales'), isActive: boardDepartmentFilter === 'sales' }
+                { key: 'sales', el: document.getElementById('boardTabBtn-sales'), isActive: boardDepartmentFilter === 'sales' }
             ].concat(BOARD_TABS.map(stage => ({
+                    key: stage,
                     el: document.getElementById(`boardTabBtn-${stage}`),
                     isActive: boardDepartmentFilter === stage
                 })));
-            buttons.forEach(({ el, isActive }) => {
+            buttons.forEach(({ key, el, isActive }) => {
                 if (!el) return;
+                el.classList.remove(...allToneClasses, 'text-white', 'shadow-sm', ...inactiveClasses);
                 if (isActive) {
-                    el.classList.remove(...inactiveClasses);
-                    el.classList.add(...activeClasses);
+                    el.classList.add(...(toneByTab[key] || toneByTab.planning), 'text-white', 'shadow-sm');
+                    el.setAttribute('aria-selected', 'true');
                 } else {
-                    el.classList.remove(...activeClasses);
                     el.classList.add(...inactiveClasses);
+                    el.setAttribute('aria-selected', 'false');
                 }
             });
         }
@@ -12249,7 +12260,11 @@
         function dyeingFullyCoveredBySurplus(order) {
             const rows = ((order.dyeing || {}).colorOrders) || [];
             if (rows.length === 0) return false;
-            return rows.every(r => r.useSurplus);
+            return rows.every(r => {
+                const requiredKg = Number(r.kg) || 0;
+                const surplusKg = Number(r.surplusKg) || 0;
+                return r.useSurplus && requiredKg > 0 && surplusKg + 0.0001 >= requiredKg;
+            });
         }
 
         // ---- Per-color dye-order plan (order.dyeing.colorOrders) ---------------------------------------
@@ -12261,8 +12276,8 @@
         // the compact Board card and the fuller Order Detail modal render through the same functions
         // below so they can never show different numbers for the same order.
 
-        function newDyeingColorOrderRow() {
-            return { id: 'co_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), colorCode: '', kg: 0, useSurplus: false, surplusKg: 0, surplusLedgerId: '' };
+        function newDyeingColorOrderRow(source = 'manual') {
+            return { id: 'co_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), colorCode: '', kg: 0, useSurplus: false, surplusKg: 0, surplusLedgerId: '', source };
         }
 
         function addDyeingColorOrderRow(orderIndex) {
@@ -12270,9 +12285,49 @@
             if (!order) return;
             if (!order.dyeing) order.dyeing = {};
             if (!Array.isArray(order.dyeing.colorOrders)) order.dyeing.colorOrders = [];
-            order.dyeing.colorOrders.push(newDyeingColorOrderRow());
+            order.dyeing.colorOrders.push(newDyeingColorOrderRow('manual'));
             persistOrderChange(order);
             rerenderOrderViews(orderIndex);
+        }
+
+        function mergeYarnCalculatorColorsIntoOrder(order, colors) {
+            if (!order || !order.dyeing) return 0;
+            if (!Array.isArray(order.dyeing.colorOrders)) order.dyeing.colorOrders = [];
+            const incoming = (Array.isArray(colors) ? colors : [])
+                .map(c => ({ colorCode: String(c.colorCode || '').trim(), kg: Number(c.dyeKg !== undefined ? c.dyeKg : c.kg) || 0 }))
+                .filter(c => c.colorCode || c.kg > 0);
+            incoming.forEach((color, index) => {
+                const normalizedCode = color.colorCode.toLowerCase();
+                const match = order.dyeing.colorOrders.find(row =>
+                    normalizedCode && String(row.colorCode || '').trim().toLowerCase() === normalizedCode
+                );
+                if (match) {
+                    match.kg = color.kg;
+                    match.source = 'calculator';
+                } else {
+                    order.dyeing.colorOrders.push(Object.assign(newDyeingColorOrderRow('calculator'), {
+                        id: 'co_calc_' + Date.now() + '_' + index + '_' + Math.random().toString(36).slice(2, 6),
+                        colorCode: color.colorCode,
+                        kg: color.kg
+                    }));
+                }
+            });
+            order.dyeing.plannedColorCount = incoming.filter(c => c.kg > 0).length;
+            order.dyeing.plannedKg = Math.round(incoming.reduce((sum, c) => sum + c.kg, 0) * 100) / 100;
+            return incoming.length;
+        }
+
+        function importLatestYarnCalculation(orderIndex) {
+            const order = productionOrders[orderIndex];
+            const lastOrder = order && order.dyeing && order.dyeing.lastDyeingOrder;
+            if (!lastOrder || !Array.isArray(lastOrder.colors) || lastOrder.colors.length === 0) {
+                showToast('ยังไม่มีผลจากใบคำนวณไหมของ M/O, S/O นี้ กรุณาเปิดเครื่องคำนวณไหมและสร้างใบสั่งย้อมก่อน', 'fa-circle-info', 'text-amber-400');
+                return;
+            }
+            const importedCount = mergeYarnCalculatorColorsIntoOrder(order, lastOrder.colors);
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+            showToast(`ดึงข้อมูลจากใบคำนวณไหมล่าสุดแล้ว ${importedCount} รายการสี`, 'fa-calculator', 'text-indigo-400');
         }
 
         // Removing a row that was drawing from a Surplus ledger entry must give that kg back to the
@@ -12314,6 +12369,13 @@
             return (Array.isArray(surplusYarnLedger) ? surplusYarnLedger : []).find(e => e.id === id) || null;
         }
 
+        function getSurplusAvailableKg(entry, row) {
+            if (!entry) return 0;
+            const baseRemaining = (Number(entry.weightInKg) || 0) - (Number(entry.weightOutKg) || 0);
+            const currentRowDeduction = row && row.surplusLedgerId === entry.id ? (Number(row.surplusKg) || 0) : 0;
+            return Math.max(0, baseRemaining + currentRowDeduction);
+        }
+
         // Gives back whatever kg a color-order row previously drew from its linked Surplus ledger entry —
         // called before that row's link/amount changes (or the row itself is removed) so the warehouse
         // balance never stays short from a draw nothing points to anymore.
@@ -12350,9 +12412,24 @@
                 row.useSurplus = value;
                 if (!value) { row.surplusKg = 0; row.surplusLedgerId = ''; }
             } else if (field === 'surplusKg') {
-                row.surplusKg = Number(value) || 0;
+                row.surplusKg = Math.max(0, Number(value) || 0);
             } else if (field === 'surplusLedgerId') {
                 row.surplusLedgerId = value;
+                const selectedEntry = findSurplusLedgerEntry(value);
+                if (selectedEntry) {
+                    row.colorCode = selectedEntry.colorCode || row.colorCode;
+                    const availableKg = getSurplusAvailableKg(selectedEntry, null);
+                    const requestedKg = Number(row.kg) || 0;
+                    row.surplusKg = Math.min(requestedKg > 0 ? requestedKg : availableKg, availableKg);
+                }
+            }
+            if (row.useSurplus && row.surplusLedgerId) {
+                const selectedEntry = findSurplusLedgerEntry(row.surplusLedgerId);
+                const availableKg = getSurplusAvailableKg(selectedEntry, null);
+                if ((Number(row.surplusKg) || 0) > availableKg) {
+                    row.surplusKg = availableKg;
+                    showToast(`Stock Surplus มีคงเหลือ ${availableKg.toFixed(2)} กก. ระบบปรับจำนวนใช้ไม่ให้เกินยอด`, 'fa-triangle-exclamation', 'text-amber-400');
+                }
             }
             if (row.useSurplus) applySurplusLedgerDeduction(row);
             persistOrderChange(order);
@@ -12387,20 +12464,26 @@
             const codeCls = compact ? 'w-16 p-1 bg-white border border-slate-200 rounded-md text-[11px]' : 'w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs';
             const rowsHtml = rows.map((row, i) => {
                 const ledgerOptions = getAvailableSurplusLedgerOptions(row.surplusLedgerId);
+                const selectedLedger = findSurplusLedgerEntry(row.surplusLedgerId);
+                const selectedAvailableKg = getSurplusAvailableKg(selectedLedger, row);
                 const optionsHtml = ledgerOptions.map(({ entry, remaining }) =>
-                    `<option value="${entry.id}" ${row.surplusLedgerId === entry.id ? 'selected' : ''}>${escapeHtml(entry.moSo || '(ไม่ระบุ M/O)')} • ${escapeHtml(entry.colorCode || '-')} • เหลือ ${remaining.toFixed(2)} กก.</option>`
+                    `<option value="${entry.id}" ${row.surplusLedgerId === entry.id ? 'selected' : ''}>${escapeHtml(entry.colorCode || '-')} • จาก ${escapeHtml(entry.moSo || '(ไม่ระบุ M/O)')} • ใช้ได้ ${getSurplusAvailableKg(entry, row).toFixed(2)} กก.</option>`
                 ).join('');
+                const sourceBadge = row.source === 'calculator'
+                    ? '<span class="text-[9px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">จากใบคำนวณไหม</span>'
+                    : '<span class="text-[9px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">คีย์เอง</span>';
                 return `
-                    <div class="flex flex-wrap items-center gap-1.5 ${compact ? '' : 'p-2 bg-white/70 rounded-lg border border-violet-100'}">
+                    <div class="flex flex-wrap items-center gap-1.5 ${compact ? 'py-1 border-b border-slate-100 last:border-b-0' : 'p-2 bg-white border border-slate-200 rounded-md'}">
                         <span class="text-[10px] text-slate-400 w-4 text-right">${i + 1}</span>
+                        ${sourceBadge}
                         <input type="text" placeholder="Code สี" value="${escapeHtml(row.colorCode || '')}" onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'colorCode', this.value)" class="${codeCls}">
                         <input type="number" min="0" step="0.01" placeholder="กก." value="${row.kg || ''}" onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'kg', Number(this.value)||0)" class="${inputCls}">
                         <span class="text-[10px] text-slate-400">กก.</span>
                         <label class="flex items-center gap-1 text-[10px] text-slate-600"><input type="checkbox" ${row.useSurplus ? 'checked' : ''} onchange="updateDyeingColorOrderSurplus(${orderIndex}, '${row.id}', 'useSurplus', this.checked)" class="rounded"> Surplus</label>
                         ${row.useSurplus ? `
-                            <input type="number" min="0" step="0.01" placeholder="กก. Surplus" value="${row.surplusKg || ''}" onchange="updateDyeingColorOrderSurplus(${orderIndex}, '${row.id}', 'surplusKg', Number(this.value)||0)" class="${inputCls}">
+                            <input type="number" min="0" ${selectedLedger ? `max="${selectedAvailableKg}"` : ''} step="0.01" placeholder="กก. Surplus" value="${row.surplusKg || ''}" onchange="updateDyeingColorOrderSurplus(${orderIndex}, '${row.id}', 'surplusKg', Number(this.value)||0)" class="${inputCls}">
                             <select onchange="updateDyeingColorOrderSurplus(${orderIndex}, '${row.id}', 'surplusLedgerId', this.value)" class="${compact ? 'w-28' : 'flex-1 min-w-[10rem]'} p-1 bg-white border border-slate-200 rounded-md text-[11px]">
-                                <option value="">— ดึงจาก M/O,S/O —</option>
+                                <option value="">— ไม่มีใน Stock / คีย์เอง —</option>
                                 ${optionsHtml}
                             </select>
                         ` : ''}
@@ -12411,10 +12494,12 @@
             return `
                 <div class="space-y-1.5">
                     ${rowsHtml || `<p class="text-[11px] text-slate-400">ยังไม่มีรายการสี — กด "เพิ่มสี" เพื่อเริ่มบันทึกแผนสั่งย้อม</p>`}
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="addDyeingColorOrderRow(${orderIndex})" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 border border-dashed border-indigo-200 rounded-lg px-2 py-1"><i class="fa-solid fa-plus"></i> เพิ่มสี</button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="importLatestYarnCalculation(${orderIndex})" class="text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-md px-2 py-1"><i class="fa-solid fa-calculator"></i> ดึงข้อมูลล่าสุดจากใบคำนวณไหม</button>
+                        <button type="button" onclick="addDyeingColorOrderRow(${orderIndex})" class="text-[11px] font-semibold text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-md px-2 py-1"><i class="fa-solid fa-plus"></i> เพิ่มรายการสั่งย้อมเอง</button>
                         ${rows.length > 0 ? `<span class="text-[11px] font-bold text-violet-700">${rows.length} สี • รวม ${totalKg.toFixed(2)} กก.</span>` : ''}
                     </div>
+                    <p class="text-[10px] text-slate-500">เลือกจาก Stock Surplus เพื่อเติม Code สีและจำนวนที่ใช้ได้อัตโนมัติ หรือเลือก “ไม่มีใน Stock / คีย์เอง” เพื่อกรอกข้อมูลเอง</p>
                 </div>
             `;
         }
@@ -12609,8 +12694,8 @@
         let weavingActiveSubTab = 'board';
         function setWeavingSubTab(tab) {
             weavingActiveSubTab = (tab === 'log') ? 'log' : 'board';
-            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
-            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            const activeClasses = ['bg-teal-700', 'border-teal-700', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'];
             [
                 { el: document.getElementById('weavingSubTabBtn-board'), isActive: weavingActiveSubTab === 'board' },
                 { el: document.getElementById('weavingSubTabBtn-log'), isActive: weavingActiveSubTab === 'log' }
@@ -12649,8 +12734,8 @@
 
         function setDeptKpiSubTab(dept, tab) {
             deptKpiActiveSubTab[dept] = (tab === 'kpi') ? 'kpi' : 'board';
-            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
-            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
+            const activeClasses = ['bg-slate-700', 'border-slate-700', 'text-white', 'shadow-sm'];
+            const inactiveClasses = ['bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'];
             [
                 { el: document.getElementById(`${dept}KpiSubTabBtn-board`), isActive: deptKpiActiveSubTab[dept] === 'board' },
                 { el: document.getElementById(`${dept}KpiSubTabBtn-kpi`), isActive: deptKpiActiveSubTab[dept] === 'kpi' }
@@ -15018,8 +15103,8 @@
 
         function setPlanningKpiTab(tab) {
             currentPlanningKpiTab = tab;
-            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
-            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-indigo-700 text-xs font-semibold bg-indigo-700 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-300 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50 transition";
             const tabs = { due: 'kpiTabDueBtn', yarn: 'kpiTabYarnBtn', surplus: 'kpiTabSurplusBtn', extraDye: 'kpiTabExtraDyeBtn' };
             const sections = { due: 'kpiDueDateSection', yarn: 'kpiYarnSection', surplus: 'kpiSurplusSection', extraDye: 'kpiExtraDyeSection' };
             Object.keys(tabs).forEach(key => {
@@ -15505,8 +15590,8 @@
 
         function setDesignKpiTab(tab) {
             currentDesignKpiTab = tab === 'transfer' ? 'transfer' : 'jobs';
-            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
-            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-cyan-700 text-xs font-semibold bg-cyan-700 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-300 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50 transition";
             document.getElementById('designKpiTabJobsBtn').className = currentDesignKpiTab === 'jobs' ? activeCls : inactiveCls;
             document.getElementById('designKpiTabTransferBtn').className = currentDesignKpiTab === 'transfer' ? activeCls : inactiveCls;
             document.getElementById('designKpiJobsSection').classList.toggle('hidden', currentDesignKpiTab !== 'jobs');
@@ -15763,8 +15848,8 @@
 
         function setDyeingKpiTab(tab) {
             currentDyeingKpiTab = tab === 'extra' ? 'extra' : 'regular';
-            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
-            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-violet-700 text-xs font-semibold bg-violet-700 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-300 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50 transition";
             document.getElementById('dyeingKpiTabRegularBtn').className = currentDyeingKpiTab === 'regular' ? activeCls : inactiveCls;
             document.getElementById('dyeingKpiTabExtraBtn').className = currentDyeingKpiTab === 'extra' ? activeCls : inactiveCls;
             const titleEl = document.getElementById('dyeingKpiSectionTitle');
@@ -16008,8 +16093,8 @@
 
         function setFinishingKpiTab(tab) {
             currentFinishingKpiTab = tab === 'glue' ? 'glue' : 'efficiency';
-            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition";
-            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+            const activeCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-emerald-700 text-xs font-semibold bg-emerald-700 text-white shadow-sm transition";
+            const inactiveCls = "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-slate-300 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50 transition";
             document.getElementById('finishingKpiTabEfficiencyBtn').className = currentFinishingKpiTab === 'efficiency' ? activeCls : inactiveCls;
             document.getElementById('finishingKpiTabGlueBtn').className = currentFinishingKpiTab === 'glue' ? activeCls : inactiveCls;
             document.getElementById('finishingKpiEfficiencySection').classList.toggle('hidden', currentFinishingKpiTab !== 'efficiency');
