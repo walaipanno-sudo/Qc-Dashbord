@@ -7437,7 +7437,10 @@
             const bomRaw = (planningRaw.bom && typeof planningRaw.bom === 'object') ? planningRaw.bom : {};
             planning.bom = {
                 yarnSkuCode: bomRaw.yarnSkuCode || '',
-                prices: Object.assign({}, (bomRaw.prices && typeof bomRaw.prices === 'object') ? bomRaw.prices : {})
+                prices: Object.assign({}, (bomRaw.prices && typeof bomRaw.prices === 'object') ? bomRaw.prices : {}),
+                materialNotes: bomRaw.materialNotes || '',
+                memorySourceMoSo: bomRaw.memorySourceMoSo || '',
+                memoryAppliedAt: bomRaw.memoryAppliedAt || ''
             };
 
             // NEW: "แผนกดีไซน์/ขยายลาย" checklist (done/doneBy/note) — deliberately NOT added to the
@@ -7445,6 +7448,12 @@
             // normalizeOrder), so it has no percent/transfer logic — just a simple tracked note shown
             // in its own section of the order detail modal (see renderDesignSectionHtml()).
             const design = Object.assign({ done: false, doneBy: '', note: '' }, parseField(raw.design, {}));
+
+            // Free-text work grades are intentionally independent from the automatic production grades.
+            // Each department can record its own operational grade using the terminology used on the floor.
+            const departmentGrades = Object.assign({
+                sales: '', planning: '', design: '', dyeing: '', weaving: '', finishing: ''
+            }, parseField(raw.departmentGrades, {}));
 
             // NEW (2026-09-10): Carpet Production Planning calc engine (เอกสารอ้างอิง TH098/26-แก้แบบ) —
             // the "Global Design Inputs" that drive the auto-grade/hours/production-days suggestions for
@@ -7700,6 +7709,7 @@
                 },
                 // NEW (2026-09-10): production calc engine inputs — see comment above.
                 productionCalc,
+                departmentGrades,
                 // NEW (2026-09-12): "SPECIFICATIONS" checklist — see comment above.
                 specs,
                 // NEW (2026-09-10): whether "แผนกวางแผน ต้องเสร็จวันที่" currently auto-follows the last
@@ -9674,6 +9684,7 @@
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
                     <span class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-file-lines mr-1"></i> ข้อมูลเพิ่มเติม (จากใบเปิด M/O)</span>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        ${renderDepartmentWorkGradeInputHtml(order, orderIndex, 'sales')}
                         <div>
                             <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">วันที่เปิด M/O</label>
                             <input type="date" value="${order.openDate || ''}" onchange="${f('openDate')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
@@ -9745,6 +9756,54 @@
                             <textarea rows="2" onchange="${f('productionInstruction')}" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs resize-none">${escapeHtml(order.productionInstruction || '')}</textarea>
                         </div>
                     </div>
+                </div>
+            `;
+        }
+
+        const DEPARTMENT_GRADE_LABELS = {
+            sales: 'ฝ่ายขาย',
+            planning: 'แผนกวางแผน',
+            design: 'แผนกดีไซน์/ขยายลาย',
+            dyeing: 'แผนกย้อม',
+            weaving: 'แผนกทอ',
+            finishing: 'แผนกตกแต่ง/บรรจุ'
+        };
+
+        function getSuggestedDepartmentGrade(order, department) {
+            if (!order || !order.productionCalc || !(Number(order.productionCalc.totalArea) > 0)) return '';
+            if (!['design', 'weaving', 'finishing'].includes(department)) return '';
+            const suggestion = computeProductionSuggestions(order)[department];
+            return suggestion && suggestion.grade ? String(suggestion.grade) : '';
+        }
+
+        function applySuggestedDepartmentGrade(orderIndex, department) {
+            const order = productionOrders[orderIndex];
+            const grade = getSuggestedDepartmentGrade(order, department);
+            if (!order || !grade) return;
+            if (!order.departmentGrades) order.departmentGrades = {};
+            order.departmentGrades[department] = grade;
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+            showToast(`ใช้เกรดที่ระบบแนะนำสำหรับ${DEPARTMENT_GRADE_LABELS[department] || department}: ${grade}`, 'fa-brain', 'text-indigo-500');
+        }
+
+        function renderDepartmentWorkGradeInputHtml(order, orderIndex, department) {
+            const grades = order.departmentGrades || {};
+            const suggestedGrade = getSuggestedDepartmentGrade(order, department);
+            const currentGrade = grades[department] || '';
+            return `
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">เกรดการทำงาน - ${escapeHtml(DEPARTMENT_GRADE_LABELS[department] || department)}</label>
+                    <input type="text" placeholder="กรอกเกรดได้เอง เช่น A, B+, งานเร่ง" value="${escapeHtml(currentGrade)}" onchange="updateOrderField(${orderIndex}, 'departmentGrades.${department}', this.value.trim())" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs">
+                    ${suggestedGrade ? `<p class="text-[9px] text-indigo-600 mt-0.5">AI แนะนำ ${escapeHtml(suggestedGrade)}${currentGrade === suggestedGrade ? ' • ใช้อยู่' : ` • <button type="button" onclick="applySuggestedDepartmentGrade(${orderIndex}, '${department}')" class="underline font-semibold">ใช้ค่านี้</button>`}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function renderDepartmentWorkGradeCardHtml(order, orderIndex, department) {
+            return `
+                <div class="bg-white p-2.5 rounded-md border border-slate-200">
+                    ${renderDepartmentWorkGradeInputHtml(order, orderIndex, department)}
                 </div>
             `;
         }
@@ -13174,6 +13233,7 @@
                 productionInstruction: productionInstruction,
                 currentStage: 'planning',
                 planning: { specDone: false, specDoneBy: '', planEntered: false, planEnteredBy: '', percent: 0 },
+                departmentGrades: { sales: '', planning: '', design: '', dyeing: '', weaving: '', finishing: '' },
                 // NEW: "แผนกดีไซน์/ขยายลาย" — a simple done/who/note checklist, not part of the
                 // planning→dyeing→...→shipped state machine (see STAGE_LABELS.design's comment) — see
                 // renderDesignSectionHtml().
@@ -13395,6 +13455,68 @@
             return (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
         }
 
+        function normalizeBomMemoryText(value) {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function bomMemoryCandidateScore(target, candidate) {
+            if (!target || !candidate || target === candidate) return -1;
+            const candidateBom = candidate.planning && candidate.planning.bom;
+            if (!candidateBom) return -1;
+            const hasRememberedData = candidateBom.yarnSkuCode ||
+                candidateBom.materialNotes ||
+                Object.keys(candidateBom.prices || {}).length > 0;
+            if (!hasRememberedData) return -1;
+            let score = 0;
+            const addExact = (field, points) => {
+                const a = normalizeBomMemoryText(target[field]);
+                const b = normalizeBomMemoryText(candidate[field]);
+                if (a && b && a === b) score += points;
+            };
+            addExact('quality', 5);
+            addExact('yarnType', 4);
+            addExact('tuftingSpec', 3);
+            addExact('designRef', 2);
+            if (target.market && target.market === candidate.market) score += 1;
+            if (target.orderType && target.orderType === candidate.orderType) score += 1;
+            const targetArea = Number(target.totalSqm) || 0;
+            const candidateArea = Number(candidate.totalSqm) || 0;
+            if (targetArea > 0 && candidateArea > 0) {
+                const areaDifferenceRatio = Math.abs(targetArea - candidateArea) / Math.max(targetArea, candidateArea);
+                if (areaDifferenceRatio <= 0.15) score += 2;
+                else if (areaDifferenceRatio <= 0.35) score += 1;
+            }
+            return score;
+        }
+
+        function getBomMemorySuggestion(order) {
+            return productionOrders
+                .map(candidate => ({ candidate, score: bomMemoryCandidateScore(order, candidate) }))
+                .filter(item => item.score > 0)
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return String(b.candidate.lastUpdated || '').localeCompare(String(a.candidate.lastUpdated || ''));
+                })[0] || null;
+        }
+
+        function applyBomMemorySuggestion(orderIndex, sourceOrderIndex) {
+            const order = productionOrders[orderIndex];
+            const sourceOrder = productionOrders[sourceOrderIndex];
+            if (!order || !sourceOrder || !sourceOrder.planning || !sourceOrder.planning.bom) {
+                showToast('ไม่พบข้อมูลวัตถุดิบของ M/O, S/O ต้นทาง', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+            const sourceBom = sourceOrder.planning.bom;
+            order.planning.bom.yarnSkuCode = sourceBom.yarnSkuCode || '';
+            order.planning.bom.materialNotes = sourceBom.materialNotes || '';
+            order.planning.bom.prices = Object.assign({}, sourceBom.prices || {});
+            order.planning.bom.memorySourceMoSo = sourceOrder.moSo || '';
+            order.planning.bom.memoryAppliedAt = new Date().toISOString();
+            persistOrderChange(order);
+            rerenderOrderViews(orderIndex);
+            showToast(`นำข้อมูลวัตถุดิบและต้นทุนจาก ${sourceOrder.moSo} มาใช้แล้ว`, 'fa-brain', 'text-indigo-500');
+        }
+
         // Writes the resolved (currently displayed) price set as the new shared global default — a
         // one-click "ใช้ราคาชุดนี้เป็นค่าเริ่มต้นกลาง" per the user's explicit choice. Only affects OTHER
         // orders that haven't customized a given field themselves; this order's own overrides (if any)
@@ -13438,6 +13560,26 @@
             const hasArea = bom.area > 0;
             const defaults = getBomDefaultPrices();
             const overrides = (order.planning.bom.prices) || {};
+            const memorySuggestion = getBomMemorySuggestion(order);
+            const memorySuggestionHtml = memorySuggestion ? (() => {
+                const source = memorySuggestion.candidate;
+                const sourceOrderIndex = productionOrders.indexOf(source);
+                const sourceBom = source.planning.bom;
+                const rememberedFields = [
+                    sourceBom.yarnSkuCode ? `SKU ${escapeHtml(sourceBom.yarnSkuCode)}` : '',
+                    Object.keys(sourceBom.prices || {}).length ? 'ราคาต้นทุน' : '',
+                    sourceBom.materialNotes ? 'รายละเอียดวัตถุดิบ' : ''
+                ].filter(Boolean).join(' • ');
+                return `
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-md p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <p class="text-[11px] font-semibold text-indigo-800"><i class="fa-solid fa-brain mr-1"></i>AI จดจำจากงานใกล้เคียง: ${escapeHtml(source.moSo || '-')}</p>
+                            <p class="text-[10px] text-indigo-600">${rememberedFields || 'มีข้อมูล BOM ที่บันทึกไว้'} • คะแนนความใกล้เคียง ${memorySuggestion.score}</p>
+                        </div>
+                        <button type="button" onclick="applyBomMemorySuggestion(${orderIndex}, ${sourceOrderIndex})" class="shrink-0 text-[10px] bg-indigo-700 hover:bg-indigo-800 text-white font-semibold px-2.5 py-1.5 rounded-md transition"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>ใช้ข้อมูลที่ AI แนะนำ</button>
+                    </div>
+                `;
+            })() : `<p class="text-[10px] text-slate-400"><i class="fa-solid fa-brain mr-1"></i>AI จะเริ่มแนะนำเมื่อมี M/O, S/O เก่าที่บันทึก SKU วัตถุดิบ หรือราคาต้นทุนและมีลักษณะงานใกล้เคียงกัน</p>`;
 
             const priceInputsHtml = BOM_PRICE_FIELDS.map(f => {
                 const isOverridden = Object.prototype.hasOwnProperty.call(overrides, f.key);
@@ -13469,6 +13611,7 @@
                         <button type="button" onclick="openYarnCalculatorModal(${orderIndex})" class="text-[10px] bg-white hover:bg-amber-50 text-amber-700 font-semibold px-2 py-1 rounded-lg border border-amber-200 transition flex items-center gap-1"><i class="fa-solid fa-calculator"></i> เปิดเครื่องคำนวณไหมพรม (M/O นี้)</button>
                     </div>
                     ${!hasArea ? `<p class="text-[11px] text-amber-700 bg-amber-100/60 border border-amber-200 rounded-lg px-2 py-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>ยังไม่มีพื้นที่รวม (ตร.ม.) ของ M/O นี้ — กรุณากรอกขนาด/จำนวนชิ้นก่อน ระบบจึงจะคำนวณ BOM ได้</p>` : ''}
+                    ${memorySuggestionHtml}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                             <label class="block text-[10px] text-slate-500 mb-0.5">รหัส SKU ไหมพรม</label>
@@ -13480,6 +13623,11 @@
                                 <span>จำนวนพลาย: <span class="font-semibold text-amber-700">${escapeHtml(spec.ply)}</span> • รหัสสี: <span class="font-semibold text-amber-700">${escapeHtml(spec.colorCode)}</span></span>
                             ` : `<span class="text-slate-400">กรอกรหัส SKU เพื่อถอดสเปค (เกรด/พลาย/รหัสสี)</span>`}
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-0.5">รายละเอียดวัตถุดิบเพิ่มเติมของ M/O, S/O นี้</label>
+                        <textarea rows="2" placeholder="เช่น ชนิดไหม ผู้ขาย Lot วัตถุดิบ หรือเงื่อนไขราคาพิเศษ" onchange="updateOrderField(${orderIndex}, 'planning.bom.materialNotes', this.value)" class="w-full p-1.5 bg-white border border-slate-200 rounded-md text-xs resize-none">${escapeHtml(order.planning.bom.materialNotes || '')}</textarea>
+                        ${order.planning.bom.memorySourceMoSo ? `<p class="text-[9px] text-indigo-500 mt-0.5">เคยนำคำแนะนำมาจาก ${escapeHtml(order.planning.bom.memorySourceMoSo)}</p>` : ''}
                     </div>
                     <p class="text-[11px] text-slate-500">พื้นที่รวม (จาก M/O): <span class="font-semibold text-slate-700">${fmtBomNum(bom.area, 2)} ตร.ม.</span></p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -13511,6 +13659,7 @@
             const dyeing = order.dyeing;
             const weaving = order.weaving;
             return `
+                ${renderDepartmentWorkGradeCardHtml(order, orderIndex, 'planning')}
                 ${renderBomCardHtml(order, orderIndex)}
                 <div class="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
                     <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" ${order.planning.specDone ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'planning.specDone', this.checked)" class="rounded w-4 h-4"> คำนวณสเปคแล้ว</label>
@@ -13868,6 +14017,7 @@
                         </div>
                     </div>
                     <div class="p-3 space-y-2">
+                        ${renderDepartmentWorkGradeCardHtml(order, orderIndex, 'design')}
                         ${planDateBadgeHtml}
                         ${designRefHtml}
                         ${designDatesHtml}
@@ -14127,6 +14277,7 @@
                     </div>
                     <div class="p-3 space-y-2">
                         ${modeToggleHtml}
+                        ${stage === 'planning' ? '' : renderDepartmentWorkGradeCardHtml(order, orderIndex, stage)}
                         <p class="text-xs ${complete ? 'text-emerald-600 font-semibold' : 'text-slate-500'}"><i class="fa-solid ${complete ? 'fa-circle-check' : 'fa-hourglass-half'} mr-1"></i>${escapeHtml(stageProgressText(order, stage))}</p>
                         ${weavingChecks}
                         ${bodyContentHtml}

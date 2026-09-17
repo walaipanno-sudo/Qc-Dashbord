@@ -891,7 +891,10 @@ var ORDERS_NEW_HEADERS = ["CreatedAt", "IsInserted", "ShippingMark",
   // NEW (2026-09-12): "SPECIFICATIONS" checklist (วิธีทอ/เส้นด้าย/ลักษณะขน/ลวดลาย/วัสดุรองหลัง/ขอบพรม/
   // เจ้าของแบบ) — see SPEC_FIELD_GROUPS/defaultSpecsState() in QCDashboard.html. Stored as a JSON object,
   // same pass-through pattern as ProductionCalc/Design above.
-  "Specs"];
+  "Specs",
+  // Free-text work grades entered independently by Sales, Planning, Design, Dyeing, Weaving and
+  // Finishing. Appended by header name so existing order sheets keep every current column in place.
+  "DepartmentGrades"];
 function ensureOrdersHeaders(sheet) {
   var lastCol = sheet.getLastColumn();
   var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); }) : [];
@@ -960,6 +963,7 @@ function extractOrderFromRow_(row, headerNames) {
   var productionInstructionIdx = headerNames.indexOf('productioninstruction');
   // NEW (2026-09-12): "SPECIFICATIONS" checklist — see ORDERS_NEW_HEADERS.
   var specsIdx = headerNames.indexOf('specs');
+  var departmentGradesIdx = headerNames.indexOf('departmentgrades');
 
   return {
     moSo: String(row[0] || ''),
@@ -1043,7 +1047,8 @@ function extractOrderFromRow_(row, headerNames) {
     productionInstruction: productionInstructionIdx !== -1 && row[productionInstructionIdx] ? String(row[productionInstructionIdx]) : '',
     // NEW (2026-09-12): passed through as the raw JSON string — QCDashboard.html's normalizeOrder()
     // already parses either a string or a real object (same pattern as productionCalc/design above).
-    specs: specsIdx !== -1 && row[specsIdx] ? String(row[specsIdx]) : '{}'
+    specs: specsIdx !== -1 && row[specsIdx] ? String(row[specsIdx]) : '{}',
+    departmentGrades: departmentGradesIdx !== -1 && row[departmentGradesIdx] ? String(row[departmentGradesIdx]) : '{}'
   };
 }
 
@@ -1285,6 +1290,12 @@ function upsertOrderIntoSheets_(order) {
     var planningDeadlineAutoIdx = headerNames.indexOf('planningdeadlineauto');
     if (planningDeadlineAutoIdx !== -1) {
       sheet.getRange(targetRow, planningDeadlineAutoIdx + 1).setValue(order.planningDeadlineAuto === false ? false : true);
+    }
+    var departmentGradesIdx = headerNames.indexOf('departmentgrades');
+    if (departmentGradesIdx !== -1) {
+      sheet.getRange(targetRow, departmentGradesIdx + 1).setValue(
+        typeof order.departmentGrades === 'object' ? JSON.stringify(order.departmentGrades || {}) : (order.departmentGrades || '{}')
+      );
     }
 
     // NEW (2026-09-12): วันที่ส่งแบบ/ได้รับแบบ (แผนกดีไซน์) + "ข้อกำหนดสำหรับฝ่ายผลิต" — plain string/date

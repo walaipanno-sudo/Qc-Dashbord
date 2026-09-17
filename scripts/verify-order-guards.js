@@ -3,6 +3,7 @@ const vm = require('vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+const appsScriptCode = fs.readFileSync('apps-script/Code.js', 'utf8');
 
 function extractFunction(name) {
     const start = script.indexOf(`function ${name}(`);
@@ -55,7 +56,10 @@ vm.createContext(context);
     'buildProductionCalendarDayMap',
     'newDyeingColorOrderRow',
     'mergeYarnCalculatorColorsIntoOrder',
-    'getSurplusAvailableKg'
+    'getSurplusAvailableKg',
+    'normalizeBomMemoryText',
+    'bomMemoryCandidateScore',
+    'getBomMemorySuggestion'
 ].forEach(name => vm.runInContext(extractFunction(name), context));
 vm.runInContext(extractFunction('dyeingFullyCoveredBySurplus'), context);
 
@@ -163,4 +167,59 @@ if (!context.dyeingFullyCoveredBySurplus({ dyeing: { colorOrders: [{ kg: 5, useS
     throw new Error('Fully covered Surplus plan was not recognized');
 }
 
-console.log('Order deduplication, calendar deduplication, transfer guards, and dye-plan guards passed.');
+const targetOrder = {
+    moSo: 'M/O 900',
+    orderType: 'MO',
+    market: 'domestic',
+    quality: 'WL-01',
+    yarnType: 'Wool',
+    tuftingSpec: 'Cut pile',
+    designRef: 'D-100',
+    totalSqm: 100,
+    planning: { bom: { yarnSkuCode: '', materialNotes: '', prices: {} } }
+};
+const closeBomOrder = {
+    moSo: 'M/O 800',
+    orderType: 'MO',
+    market: 'domestic',
+    quality: ' wl-01 ',
+    yarnType: 'WOOL',
+    tuftingSpec: 'Cut pile',
+    designRef: 'D-100',
+    totalSqm: 110,
+    lastUpdated: '2026-09-16',
+    planning: {
+        bom: {
+            yarnSkuCode: 'YN-AP-WL01-103-WHT01',
+            materialNotes: 'Supplier A',
+            prices: { yarnPerKg: 250 }
+        }
+    }
+};
+const distantBomOrder = {
+    moSo: 'S/O 700',
+    orderType: 'SO',
+    market: 'export',
+    quality: 'OTHER',
+    yarnType: 'Nylon',
+    tuftingSpec: 'Loop',
+    designRef: 'D-999',
+    totalSqm: 500,
+    lastUpdated: '2026-09-17',
+    planning: { bom: { yarnSkuCode: 'YN-STD', materialNotes: '', prices: { yarnPerKg: 100 } } }
+};
+context.productionOrders = [targetOrder, distantBomOrder, closeBomOrder];
+const memorySuggestion = context.getBomMemorySuggestion(targetOrder);
+if (!memorySuggestion || memorySuggestion.candidate.moSo !== 'M/O 800') {
+    throw new Error('BOM memory did not select the closest historical M/O');
+}
+if (context.bomMemoryCandidateScore(targetOrder, { planning: { bom: { yarnSkuCode: '', materialNotes: '', prices: {} } } }) !== -1) {
+    throw new Error('BOM memory accepted an order without remembered material or cost data');
+}
+if (!appsScriptCode.includes('"DepartmentGrades"') ||
+    !appsScriptCode.includes("headerNames.indexOf('departmentgrades')") ||
+    !appsScriptCode.includes('JSON.stringify(order.departmentGrades || {})')) {
+    throw new Error('Department work grades are not fully wired through the Google Sheets backend');
+}
+
+console.log('Order deduplication, calendar deduplication, transfer guards, dye-plan guards, and BOM memory passed.');
