@@ -55,6 +55,27 @@
             #mainHeader .max-w-7xl { align-items: stretch; }
             .app-navigation-tabs { width: 100%; }
         }
+        @media (max-width: 640px) {
+            #mainHeader { position: static !important; }
+            #mainHeader .max-w-7xl { padding: 12px; gap: 10px; }
+            #mainHeader h1 { font-size: 1rem; line-height: 1.35; }
+            #mainHeader .header-actions {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                overflow-x: auto;
+                width: 100%;
+                padding-bottom: 4px;
+                scrollbar-width: thin;
+            }
+            #mainHeader .header-actions button {
+                flex: 0 0 auto;
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+            main.max-w-7xl { padding-left: 10px; padding-right: 10px; padding-top: 12px; }
+            #mascotWidget { display: none !important; }
+            #toast { left: 10px; right: 10px; bottom: 10px; }
+        }
 
         /* ===== Print-only header (shown only when printing the full list) ===== */
         .print-only-header { display: none; }
@@ -304,7 +325,7 @@
                      renderCurrentUserBadge(). Empty/invisible until Supabase login is configured. -->
                 <span id="currentUserBadgeHolder"></span>
             </div>
-            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+            <div class="header-actions flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
                 <button onclick="forceSyncData()" class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-3.5 py-2 rounded-xl shadow transition duration-200 text-sm flex items-center gap-1.5" title="ดึงข้อมูลล่าสุดจาก Google Sheets">
                     <i class="fa-solid fa-rotate" id="syncIcon"></i> ซิงค์ข้อมูล
                 </button>
@@ -3014,6 +3035,11 @@
                     <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <p class="text-xs text-slate-400 mt-1">วางลิงก์ Web App จาก Google Apps Script เพื่อให้ทุกเครื่องที่เปิดผ่าน GitHub ดึงและบันทึกข้อมูลลง Google Sheet เดียวกัน</p>
                 </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">รหัสเขียนข้อมูล:</label>
+                    <input type="password" id="gasWriteKeyInput" autocomplete="off" placeholder="เว้นว่างได้จนกว่า Admin จะเปิดการป้องกัน API" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <p class="text-xs text-slate-400 mt-1">ใช้ป้องกันการเพิ่ม แก้ไข และลบข้อมูลจากบุคคลภายนอก ลิงก์สำหรับดูข้อมูลยังใช้งานได้ตามปกติ</p>
+                </div>
                 <!-- NEW (2026-09-11): Supabase — เปิดใช้ระบบ Login + สิทธิ์แต่ละแผนกได้ก็ต่อเมื่อกรอก 2
                      ช่องนี้ครบเท่านั้น (ว่างไว้ = ระบบทำงานแบบเดิมทุกประการ ไม่มีหน้า login) ดูขั้นตอน
                      สร้าง Supabase project ทั้งหมดได้ในไฟล์ setup_guide.md ที่แนบมาด้วยกัน -->
@@ -3268,23 +3294,41 @@
         let weavingStaffList = [];
         // NEW (2026-09-16): "รายชื่อพนักงานตกแต่ง" — same purpose/shape as weavingStaffList above, but for
         // the ประสิทธิภาพการตกแต่ง (finishing efficiency) log — see renderFinishingStaffManagerHtml() near
-        // the finishing KPI code. Local-only for now (no Google Sheet tab), same as surplusYarnLedger below.
+        // the finishing KPI code. Cached locally and synchronized through DashboardSharedRecords.
         let finishingStaffList = [];
         // NEW (2026-09-16): "รายงาน KPI แผนกวางแผน" — monthly ไหม Surplus warehouse ledger (ใบ "5.ไหม
         // Surplusคงเหลือ" ในไฟล์ Excel ที่แนบมา). This one is company-wide per MONTH, not tied to any one
         // M/O, S/O, so — unlike the per-order KPI fields added under order.weaving/order.dyeing/
-        // order.finishing below (which ride the existing order-sync pipeline for free) — it currently
-        // only persists to this browser's localStorage (see saveSurplusLedgerToLocal()). If this needs to
-        // sync across devices/users later, it can get its own Google Sheet tab + GET/POST actions the same
-        // way weavingStaffList does (fetchWeavingStaffFromGoogleSheet() above is the template) — deliberately
-        // left as a local-only v1 for now rather than shipping untested backend changes.
+        // order.finishing below (which ride the existing order-sync pipeline for free) — it is cached in
+        // localStorage for offline use and synchronized through DashboardSharedRecords across devices.
         let surplusYarnLedger = [];
         // NEW (2026-09-16): "แผนกดีไซน์/ขยายลาย (KPI)" — designJobLogs mirrors Design_KPI.xlsx's
-        // Data_Logs sheet. Local-only for the same reason as surplusYarnLedger: a design job's Design No.
+        // Data_Logs sheet. It remains independent from M/O records because a design job's Design No.
         // often isn't a real M/O in this system yet (per-design-variant tasks, ones that never became an
         // order, etc.), so there's no natural order.* JSON blob to ride on.
         let designJobLogs = [];
-        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
+        const DEFAULT_GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx4-GPp_qi4um9SWWQWo5xNtuVyA9ROIsmKbMIMQbvqcf-oFPQvCN2wJO-Wq1spt89_Yg/exec';
+        const queryGasUrl = new URLSearchParams(window.location.search).get('gasUrl') || '';
+        let gasWebAppUrl = queryGasUrl || localStorage.getItem('qc_gas_url') || DEFAULT_GAS_WEB_APP_URL;
+        let gasWriteKey = localStorage.getItem('qc_gas_write_key') || '';
+
+        function withWriteKey(url) {
+            if (!gasWriteKey) return url;
+            const separator = url.includes('?') ? '&' : '?';
+            return `${url}${separator}writeKey=${encodeURIComponent(gasWriteKey)}`;
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const method = String(options.method || 'GET').toUpperCase();
+                const requestUrl = method === 'GET' ? url : withWriteKey(url);
+                return await fetch(requestUrl, Object.assign({}, options, { signal: controller.signal }));
+            } finally {
+                clearTimeout(timer);
+            }
+        }
 
         // NEW (2026-09-16): "แจ้งเตือนผ่านไลน์ แจ้งแค่ปัญหาพอ ถ้ามีรายการอื่นด้วย limit จะเต็ม" — the LINE
         // Official Account's free-tier monthly message quota gets used up if every event type (งานเสร็จ
@@ -3917,6 +3961,9 @@
             initApp();
             switchView('overview');
             startMascotBlinkLoop();
+            fetchSharedRecordsFromSheet('finishingStaff', false);
+            fetchSharedRecordsFromSheet('surplusLedger', false);
+            fetchSharedRecordsFromSheet('designJobLogs', false);
             initSupabase(); // NEW (2026-09-11): no-op until a Supabase URL/anon key has been saved
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
@@ -3960,21 +4007,22 @@
             localStorage.setItem('qc_weaving_staff_v1', JSON.stringify(weavingStaffList));
         }
 
-        // NEW (2026-09-16): persists finishingStaffList locally, same convention as saveWeavingStaffToLocal()
-        // above, minus the Google Sheet sync (local-only, see the declaration comment).
+        // Persists immediately to the local cache, then debounces the shared Google Sheet update.
         function saveFinishingStaffToLocal() {
             localStorage.setItem('qc_finishing_staff_v1', JSON.stringify(finishingStaffList));
+            scheduleSharedRecordsSync('finishingStaff');
         }
 
-        // NEW (2026-09-16): persists surplusYarnLedger locally — same convention as saveWeavingStaffToLocal()
-        // above, minus the Google Sheet sync (see the surplusYarnLedger declaration comment for why).
+        // Persists immediately to the local cache, then debounces the shared Google Sheet update.
         function saveSurplusLedgerToLocal() {
             localStorage.setItem('qc_surplus_ledger_v1', JSON.stringify(surplusYarnLedger));
+            scheduleSharedRecordsSync('surplusLedger');
         }
 
-        // NEW (2026-09-16): persists designJobLogs locally — same convention as saveSurplusLedgerToLocal().
+        // Persists immediately to the local cache, then debounces the shared Google Sheet update.
         function saveDesignJobLogsToLocal() {
             localStorage.setItem('qc_design_job_logs_v1', JSON.stringify(designJobLogs));
+            scheduleSharedRecordsSync('designJobLogs');
         }
 
         function initApp() {
@@ -4109,11 +4157,18 @@
             const icon = document.getElementById('syncIcon');
             icon.classList.add('fa-spin');
             showToast('กำลังซิงค์ข้อมูลกับ Google Sheets...');
-            await fetchDataFromGoogleSheet(true);
-            await fetchOrdersFromGoogleSheet(false);
-            await fetchIssuesFromGoogleSheet(false);
-            await fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
-            setTimeout(() => icon.classList.remove('fa-spin'), 600);
+            await Promise.allSettled([
+                fetchDataFromGoogleSheet(true),
+                fetchOrdersFromGoogleSheet(false),
+                fetchIssuesFromGoogleSheet(false),
+                fetchProductionSettingsFromSheet(),
+                fetchSpecTemplatesFromGoogleSheet(false),
+                fetchWeavingStaffFromGoogleSheet(false),
+                fetchSharedRecordsFromSheet('finishingStaff', false),
+                fetchSharedRecordsFromSheet('surplusLedger', false),
+                fetchSharedRecordsFromSheet('designJobLogs', false)
+            ]);
+            icon.classList.remove('fa-spin');
         }
 
         async function fetchDataFromGoogleSheet(isManual = false) {
@@ -4127,7 +4182,7 @@
 
             try {
                 const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=get' : gasWebAppUrl + '?action=get';
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl);
                 const text = await response.text();
                 
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
@@ -6616,7 +6671,7 @@
                     // existing record shipped doesn't leave its "Details" cell showing a stale value
                     // once every OTHER save already switched to readable text — see buildQcDetailsText.
                     const shipPayload = Object.assign({}, item, { detailsText: buildQcDetailsText(item) });
-                    await fetch(gasWebAppUrl, {
+                    await fetch(withWriteKey(gasWebAppUrl), {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
@@ -6639,7 +6694,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getOrders' : gasWebAppUrl + '?action=getOrders';
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl);
                 const text = await response.text();
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                     // Backend doesn't support order sync yet — fail silently, keep working from localStorage.
@@ -6672,7 +6727,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getIssues' : gasWebAppUrl + '?action=getIssues';
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl);
                 const text = await response.text();
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                     return;
@@ -6698,7 +6753,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getSpecTemplates' : gasWebAppUrl + '?action=getSpecTemplates';
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl);
                 const text = await response.text();
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                     return;
@@ -6726,7 +6781,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=specTemplate' : gasWebAppUrl + '?type=specTemplate';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -6743,7 +6798,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const fetchUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&action=getWeavingStaff' : gasWebAppUrl + '?action=getWeavingStaff';
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl);
                 const text = await response.text();
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                     return;
@@ -6762,11 +6817,92 @@
             }
         }
 
+        const sharedRecordSyncTimers = {};
+
+        function getSharedCollectionState(collection) {
+            if (collection === 'finishingStaff') return finishingStaffList;
+            if (collection === 'surplusLedger') return surplusYarnLedger;
+            if (collection === 'designJobLogs') return designJobLogs;
+            return [];
+        }
+
+        function setSharedCollectionState(collection, records) {
+            const items = Array.isArray(records) ? records : [];
+            if (collection === 'finishingStaff') {
+                finishingStaffList = items;
+                localStorage.setItem('qc_finishing_staff_v1', JSON.stringify(finishingStaffList));
+                renderFinishingStaffManagerHtml();
+                renderFinishingEfficiencyTable();
+            } else if (collection === 'surplusLedger') {
+                surplusYarnLedger = items;
+                localStorage.setItem('qc_surplus_ledger_v1', JSON.stringify(surplusYarnLedger));
+                renderKpiSurplusLedger();
+                renderCentralDashboard();
+            } else if (collection === 'designJobLogs') {
+                designJobLogs = items;
+                localStorage.setItem('qc_design_job_logs_v1', JSON.stringify(designJobLogs));
+                renderDesignKpiReports();
+                renderCentralDashboard();
+            }
+        }
+
+        async function replaceSharedRecordsOnSheet(collection, records) {
+            if (!gasWebAppUrl) return;
+            const postUrl = gasWebAppUrl.includes('?')
+                ? gasWebAppUrl + '&type=replaceSharedRecords'
+                : gasWebAppUrl + '?type=replaceSharedRecords';
+            await fetchWithTimeout(postUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ collection, records: Array.isArray(records) ? records : [] })
+            });
+        }
+
+        function scheduleSharedRecordsSync(collection, delayMs = 900) {
+            if (!gasWebAppUrl) return;
+            clearTimeout(sharedRecordSyncTimers[collection]);
+            sharedRecordSyncTimers[collection] = setTimeout(async () => {
+                try {
+                    await replaceSharedRecordsOnSheet(collection, getSharedCollectionState(collection));
+                } catch (error) {
+                    console.error(`Shared collection sync failed (${collection}):`, error);
+                }
+            }, delayMs);
+        }
+
+        async function fetchSharedRecordsFromSheet(collection, isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const separator = gasWebAppUrl.includes('?') ? '&' : '?';
+                const fetchUrl = `${gasWebAppUrl}${separator}action=getSharedRecords&collection=${encodeURIComponent(collection)}`;
+                const response = await fetchWithTimeout(fetchUrl);
+                const text = await response.text();
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) return;
+                let result;
+                try { result = JSON.parse(text); } catch (error) { return; }
+                if (!Array.isArray(result)) return;
+
+                const localRecords = getSharedCollectionState(collection);
+                if (result.length > 0 || localRecords.length === 0) {
+                    setSharedCollectionState(collection, result);
+                }
+                if (isManual) {
+                    const visibleCount = result.length > 0 ? result.length : localRecords.length;
+                    showToast(`ซิงค์ข้อมูลส่วนกลางสำเร็จ (${collection}: ${visibleCount} รายการ)`);
+                }
+            } catch (error) {
+                if (isManual) {
+                    showToast(`ยังซิงค์ข้อมูลส่วนกลาง ${collection} ไม่ได้`, 'fa-circle-exclamation', 'text-amber-400');
+                }
+            }
+        }
+
         async function syncWeavingStaffMemberToSheet(member) {
             if (!gasWebAppUrl) return;
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=weavingStaff' : gasWebAppUrl + '?type=weavingStaff';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -6844,7 +6980,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=productionSettings' : gasWebAppUrl + '?type=productionSettings';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -6963,7 +7099,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=issue' : gasWebAppUrl + '?type=issue';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -6990,7 +7126,7 @@
             if (issue.reportedBy) messageLines.push(`ผู้แจ้ง: ${issue.reportedBy}`);
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -7145,7 +7281,7 @@
             showToast('ลบรายการปัญหาแล้ว', 'fa-circle-xmark', 'text-rose-400');
             if (gasWebAppUrl) {
                 const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteIssue&id=' + encodeURIComponent(id);
-                fetch(deleteUrl).catch(err => console.error("Error deleting issue from Google Sheet:", err));
+                fetch(withWriteKey(deleteUrl)).catch(err => console.error("Error deleting issue from Google Sheet:", err));
             }
         }
 
@@ -8156,7 +8292,7 @@
             showToast(`ลบ "${weavingStaffDisplayName(member)}" ออกจากรายชื่อแล้ว`, 'fa-circle-xmark', 'text-rose-400');
             if (gasWebAppUrl) {
                 const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteWeavingStaff&id=' + encodeURIComponent(id);
-                fetch(deleteUrl).catch(err => console.error("Error deleting weaving staff member from Google Sheet:", err));
+                fetch(withWriteKey(deleteUrl)).catch(err => console.error("Error deleting weaving staff member from Google Sheet:", err));
             }
         }
 
@@ -9033,7 +9169,7 @@
             if (!gasWebAppUrl) return;
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=order' : gasWebAppUrl + '?type=order';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -9062,7 +9198,7 @@
             if (order.dueDate) messageLines.push(`กำหนดส่ง: ${order.dueDate}`);
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -9088,7 +9224,7 @@
             if (order.dueDate) messageLines.push(`กำหนดส่ง: ${order.dueDate}`);
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -9117,7 +9253,7 @@
             messageLines.push('👉 กรุณากำหนดวันเสร็จแต่ละแผนก (ระยะเวลาที่ใช้) ให้ M/O, S/O นี้');
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -9162,7 +9298,7 @@
             }
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -9383,7 +9519,7 @@
             showToast(`ลบแม่แบบ "${template.name}" แล้ว`, 'fa-circle-xmark', 'text-rose-400');
             if (gasWebAppUrl) {
                 const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteSpecTemplate&id=' + encodeURIComponent(templateId);
-                fetch(deleteUrl).catch(err => console.error("Error deleting spec template from Google Sheet:", err));
+                fetch(withWriteKey(deleteUrl)).catch(err => console.error("Error deleting spec template from Google Sheet:", err));
             }
         }
 
@@ -9424,7 +9560,7 @@
                 let resultUrl = null;
                 let serverError = null;
                 try {
-                    const resp = await fetch(postUrl, { method: 'POST', body: JSON.stringify(payload) });
+                    const resp = await fetch(withWriteKey(postUrl), { method: 'POST', body: JSON.stringify(payload) });
                     const json = await resp.json();
                     if (json && json.result === 'success' && json.url) {
                         resultUrl = json.url;
@@ -10146,7 +10282,7 @@
             messageLines.push('👉 ทุกแผนกกรุณากดรับทราบที่หน้า "ภาพรวมการผลิต"');
             try {
                 const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=lineNotify' : gasWebAppUrl + '?type=lineNotify';
-                await fetch(postUrl, {
+                await fetch(withWriteKey(postUrl), {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -14135,6 +14271,7 @@
 
         function openConfigModal() {
             document.getElementById('gasUrlInput').value = gasWebAppUrl;
+            document.getElementById('gasWriteKeyInput').value = gasWriteKey;
             document.getElementById('supabaseUrlInput').value = supabaseUrl;
             document.getElementById('supabaseAnonKeyInput').value = supabaseAnonKey;
             document.getElementById('configModal').classList.remove('hidden');
@@ -14324,6 +14461,8 @@
         function saveGasConfig() {
             gasWebAppUrl = document.getElementById('gasUrlInput').value.trim();
             localStorage.setItem('qc_gas_url', gasWebAppUrl);
+            gasWriteKey = document.getElementById('gasWriteKeyInput').value.trim();
+            localStorage.setItem('qc_gas_write_key', gasWriteKey);
 
             // NEW (2026-09-11): Supabase URL/anon key — see initSupabase()/"Supabase — Login + สิทธิ์"
             // block above. Saving a blank value here turns the whole login/permission system back off.
@@ -14449,7 +14588,7 @@
                     // itself, so localStorage/qcData's shape is unchanged; the backend writes it into
                     // the Sheet's "Details" column instead of the raw JSON blob it used to store there.
                     const payload = Object.assign({}, newItem, { detailsText: buildQcDetailsText(newItem) });
-                    await fetch(gasWebAppUrl, {
+                    await fetch(withWriteKey(gasWebAppUrl), {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
@@ -14551,7 +14690,7 @@
             if (gasWebAppUrl && deletedItem.id) {
                 try {
                     const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=delete&id=' + encodeURIComponent(deletedItem.id);
-                    await fetch(deleteUrl);
+                    await fetch(withWriteKey(deleteUrl));
                 } catch(err) {
                     console.error("Error deleting from Google Sheet:", err);
                 }
@@ -14593,7 +14732,7 @@
             if (gasWebAppUrl && deletedOrder.moSo) {
                 try {
                     const deleteUrl = (gasWebAppUrl.includes('?') ? gasWebAppUrl + '&' : gasWebAppUrl + '?') + 'action=deleteOrder&moSo=' + encodeURIComponent(deletedOrder.moSo);
-                    await fetch(deleteUrl);
+                    await fetch(withWriteKey(deleteUrl));
                 } catch(err) {
                     console.error("Error deleting production order from Google Sheet:", err);
                 }
