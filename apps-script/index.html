@@ -305,11 +305,110 @@
         .department-tab[data-department="weaving"] { --dept-color: #168071; --dept-soft: #e8f6f3; --dept-border: #a9d9d1; }
         .department-tab[data-department="finishing"] { --dept-color: #a34372; --dept-soft: #faedf3; --dept-border: #e5b8cd; }
         .department-tab[data-department="ready_to_ship"] { --dept-color: #b76616; --dept-soft: #fff3e5; --dept-border: #edc28f; }
+        .qc-records-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 12px;
+            scrollbar-width: thin;
+        }
+        .qc-records-toolbar > * { flex: 0 0 auto; }
+        .qc-records-toolbar #globalSearchFilterWrapper {
+            width: auto !important;
+            margin-left: auto;
+            flex-wrap: nowrap !important;
+        }
+        .qc-records-toolbar #globalSearchFilterWrapper > div:first-child { width: 220px !important; }
+        .qc-records-toolbar #deptFilterWrapper { flex-wrap: nowrap !important; }
+        .qc-records-toolbar #orderTypeFilterPanel,
+        .qc-records-toolbar #marketFilterPanel {
+            padding: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+        .timeline-mode-tabs {
+            display: inline-flex;
+            border: 1px solid var(--line);
+            background: #f2f5f5;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        .timeline-mode-tabs button {
+            padding: 8px 14px;
+            border-radius: 2px !important;
+            color: #607071;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .timeline-mode-tabs button.is-active {
+            background: var(--brand-800) !important;
+            color: #fff !important;
+        }
+        .master-plan-table th,
+        .master-plan-table td { white-space: nowrap; }
+        .master-plan-table input {
+            width: 64px;
+            min-width: 64px;
+            padding: 6px 7px;
+            text-align: right;
+            font-size: 11px;
+        }
+        .kpi-dashboard-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 18px;
+        }
+        .kpi-dashboard-heading .eyebrow {
+            margin: 0;
+            color: var(--brand-700);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .kpi-dashboard-heading h2 {
+            margin: 4px 0 3px;
+            color: var(--ink);
+            font-size: 27px;
+            font-weight: 700;
+        }
+        .kpi-snapshot {
+            min-width: 190px;
+            padding: 10px 12px;
+            background: #fff;
+            border-left: 4px solid var(--brand-mint);
+            color: var(--muted);
+            font-size: 10px;
+        }
+        .kpi-snapshot strong { display: block; margin-top: 3px; color: var(--ink); font-size: 12px; }
+        .kpi-toolbar {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid var(--line);
+        }
+        .kpi-toolbar label { display: grid; gap: 4px; color: var(--muted); font-size: 9px; font-weight: 700; }
+        .kpi-toolbar input { min-width: 250px; padding: 8px; }
+        .kpi-toolbar select { min-width: 190px; padding: 8px; }
+        #centralDeptKpiGrid .central-dept-card {
+            border: 1px solid var(--line) !important;
+            border-radius: 3px !important;
+            background: #fff;
+        }
         @media (max-width: 768px) {
             #mainHeader .max-w-7xl { align-items: stretch; }
             .app-navigation-tabs { width: 100%; }
             .department-tabs { grid-template-columns: repeat(7, minmax(132px, 1fr)); }
             .department-tab { min-width: 132px; min-height: 78px; padding: 12px !important; }
+            .kpi-dashboard-heading { align-items: stretch; flex-direction: column; }
+            .kpi-snapshot { width: 100%; }
+            .kpi-toolbar { align-items: stretch; flex-direction: column; }
+            .kpi-toolbar input, .kpi-toolbar select { width: 100%; min-width: 0; }
         }
         @media (max-width: 640px) {
             #mainHeader .max-w-7xl { padding: 16px 12px; gap: 14px; }
@@ -721,7 +820,7 @@
         </div>
 
         <!-- Dashboard Stats Cards -->
-        <div class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div id="qcStatsPanel" class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">รายการทั้งหมด</p>
@@ -867,7 +966,7 @@
              รายงาน QC ทั้งหมด, รอส่ง, ส่งแล้ว). Narrows each tab's own content down to just the
              selected order type; does not affect the weekly QC summary report, which is always
              company-wide by design. -->
-        <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
+        <div id="orderTypeFilterPanel" class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
             <span class="formal-filter-label text-xs font-semibold uppercase tracking-wide"><i class="fa-solid fa-filter mr-1.5"></i>ตัวกรองประเภทงาน</span>
             <div class="flex items-center bg-slate-100 p-1 rounded-xl">
                 <button onclick="setOrderTypeFilter('all')" id="orderTypeFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
@@ -882,7 +981,7 @@
              Orders saved before this feature existed have no market set and only show up under
              "ทั้งหมด" (there's no way to guess export/domestic from the M/O number the way order type
              can be guessed from it) until someone tags them via the order detail modal. -->
-        <div class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
+        <div id="marketFilterPanel" class="no-print bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-3">
             <span class="formal-filter-label text-xs font-semibold uppercase tracking-wide"><i class="fa-solid fa-earth-asia mr-1.5"></i>ตัวกรองตลาด</span>
             <div class="flex items-center bg-slate-100 p-1 rounded-xl">
                 <button onclick="setMarketFilter('all')" id="marketFilterAllBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition">ทั้งหมด</button>
@@ -2247,13 +2346,25 @@
         <div id="timelineViewContainer" class="hidden space-y-4">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-timeline mr-2 text-indigo-600"></i> ไทม์ไลน์การผลิต — ทุกแผนกในหน้าเดียว</h3>
-                    <p class="text-[11px] text-slate-400 mt-1">แถบสีคือช่วงเวลาที่วางแผนไว้ของแต่ละแผนก เรียงจากกำหนดส่งใกล้สุดขึ้นก่อน คลิกที่ชื่อ M/O, S/O เพื่อเปิดดู/แก้ไขรายละเอียด</p>
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-table-list mr-2 text-indigo-600"></i> Master Plan การผลิต</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">เลือกให้ระบบ AI คำนวณระยะเวลาจากกำลังผลิตและภาระงาน หรือกำหนดจำนวนวันของแต่ละแผนกเองในรูปแบบตารางแผนการผลิต</p>
                 </div>
                 <div class="relative w-full sm:w-72">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs"><i class="fa-solid fa-search"></i></span>
                     <input type="text" id="timelineSearchInput" oninput="renderProductionTimeline()" placeholder="ค้นหา M/O, S/O, ลูกค้า, PO... (กรองทั้งสองกรอบ)" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="timeline-mode-tabs" role="tablist" aria-label="โหมดคำนวณ Master Plan">
+                    <button type="button" id="timelineModeAiBtn" class="is-active" aria-selected="true" onclick="setTimelinePlanningMode('ai')">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI คำนวณ
+                    </button>
+                    <button type="button" id="timelineModeManualBtn" aria-selected="false" onclick="setTimelinePlanningMode('manual')">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i> คำนวณเอง
+                    </button>
+                </div>
+                <p id="timelineModeDescription" class="text-[11px] text-slate-500">AI ใช้ข้อมูลพื้นที่ ความซับซ้อน กำลังคน และคิวงาน เพื่อคำนวณจำนวนวันของแต่ละแผนก</p>
             </div>
 
             <!-- NEW (2026-09-12): "ใช้แผน AI กับทุก M/O, S/O" — ตามคำขอ "ตอนนี้ทั้งหมดให้ยึด AI คิดให้ก่อน
@@ -2262,7 +2373,7 @@
                  ไปกดทีละใบใน "ข้อมูลแผนกวางแผน" — ใบไหนข้อมูล/กำลังผลิตยังไม่ครบ (คำนวณไม่ได้) จะข้ามแผนก
                  นั้นไปเฉยๆ ไม่บล็อกทั้งใบ ทีหลังยังเข้าไปแก้เป็นรายแผนก/รายใบด้วยมือได้ตามปกติ (สลับกลับเป็น
                  "กำหนดเอง (Manual)" ในข้อมูลแผนกวางแผนของ M/O นั้นๆ) — see applyAiPlanToAllOrders(). -->
-            <div class="bg-fuchsia-50/60 border border-fuchsia-100 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div id="timelineAiPanel" class="bg-fuchsia-50/60 border border-fuchsia-100 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
                     <p class="text-xs font-bold text-fuchsia-700 flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> ให้ AI คิดแผนระยะเวลาให้ก่อนทั้งระบบ</p>
                     <p class="text-[10px] text-slate-500 mt-0.5">คำนวณจำนวนวันแต่ละแผนกให้ทุก M/O, S/O ที่ยังไม่ส่งในคราวเดียว (ใบไหนคำนวณไม่ได้จะข้ามไป) — แก้ไขเป็นรายใบทีหลังได้ตามปกติ</p>
@@ -2270,6 +2381,35 @@
                 <button type="button" onclick="applyAiPlanToAllOrders()" class="shrink-0 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> ใช้แผน AI กับทุก M/O, S/O
                 </button>
+            </div>
+
+            <div id="timelineManualPanel" class="hidden bg-white border border-slate-100 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800"><i class="fa-solid fa-file-excel mr-1.5 text-emerald-600"></i> ตารางกำหนดระยะเวลารายแผนก</h4>
+                        <p class="text-[10px] text-slate-500 mt-0.5">กรอกจำนวนวัน ระบบจะจัดคิวและคำนวณวันเสร็จต่อเนื่องให้ทันที โดยไม่เปลี่ยนกำหนดส่งลูกค้า</p>
+                    </div>
+                    <span id="timelineManualCount" class="text-[10px] font-semibold text-slate-500"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="master-plan-table w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-[10px] uppercase font-semibold border-b border-slate-200">
+                                <th class="py-2.5 px-3">M/O, S/O</th>
+                                <th class="py-2.5 px-3">ลูกค้า</th>
+                                <th class="py-2.5 px-3">กำหนดส่ง</th>
+                                <th class="py-2.5 px-3 text-right">ดีไซน์</th>
+                                <th class="py-2.5 px-3 text-right">ย้อม</th>
+                                <th class="py-2.5 px-3 text-right">ทอ</th>
+                                <th class="py-2.5 px-3 text-right">ตกแต่ง</th>
+                                <th class="py-2.5 px-3 text-right">รวมวัน</th>
+                                <th class="py-2.5 px-3">วันเสร็จตามแผน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timelineManualTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="timelineManualEmpty" class="hidden px-4 py-10 text-center text-xs text-slate-400">ไม่พบ M/O, S/O ตามตัวกรองปัจจุบัน</div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-600">
@@ -2337,6 +2477,13 @@
                  pointed out. Filtering this table by department is unchanged either way: it's the
                  un-hidden #deptFilter <select> in the toolbar above (setDepartmentTab()/filterTable()
                  still read/write it) — that's now the only department-filter control for this table. -->
+
+            <div id="qcRecordsStatsMount"></div>
+            <div id="qcRecordsControlsRow" class="qc-records-toolbar no-print bg-white border border-slate-100">
+                <div id="qcRecordsOrderTypeMount"></div>
+                <div id="qcRecordsMarketMount"></div>
+                <div id="qcRecordsFilterMount"></div>
+            </div>
 
             <!-- Weekly QC Summary Report: company-wide totals per week, most recent 8 weeks. -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -2546,6 +2693,18 @@
              (จำนวนจอทอ/พนักงานจาก productionSettings) และงานเสี่ยงเลยกำหนดแยกตามแผนก — ดึงข้อมูลจาก
              productionOrders ที่มีอยู่ในเครื่องอยู่แล้ว ไม่ต้องรอ Supabase — ดู renderCentralDashboard(). -->
         <div id="centralViewContainer" class="hidden space-y-4">
+            <section class="kpi-dashboard-heading">
+                <div>
+                    <p class="eyebrow">Management Control</p>
+                    <h2>KPI ทุกแผนกจากข้อมูลที่บันทึกจริง</h2>
+                    <p class="text-[11px] text-slate-500">สรุปข้อมูลการผลิต คุณภาพ และกำลังการผลิตที่ระบบมีอยู่ โดยไม่คาดเดาค่าที่ยังไม่ได้บันทึก</p>
+                </div>
+                <div class="kpi-snapshot">
+                    ข้อมูล ณ
+                    <strong id="centralSnapshotAt">-</strong>
+                </div>
+            </section>
+
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
                     <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wide">งานที่กำลังดำเนินการ</p>
@@ -2568,6 +2727,24 @@
                     <p id="centralKpiShipped30dNote" class="text-[11px] text-slate-400 mt-0.5">-</p>
                 </div>
             </div>
+
+            <section class="kpi-toolbar">
+                <label>
+                    ค้นหา KPI หรือแผนก
+                    <input type="search" id="centralKpiSearchInput" oninput="filterCentralKpiCards()" placeholder="เช่น ย้อม, ตรงเวลา, กำลังผลิต">
+                </label>
+                <label>
+                    แผนก
+                    <select id="centralKpiDepartmentFilter" onchange="filterCentralKpiCards()">
+                        <option value="">ทุกแผนก</option>
+                        <option value="planning">วางแผน</option>
+                        <option value="design">ดีไซน์/ขยายลาย</option>
+                        <option value="dyeing">ย้อม</option>
+                        <option value="weaving">ทอ</option>
+                        <option value="finishing">ตกแต่ง/ทากาว/บรรจุ</option>
+                    </select>
+                </label>
+            </section>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -3816,6 +3993,7 @@
         })();
         let isDisplayMode = false;
         let currentView = 'overview'; // 'overview' | 'board' | 'records' | 'summary' | 'shipping'
+        let timelinePlanningMode = 'ai'; // 'ai' | 'manual'
         // Global M/O / S/O switch — applies across every tab in the whole system at once (not just
         // Overview). 'all' shows everything; 'MO'/'SO' narrows every tab's list/table/board down to
         // just that order type. Persists across tab switches until the user changes it again.
@@ -4283,7 +4461,22 @@
             scheduleSharedRecordsSync('designJobLogs');
         }
 
+        function positionQcControls() {
+            const moves = [
+                ['qcStatsPanel', 'qcRecordsStatsMount'],
+                ['orderTypeFilterPanel', 'qcRecordsOrderTypeMount'],
+                ['marketFilterPanel', 'qcRecordsMarketMount'],
+                ['globalSearchFilterWrapper', 'qcRecordsFilterMount']
+            ];
+            moves.forEach(([sourceId, mountId]) => {
+                const source = document.getElementById(sourceId);
+                const mount = document.getElementById(mountId);
+                if (source && mount && source.parentElement !== mount) mount.appendChild(source);
+            });
+        }
+
         function initApp() {
+            positionQcControls();
             populateMoSoFilterOptions();
             filterTable(); // applies the search/status/dept/month filters plus the global M/O, S/O switch, and renders both the records table and the shipping list
             renderWeeklyQcSummary();
@@ -5009,6 +5202,13 @@
         // =========================================================================================
         function renderCentralDashboard() {
             const activeOrders = productionOrders.filter(o => getEffectiveStage(o) !== 'shipped');
+            const snapshotEl = document.getElementById('centralSnapshotAt');
+            if (snapshotEl) {
+                snapshotEl.textContent = new Intl.DateTimeFormat('th-TH', {
+                    dateStyle: 'long',
+                    timeStyle: 'short'
+                }).format(new Date());
+            }
 
             document.getElementById('centralKpiActiveOrders').textContent = String(activeOrders.length);
             const moCount = activeOrders.filter(o => (o.orderType || detectOrderTypeFromMoSo(o.moSo)) === 'MO').length;
@@ -5044,6 +5244,7 @@
             })).filter(it => it.value > 0 || true), 'bg-indigo-500');
             renderCentralUrgentTable(activeOrders);
             renderCentralDeptKpiGrid(activeOrders);
+            filterCentralKpiCards();
         }
 
         // NEW (2026-09): จาก Dashboard กลาง กดเข้าไปดูรายงาน KPI เต็มรูปแบบของแผนกนั้น ๆ ได้ทันที —
@@ -5116,8 +5317,10 @@
             // เฉลี่ยถ่วงน้ำหนักตามชั่วโมงทำงานวันนี้ (ตามที่ผู้ใช้เลือก "สรุปภาพรวมทั้งบริษัท") ---
             const weavingStats = computeWeavingTodayStats();
 
-            const card = (icon, color, title, rows, dept) => `
-                <div class="border border-slate-100 rounded-xl p-3.5 flex flex-col justify-between">
+            const card = (icon, color, title, rows, dept) => {
+                const searchText = [title].concat(rows.map(r => `${r.label} ${r.value}`)).join(' ').toLowerCase();
+                return `
+                <div class="central-dept-card p-3.5 flex flex-col justify-between" data-department="${dept}" data-search="${escapeHtml(searchText)}">
                     <div>
                         <h4 class="font-semibold text-slate-800 text-xs mb-2"><i class="fa-solid ${icon} mr-1.5 text-${color}-600"></i> ${escapeHtml(title)}</h4>
                         <div class="space-y-1.5">
@@ -5134,6 +5337,7 @@
                     </button>
                 </div>
             `;
+            };
 
             grid.innerHTML =
                 card('fa-clipboard-list', 'indigo', 'แผนกวางแผน', [
@@ -5158,6 +5362,18 @@
                     { label: 'ตร.ม. ที่ทอวันนี้', value: `${weavingStats.totalSqm.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ตร.ม.` },
                     { label: '% เทียบเกรดเฉลี่ยวันนี้', value: weavingStats.avgGradePercent === null ? '-' : `${weavingStats.avgGradePercent}%` }
                 ], 'weaving');
+        }
+
+        function filterCentralKpiCards() {
+            const queryEl = document.getElementById('centralKpiSearchInput');
+            const departmentEl = document.getElementById('centralKpiDepartmentFilter');
+            const query = (queryEl ? queryEl.value : '').trim().toLowerCase();
+            const department = departmentEl ? departmentEl.value : '';
+            document.querySelectorAll('#centralDeptKpiGrid .central-dept-card').forEach(card => {
+                const matchesDepartment = !department || card.dataset.department === department;
+                const matchesQuery = !query || (card.dataset.search || '').includes(query);
+                card.classList.toggle('hidden', !matchesDepartment || !matchesQuery);
+            });
         }
 
         // เทียบ "จำนวนงานที่กำลังอยู่ในคิวของแผนกนี้ตอนนี้" (นับจาก currentStage) กับ "กำลังการผลิตจริง"
@@ -11572,6 +11788,92 @@
         // independently via renderTimelineSection() (each with its own date range/day grid), and
         // applies the global M/O, S/O switch the same way the ภาพรวมการผลิต tab does: narrowing it to
         // one type hides the OTHER section's whole box rather than just rendering it empty.
+        function setTimelinePlanningMode(mode) {
+            timelinePlanningMode = mode === 'manual' ? 'manual' : 'ai';
+            const aiBtn = document.getElementById('timelineModeAiBtn');
+            const manualBtn = document.getElementById('timelineModeManualBtn');
+            const aiPanel = document.getElementById('timelineAiPanel');
+            const manualPanel = document.getElementById('timelineManualPanel');
+            const description = document.getElementById('timelineModeDescription');
+            if (aiBtn) {
+                aiBtn.classList.toggle('is-active', timelinePlanningMode === 'ai');
+                aiBtn.setAttribute('aria-selected', timelinePlanningMode === 'ai' ? 'true' : 'false');
+            }
+            if (manualBtn) {
+                manualBtn.classList.toggle('is-active', timelinePlanningMode === 'manual');
+                manualBtn.setAttribute('aria-selected', timelinePlanningMode === 'manual' ? 'true' : 'false');
+            }
+            if (aiPanel) aiPanel.classList.toggle('hidden', timelinePlanningMode !== 'ai');
+            if (manualPanel) manualPanel.classList.toggle('hidden', timelinePlanningMode !== 'manual');
+            if (description) {
+                description.textContent = timelinePlanningMode === 'ai'
+                    ? 'AI ใช้ข้อมูลพื้นที่ ความซับซ้อน กำลังคน และคิวงาน เพื่อคำนวณจำนวนวันของแต่ละแผนก'
+                    : 'กำหนดจำนวนวันเองในตาราง ระบบจะจัดคิวตามกำหนดส่งและกำลังผลิตที่ตั้งไว้';
+            }
+            if (timelinePlanningMode === 'manual') renderTimelineManualPlanner();
+        }
+
+        function renderTimelineManualPlanner() {
+            const tbody = document.getElementById('timelineManualTableBody');
+            const emptyEl = document.getElementById('timelineManualEmpty');
+            const countEl = document.getElementById('timelineManualCount');
+            if (!tbody) return;
+            const searchEl = document.getElementById('timelineSearchInput');
+            const searchTerm = (searchEl ? searchEl.value : '').trim().toLowerCase();
+            const rows = [];
+            productionOrders.forEach((order, orderIndex) => {
+                if (getEffectiveStage(order) === 'shipped') return;
+                const type = order.orderType || detectOrderTypeFromMoSo(order.moSo);
+                if (orderTypeFilter !== 'all' && type !== orderTypeFilter) return;
+                if (!matchesMarketFilter(order)) return;
+                const haystack = [order.moSo, order.customerName, order.customerPO].map(v => String(v || '').toLowerCase()).join(' ');
+                if (searchTerm && !haystack.includes(searchTerm)) return;
+                rows.push({ order, orderIndex });
+            });
+            rows.sort((a, b) => sortByDueDateAsc(a, b));
+            if (countEl) countEl.textContent = `${rows.length} รายการในแผน`;
+            if (emptyEl) emptyEl.classList.toggle('hidden', rows.length > 0);
+            tbody.innerHTML = rows.map(({ order, orderIndex }) => {
+                const durations = order.planDurations || {};
+                const totalDays = ['design', 'dyeing', 'weaving', 'finishing']
+                    .reduce((sum, stage) => sum + (Number(durations[stage]) || 0), 0);
+                const finalDate = order.planDates && (
+                    order.planDates.finishing ||
+                    order.planDates.weaving ||
+                    order.planDates.dyeing ||
+                    order.planDates.design
+                );
+                const durationInput = stage => `
+                    <input type="number" min="0" step="1" value="${durations[stage] === '' || durations[stage] === undefined ? '' : escapeHtml(durations[stage])}"
+                        onchange="updateTimelineManualDuration(${orderIndex}, '${stage}', this.value)"
+                        class="bg-white border border-slate-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        aria-label="จำนวนวัน ${escapeHtml(STAGE_LABELS[stage])} ของ ${escapeHtml(order.moSo)}">
+                `;
+                return `
+                    <tr class="text-slate-700 hover:bg-slate-50">
+                        <td class="py-2 px-3 font-bold text-teal-800 cursor-pointer" onclick="openOrderDetailModal(${orderIndex})">${escapeHtml(order.moSo || '-')}</td>
+                        <td class="py-2 px-3">${escapeHtml(order.customerName || '-')}</td>
+                        <td class="py-2 px-3">${escapeHtml(normalizeDateString(order.dueDate) || '-')}</td>
+                        <td class="py-2 px-3 text-right">${durationInput('design')}</td>
+                        <td class="py-2 px-3 text-right">${durationInput('dyeing')}</td>
+                        <td class="py-2 px-3 text-right">${durationInput('weaving')}</td>
+                        <td class="py-2 px-3 text-right">${durationInput('finishing')}</td>
+                        <td class="py-2 px-3 text-right font-bold">${totalDays}</td>
+                        <td class="py-2 px-3 font-semibold ${finalDate && order.dueDate && finalDate > normalizeDateString(order.dueDate) ? 'text-rose-600' : 'text-emerald-700'}">${escapeHtml(finalDate || '-')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateTimelineManualDuration(orderIndex, stage, value) {
+            if (!['design', 'dyeing', 'weaving', 'finishing'].includes(stage)) return;
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            updateOrderField(orderIndex, `planDurations.${stage}`, value === '' ? '' : Math.max(0, Number(value) || 0));
+            order.planning.planMode = 'manual';
+            renderTimelineManualPlanner();
+        }
+
         function renderProductionTimeline() {
             const moContainer = document.getElementById('timelineMoSectionContainer');
             const soContainer = document.getElementById('timelineSoSectionContainer');
@@ -11580,6 +11882,7 @@
 
             renderTimelineSection('MO', 'timelineMoGrid', 'emptyTimelineMoState', 'timelineMoCountBadge');
             renderTimelineSection('SO', 'timelineSoGrid', 'emptyTimelineSoState', 'timelineSoCountBadge');
+            if (timelinePlanningMode === 'manual') renderTimelineManualPlanner();
         }
 
         // =========================================================================================
