@@ -14830,6 +14830,7 @@
             <th class="px-2 py-2 text-left">วันที่โอน</th>
             <th class="px-2 py-2 text-left">เลขที่ใบส่ง</th>
             <th class="px-2 py-2 text-left">วันส่งพรม</th>
+            <th class="px-2 py-2 text-left">เลขที่ INV อ้างอิง</th>
         `;
 
         function renderKpiDueDateReport() {
@@ -14876,13 +14877,22 @@
                         <td class="px-2 py-1.5"><input type="date" value="${w.transferDate || ''}" onchange="${f(orderIndex, 'weaving.transferDate')}" class="px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
                         <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(fin.deliveryNoteNo || '')}" onchange="${f(orderIndex, 'finishing.deliveryNoteNo')}" class="w-20 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
                         <td class="px-2 py-1.5 whitespace-nowrap">${escapeHtml(order.shippedDate || '-')}</td>
+                        <td class="px-2 py-1.5"><input type="text" value="${escapeHtml(fin.invNo || '')}" onchange="${f(orderIndex, 'finishing.invNo')}" placeholder="เลขที่ INV" class="w-24 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs"></td>
                     </tr>
                 `;
             };
 
             const moList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) !== 'SO');
             const soList = list.filter(({ order }) => (order.orderType || detectOrderTypeFromMoSo(order.moSo)) === 'SO');
-            renderSplitOrderTypeTables('kpiDueSplitContainer', KPI_DUE_THEAD_HTML, moList.map(rowHtml).join(''), soList.map(rowHtml).join(''), moList.length, soList.length, 17);
+            // NEW (2026-09-17): "เลขที่ INV อ้างอิง" column — a reference/document number (not a billing
+            // amount), entered by staff once the shipment is invoiced. Stored at order.finishing.invNo,
+            // same convention as deliveryNoteNo right next to it: kept local-only (localStorage + this
+            // report's own Excel export/import below), never added to the Apps Script/Google Sheet
+            // schema — same reasoning as the billing fields already excluded there (see the "ใบส่งของ" /
+            // "ใบ Mark & Nos" comment above). Per the user's own request, this links the ship date
+            // (วันส่งพรม, already reading order.shippedDate live) together with this reference number in
+            // one place: the "แผนกวางแผน" KPI "ส่งมอบทั้งหมด" report.
+            renderSplitOrderTypeTables('kpiDueSplitContainer', KPI_DUE_THEAD_HTML, moList.map(rowHtml).join(''), soList.map(rowHtml).join(''), moList.length, soList.length, 18);
         }
 
         // ---- 3-4. ปริมาณไหมเหลือจากการทอ + Surplus ต่อ M/O -------------------------------------------
@@ -16187,7 +16197,8 @@
             { key: 'pendingQty', label: 'ค้างทอ', type: 'number' },
             { key: 'transferDate', label: 'วันที่โอน', type: 'date' },
             { key: 'deliveryNoteNo', label: 'เลขที่ใบส่ง' },
-            { key: 'shippedDate', label: 'วันส่งพรม' }
+            { key: 'shippedDate', label: 'วันส่งพรม' },
+            { key: 'invNo', label: 'เลขที่ INV อ้างอิง' }
         ];
 
         function exportKpiDueDateReport() {
@@ -16199,7 +16210,7 @@
                     colorsCount: order.colorsCount, totalSqm: order.totalSqm,
                     grade: w.grade, location: w.location, startDate: w.startDate, finishDate: w.finishDate,
                     pendingQty: w.pendingQty, transferDate: w.transferDate, deliveryNoteNo: fin.deliveryNoteNo,
-                    shippedDate: order.shippedDate
+                    shippedDate: order.shippedDate, invNo: fin.invNo
                 };
             });
             exportFlatRowsToExcel('รายงานกำหนดส่งตามแผน.xlsx', 'กำหนดส่ง', PLANNING_DUE_COLUMNS, flatRows);
@@ -16226,6 +16237,7 @@
                     if (r.pendingQty !== '') order.weaving.pendingQty = r.pendingQty;
                     if (r.transferDate !== '') order.weaving.transferDate = r.transferDate;
                     if (r.deliveryNoteNo !== '') order.finishing.deliveryNoteNo = r.deliveryNoteNo;
+                    if (r.invNo !== '') order.finishing.invNo = r.invNo;
                     persistOrderChange(order);
                     matched++;
                 });
