@@ -116,28 +116,6 @@
             padding-top: 28px;
             padding-bottom: 48px;
         }
-        .workspace-intro { padding: 2px 2px 0; }
-        .workspace-eyebrow {
-            margin: 0 0 5px;
-            color: var(--brand-700);
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: .09em;
-            text-transform: uppercase;
-        }
-        .workspace-heading {
-            margin: 0;
-            color: #111b1c;
-            font-size: clamp(24px, 3vw, 35px);
-            line-height: 1.25;
-            font-weight: 700;
-            letter-spacing: 0;
-        }
-        .workspace-description {
-            margin: 6px 0 0;
-            color: var(--muted);
-            font-size: 12px;
-        }
         main > .bg-white.rounded-2xl,
         main .bg-white.rounded-2xl,
         main .rounded-2xl.bg-white {
@@ -222,9 +200,116 @@
             height: 38px !important;
             border-radius: 3px !important;
         }
+        .department-tab-shell {
+            padding: 0 !important;
+            overflow: hidden;
+        }
+        .department-tabs {
+            display: grid !important;
+            grid-template-columns: repeat(7, minmax(142px, 1fr));
+            gap: 0 !important;
+            overflow-x: auto;
+            padding: 0 !important;
+            scrollbar-width: thin;
+        }
+        .department-tab {
+            --dept-color: #475569;
+            --dept-soft: #f1f5f9;
+            --dept-border: #cbd5e1;
+            position: relative;
+            min-width: 142px;
+            min-height: 86px;
+            display: flex !important;
+            flex-direction: column;
+            align-items: flex-start !important;
+            justify-content: center;
+            gap: 5px !important;
+            padding: 14px 15px !important;
+            border: 0 !important;
+            border-right: 1px solid var(--line) !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+            color: #526263 !important;
+            box-shadow: none !important;
+            text-align: left;
+            transition: background-color .18s ease, color .18s ease;
+        }
+        .department-tab:last-child { border-right: 0 !important; }
+        .department-tab::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 4px;
+            background: var(--dept-color);
+            opacity: .3;
+        }
+        .department-tab:hover { background: var(--dept-soft) !important; color: var(--dept-color) !important; }
+        .department-tab.is-active {
+            background: var(--dept-soft) !important;
+            color: var(--dept-color) !important;
+        }
+        .department-tab.is-active::after { height: 5px; opacity: 1; }
+        .department-tab-label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+        .department-tab-label i {
+            width: 26px;
+            height: 26px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 3px;
+            background: var(--dept-soft);
+            color: var(--dept-color);
+            font-size: 12px;
+        }
+        .department-tab.is-active .department-tab-label i {
+            background: var(--dept-color);
+            color: #fff;
+        }
+        .department-tab-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-left: 33px;
+            color: #7b898a;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .department-tab-count {
+            min-width: 20px !important;
+            height: 20px !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px !important;
+            border: 1px solid var(--dept-border);
+            border-radius: 10px !important;
+            background: #fff !important;
+            color: var(--dept-color) !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+        }
+        .department-tab[data-department="sales"] { --dept-color: #28765d; --dept-soft: #e9f5ef; --dept-border: #a8d5c2; }
+        .department-tab[data-department="planning"] { --dept-color: #315da8; --dept-soft: #edf3fc; --dept-border: #b5c9ea; }
+        .department-tab[data-department="design"] { --dept-color: #147b91; --dept-soft: #e8f6f8; --dept-border: #a8d8e1; }
+        .department-tab[data-department="dyeing"] { --dept-color: #7049a7; --dept-soft: #f2edf9; --dept-border: #cbb9e3; }
+        .department-tab[data-department="weaving"] { --dept-color: #168071; --dept-soft: #e8f6f3; --dept-border: #a9d9d1; }
+        .department-tab[data-department="finishing"] { --dept-color: #a34372; --dept-soft: #faedf3; --dept-border: #e5b8cd; }
+        .department-tab[data-department="ready_to_ship"] { --dept-color: #b76616; --dept-soft: #fff3e5; --dept-border: #edc28f; }
         @media (max-width: 768px) {
             #mainHeader .max-w-7xl { align-items: stretch; }
             .app-navigation-tabs { width: 100%; }
+            .department-tabs { grid-template-columns: repeat(7, minmax(132px, 1fr)); }
+            .department-tab { min-width: 132px; min-height: 78px; padding: 12px !important; }
         }
         @media (max-width: 640px) {
             #mainHeader .max-w-7xl { padding: 16px 12px; gap: 14px; }
@@ -246,8 +331,6 @@
                 font-size: 0.75rem;
             }
             main.max-w-7xl { padding-left: 10px; padding-right: 10px; padding-top: 20px; }
-            .workspace-heading { font-size: 25px; }
-            .workspace-description { font-size: 11px; }
             #mascotWidget { display: none !important; }
             #toast { left: 10px; right: 10px; bottom: 10px; }
         }
@@ -545,12 +628,6 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
-
-        <section class="workspace-intro no-print" aria-labelledby="workspaceHeading">
-            <p class="workspace-eyebrow">Production Operations</p>
-            <h2 id="workspaceHeading" class="workspace-heading">ศูนย์ควบคุมการผลิตและคุณภาพ</h2>
-            <p class="workspace-description">ติดตามแผนการผลิต สถานะงาน และผลการตรวจสอบคุณภาพจากพื้นที่ทำงานเดียว</p>
-        </section>
 
         <!-- Notification Toast -->
         <div id="toast" class="hidden no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-10 opacity-0">
@@ -934,18 +1011,19 @@
                  now only ever viewed one at a time, full-width, via its own pill below. "วางแผน" is the
                  new default/active tab on load (see boardDepartmentFilter's declaration + the
                  setBoardDepartmentTab('planning') call in initApp()). -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4">
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
+            <div class="department-tab-shell bg-white rounded-2xl shadow-sm border border-slate-100 mb-4">
+                <div class="department-tabs">
                     <!-- NEW (2026-09-11): "แผนกขาย" — not a data filter like the other pills (no
                          boardColWrap-sales column). Selecting it swaps the whole boardColumnsGrid/search
                          area out for salesFormContainer, the "เพิ่ม M/O, S/O ใหม่" form moved here inline
                          from its old popup — see updateBoardColumnVisibility() and openNewOrderModal(). -->
-                    <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-cart-shopping"></i> แผนกขาย
+                    <button onclick="setBoardDepartmentTab('sales')" id="boardTabBtn-sales" data-department="sales" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-cart-shopping"></i> ฝ่ายขาย</span>
+                        <span class="department-tab-meta">เปิดและจัดการคำสั่งผลิต</span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
-                        <i class="fa-solid fa-calendar-days"></i> วางแผน
-                        <span id="boardTabCount-planning" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('planning')" id="boardTabBtn-planning" data-department="planning" class="department-tab is-active">
+                        <span class="department-tab-label"><i class="fa-solid fa-calendar-days"></i> แผนกวางแผน</span>
+                        <span class="department-tab-meta">งานในแผนก <span id="boardTabCount-planning" class="department-tab-count">0</span></span>
                     </button>
                     <!-- NEW (2026-09-16): "ดีไซน์/ขยายลาย" — a newly added department, placed right after
                          "วางแผน" per the user's request. Unlike the other 4 pills, this doesn't filter by
@@ -953,21 +1031,21 @@
                          STAGE_LABELS.design's comment) — it counts/lists orders whose design/ขยายลาย
                          checklist isn't done yet (order.design.done === false), regardless of which real
                          stage the order is currently in. See BOARD_TABS / buildDesignOrderCard() below. -->
-                    <button onclick="setBoardDepartmentTab('design')" id="boardTabBtn-design" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-pen-ruler"></i> ดีไซน์/ขยายลาย
-                        <span id="boardTabCount-design" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('design')" id="boardTabBtn-design" data-department="design" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-pen-ruler"></i> ดีไซน์/ขยายลาย</span>
+                        <span class="department-tab-meta">งานในแผนก <span id="boardTabCount-design" class="department-tab-count">0</span></span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('dyeing')" id="boardTabBtn-dyeing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-droplet"></i> ย้อม
-                        <span id="boardTabCount-dyeing" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('dyeing')" id="boardTabBtn-dyeing" data-department="dyeing" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-droplet"></i> แผนกย้อม</span>
+                        <span class="department-tab-meta">งานในแผนก <span id="boardTabCount-dyeing" class="department-tab-count">0</span></span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('weaving')" id="boardTabBtn-weaving" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-hand-holding-heart"></i> ทอ
-                        <span id="boardTabCount-weaving" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('weaving')" id="boardTabBtn-weaving" data-department="weaving" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-hand-holding-heart"></i> แผนกทอ</span>
+                        <span class="department-tab-meta">งานในแผนก <span id="boardTabCount-weaving" class="department-tab-count">0</span></span>
                     </button>
-                    <button onclick="setBoardDepartmentTab('finishing')" id="boardTabBtn-finishing" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-box-archive"></i> ตกแต่ง/บรรจุ
-                        <span id="boardTabCount-finishing" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('finishing')" id="boardTabBtn-finishing" data-department="finishing" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-box-archive"></i> ตกแต่ง/บรรจุ</span>
+                        <span class="department-tab-meta">งานในแผนก <span id="boardTabCount-finishing" class="department-tab-count">0</span></span>
                     </button>
                     <!-- NEW (2026-09-11): "แจ้งเตือน (รอส่ง)" — same non-currentStage pattern as
                          "ดีไซน์/ขยายลาย" above: lists every order whose readyToShip flag is set (see
@@ -976,9 +1054,9 @@
                          the SAME markOrderShipped() the รายการรอส่ง tab uses — sqm-in-line deduction and
                          moving to จัดส่งเรียบร้อยแล้ว both already happen correctly via that one function,
                          no duplicate logic needed. See renderNotifyBoardColumn() / buildReadyToShipOrderCard(). -->
-                    <button onclick="setBoardDepartmentTab('ready_to_ship')" id="boardTabBtn-ready_to_ship" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-                        <i class="fa-solid fa-bell"></i> แจ้งเตือน
-                        <span id="boardTabCount-ready_to_ship" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">0</span>
+                    <button onclick="setBoardDepartmentTab('ready_to_ship')" id="boardTabBtn-ready_to_ship" data-department="ready_to_ship" class="department-tab">
+                        <span class="department-tab-label"><i class="fa-solid fa-bell"></i> แจ้งเตือน/รอส่ง</span>
+                        <span class="department-tab-meta">รายการติดตาม <span id="boardTabCount-ready_to_ship" class="department-tab-count">0</span></span>
                     </button>
                 </div>
             </div>
@@ -11171,8 +11249,6 @@
         }
 
         function updateBoardDepartmentTabStyles() {
-            const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
-            const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
             const buttons = [
                 { el: document.getElementById('boardTabBtn-sales'), isActive: boardDepartmentFilter === 'sales' }
             ].concat(BOARD_TABS.map(stage => ({
@@ -11181,13 +11257,8 @@
                 })));
             buttons.forEach(({ el, isActive }) => {
                 if (!el) return;
-                if (isActive) {
-                    el.classList.remove(...inactiveClasses);
-                    el.classList.add(...activeClasses);
-                } else {
-                    el.classList.remove(...activeClasses);
-                    el.classList.add(...inactiveClasses);
-                }
+                el.classList.toggle('is-active', isActive);
+                el.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
         }
 
