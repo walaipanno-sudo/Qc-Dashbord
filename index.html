@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Plan & Qc Siam Carpets</title>
+    <title>Production Control | Siam Carpets</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -21,44 +21,217 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         :root {
-            --brand-950: #14213d;
-            --brand-800: #1f3a5f;
-            --brand-700: #28527a;
-            --brand-600: #326a9d;
+            --brand-950: #0d3034;
+            --brand-900: #123b3f;
+            --brand-800: #174a4d;
+            --brand-700: #236064;
+            --brand-600: #34777a;
+            --brand-mint: #a8e1d1;
             --surface: #ffffff;
-            --page: #f4f7fb;
-            --line: #dce4ee;
-            --muted: #64748b;
+            --page: #f1f4f4;
+            --line: #d6dede;
+            --line-strong: #bdcaca;
+            --muted: #6c7c7d;
+            --ink: #172526;
         }
-        body { font-family: 'Prompt', sans-serif; background: var(--page) !important; color: #1e293b; }
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: var(--page) !important;
+            color: var(--ink);
+            letter-spacing: 0;
+        }
 
-        /* Corporate dashboard treatment: calm navy, clean surfaces and clear information grouping. */
-        #mainHeader { background: linear-gradient(115deg, var(--brand-950), var(--brand-800)) !important; box-shadow: 0 4px 18px rgba(20, 33, 61, .18); }
-        #mainHeader .max-w-7xl { max-width: 1440px; }
-        main.max-w-7xl { max-width: 1440px; }
+        /* Reference-led corporate shell: dark teal, compact controls and square data surfaces. */
+        #mainHeader {
+            position: relative !important;
+            background: var(--brand-950) !important;
+            box-shadow: none !important;
+            border-bottom: 1px solid rgba(168, 225, 209, .22);
+        }
+        #mainHeader .max-w-7xl { max-width: 1280px; padding-top: 22px; padding-bottom: 20px; }
+        .brand-lockup { min-width: 280px; }
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            display: grid;
+            place-items: center;
+            background: var(--brand-mint);
+            color: var(--brand-950);
+            border-radius: 2px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .brand-company {
+            margin: 0 0 2px;
+            color: #b9cecc;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        #mainHeader h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 25px;
+            line-height: 1.15;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .header-actions {
+            overflow-x: auto;
+            flex-wrap: nowrap !important;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(168, 225, 209, .45) transparent;
+            padding-bottom: 3px;
+        }
+        #mainHeader .header-actions button {
+            flex: 0 0 auto;
+            min-height: 34px;
+            padding: 7px 10px !important;
+            border: 1px solid rgba(203, 227, 223, .42) !important;
+            border-radius: 2px !important;
+            background: transparent !important;
+            color: #f5fbfa !important;
+            box-shadow: none !important;
+            font-size: 11px !important;
+            font-weight: 500;
+        }
+        #mainHeader .header-actions button:hover {
+            background: rgba(168, 225, 209, .12) !important;
+            border-color: var(--brand-mint) !important;
+        }
+        #mainHeader .header-actions #addBtn {
+            background: var(--brand-mint) !important;
+            border-color: var(--brand-mint) !important;
+            color: var(--brand-950) !important;
+            font-weight: 700;
+        }
+        #mainHeader .header-actions button i { color: inherit !important; }
+        #syncStatusText { color: #b9cecc; }
+
+        main.max-w-7xl {
+            max-width: 1280px;
+            padding-top: 28px;
+            padding-bottom: 48px;
+        }
+        .workspace-intro { padding: 2px 2px 0; }
+        .workspace-eyebrow {
+            margin: 0 0 5px;
+            color: var(--brand-700);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+        .workspace-heading {
+            margin: 0;
+            color: #111b1c;
+            font-size: clamp(24px, 3vw, 35px);
+            line-height: 1.25;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .workspace-description {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
         main > .bg-white.rounded-2xl,
-        main .bg-white.rounded-2xl { border-color: var(--line); box-shadow: 0 2px 10px rgba(15, 23, 42, .045); }
-        .app-navigation { border-color: var(--line) !important; box-shadow: 0 2px 12px rgba(15, 23, 42, .055) !important; }
-        .app-navigation-title { color: var(--brand-950); letter-spacing: .01em; }
-        .app-navigation-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: thin; }
-        .app-navigation-tabs button { white-space: nowrap; }
-        .app-navigation-tabs button:hover { background: #e8f0f7; }
+        main .bg-white.rounded-2xl,
+        main .rounded-2xl.bg-white {
+            border-color: var(--line) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 8px 24px rgba(13, 48, 52, .045) !important;
+        }
+        main .rounded-xl { border-radius: 4px !important; }
+        main .rounded-lg { border-radius: 3px !important; }
+        main table { color: #253536; }
+        main table thead tr,
+        main table thead th {
+            background: #edf1f1 !important;
+            color: #405455 !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: .025em;
+        }
+        main table th,
+        main table td { border-color: #e1e7e7 !important; }
+        main table tbody tr:hover td { background: #f8fafa; }
+        main input,
+        main select,
+        main textarea {
+            border-color: var(--line-strong) !important;
+            border-radius: 3px !important;
+            background-color: #fff !important;
+        }
+        main input:focus,
+        main select:focus,
+        main textarea:focus {
+            --tw-ring-color: rgba(52, 119, 122, .2) !important;
+            border-color: var(--brand-600) !important;
+        }
+        .app-navigation {
+            padding: 14px !important;
+            border-color: var(--line) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 8px 24px rgba(13, 48, 52, .045) !important;
+        }
+        .app-navigation-title { color: var(--brand-950); letter-spacing: 0; }
+        .app-navigation-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap !important;
+            border: 1px solid var(--line);
+            border-radius: 3px !important;
+            background: #f2f5f5 !important;
+            scrollbar-width: thin;
+        }
+        .app-navigation-tabs button {
+            white-space: nowrap;
+            border-radius: 2px !important;
+            box-shadow: none !important;
+        }
+        .app-navigation-tabs button:hover { background: #e4eceb; }
         #tabOverviewBtn.bg-white, #tabBoardBtn.bg-white, #tabTimelineBtn.bg-white,
         #tabRecordsBtn.bg-white, #tabShippingBtn.bg-white, #tabShippedBtn.bg-white,
         #tabIssuesBtn.bg-white, #tabAnalyticsBtn.bg-white, #tabCentralBtn.bg-white {
             background: var(--brand-800) !important; color: #fff !important; box-shadow: none !important;
         }
         #globalSearchFilterWrapper input, #globalSearchFilterWrapper select { border-color: var(--line); background: #fff; }
-        #globalSearchFilterWrapper input:focus, #globalSearchFilterWrapper select:focus { --tw-ring-color: rgba(50,106,157,.28); border-color: var(--brand-600); }
+        #globalSearchFilterWrapper input:focus, #globalSearchFilterWrapper select:focus { --tw-ring-color: rgba(52,119,122,.22); border-color: var(--brand-600); }
         .formal-filter-label { color: var(--brand-800); }
+        #overviewViewContainer > div,
+        #recordsViewContainer > div,
+        #shippingViewContainer > div,
+        #shippedViewContainer > div,
+        #issuesViewContainer > div,
+        #analyticsViewContainer > div,
+        #centralViewContainer > div { border-color: var(--line) !important; }
+        #overviewMoBoxContainer > div:first-child,
+        #overviewSoBoxContainer > div:first-child { background: #edf3f2 !important; }
+        .no-print.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4 > div {
+            min-height: 104px;
+            padding: 18px !important;
+            border-radius: 4px !important;
+            border-color: var(--line) !important;
+            box-shadow: 0 8px 24px rgba(13, 48, 52, .045) !important;
+        }
+        .no-print.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4 > div > div:last-child {
+            width: 38px !important;
+            height: 38px !important;
+            border-radius: 3px !important;
+        }
         @media (max-width: 768px) {
             #mainHeader .max-w-7xl { align-items: stretch; }
             .app-navigation-tabs { width: 100%; }
         }
         @media (max-width: 640px) {
-            #mainHeader { position: static !important; }
-            #mainHeader .max-w-7xl { padding: 12px; gap: 10px; }
-            #mainHeader h1 { font-size: 1rem; line-height: 1.35; }
+            #mainHeader .max-w-7xl { padding: 16px 12px; gap: 14px; }
+            .brand-lockup { min-width: 0; width: 100%; }
+            .brand-logo { width: 42px; height: 42px; flex-basis: 42px; font-size: 16px; }
+            .brand-company { font-size: 8px; }
+            #mainHeader h1 { font-size: 20px; line-height: 1.2; }
             #mainHeader .header-actions {
                 flex-wrap: nowrap;
                 justify-content: flex-start;
@@ -72,7 +245,9 @@
                 padding: 8px 10px;
                 font-size: 0.75rem;
             }
-            main.max-w-7xl { padding-left: 10px; padding-right: 10px; padding-top: 12px; }
+            main.max-w-7xl { padding-left: 10px; padding-right: 10px; padding-top: 20px; }
+            .workspace-heading { font-size: 25px; }
+            .workspace-description { font-size: 11px; }
             #mascotWidget { display: none !important; }
             #toast { left: 10px; right: 10px; bottom: 10px; }
         }
@@ -310,12 +485,11 @@
 
     <header id="mainHeader" class="bg-indigo-700 text-white shadow-md sticky top-0 z-30 transition-all duration-300 no-print">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm">
-                    <i class="fa-solid fa-clipboard-check text-2xl text-indigo-200"></i>
-                </div>
+            <div class="brand-lockup flex items-center space-x-3">
+                <div class="brand-logo" aria-hidden="true">SC</div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">Production Plan & Qc Siam Carpets</h1>
+                    <p class="brand-company">Siam Carpets Manufacturing Co., Ltd.</p>
+                    <h1>Production Control</h1>
                     <p class="text-xs text-slate-200 flex items-center gap-1.5">
                         <span id="syncStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
                         <span id="syncStatusText">กำลังตรวจสอบการเชื่อมต่อข้อมูล...</span>
@@ -371,6 +545,12 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+        <section class="workspace-intro no-print" aria-labelledby="workspaceHeading">
+            <p class="workspace-eyebrow">Production Operations</p>
+            <h2 id="workspaceHeading" class="workspace-heading">ศูนย์ควบคุมการผลิตและคุณภาพ</h2>
+            <p class="workspace-description">ติดตามแผนการผลิต สถานะงาน และผลการตรวจสอบคุณภาพจากพื้นที่ทำงานเดียว</p>
+        </section>
 
         <!-- Notification Toast -->
         <div id="toast" class="hidden no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-10 opacity-0">
