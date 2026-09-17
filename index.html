@@ -10989,13 +10989,23 @@
                 { date: normalizeDateString(pd.weaving), stage: 'weaving' },
                 { date: normalizeDateString(pd.finishing), stage: 'finishing' },
                 { date: normalizeDateString(order.dueDate), stage: 'ready_to_ship' }
-            ].filter(p => p.date);
+            ];
+            // Remember each point's fixed position (0-6) in the canonical department order BEFORE
+            // filtering out the ones with no date entered — this lets a segment know whether it connects
+            // two ADJACENT departments (a real, single-department span) or SKIPPED over one or more
+            // departments whose plan date was simply never filled in (stageSkipped: true below). The
+            // production calendar uses that flag to avoid mislabeling a long undated gap with whatever
+            // department happens to have the next-known date, instead falling back to the order's actual
+            // tracked stage for that stretch (see buildProductionCalendarDayMap).
+            points.forEach((p, idx) => { p.seqIndex = idx; });
+            const filteredPoints = points.filter(p => p.date);
 
             const segments = [];
-            for (let i = 1; i < points.length; i++) {
-                const segStart = points[i - 1].date;
-                const segEnd = points[i].date < segStart ? segStart : points[i].date;
-                segments.push({ start: segStart, end: segEnd, stage: points[i].stage });
+            for (let i = 1; i < filteredPoints.length; i++) {
+                const segStart = filteredPoints[i - 1].date;
+                const segEnd = filteredPoints[i].date < segStart ? segStart : filteredPoints[i].date;
+                const stageSkipped = (filteredPoints[i].seqIndex - filteredPoints[i - 1].seqIndex) > 1;
+                segments.push({ start: segStart, end: segEnd, stage: filteredPoints[i].stage, stageSkipped });
             }
             return segments;
         }
@@ -11256,7 +11266,21 @@
             const dayMapByOrder = {};
             ordersWithIndex.forEach(({ order, orderIndex }) => {
                 computeOrderTimelineSegments(order).forEach(seg => {
-                    if (!seg.stage || seg.stage === 'ready_to_ship') return; // no department yet, or ready-to-ship (not shown here)
+                    if (!seg.stage) return; // the initial "order opened" point has no department yet
+                    let displayStage = seg.stage;
+                    if (seg.stageSkipped) {
+                        // This segment's end date isn't really a target date FOR `seg.stage` — it's just
+                        // the next department that happened to have a plan date filled in, borrowed
+                        // because one or more departments in between never got one (e.g. only "แผนก
+                        // วางแผน" was filled in, so the gap all the way to the due date used to widen
+                        // into one long borrowed "รอส่ง" segment that then got hidden entirely, leaving
+                        // no info — or, before that, painted the wrong color for days the order has
+                        // already moved past). Trust the order's own tracked current stage for this
+                        // undated stretch instead of the borrowed label, so the calendar reflects where
+                        // the order actually is, not just the next date someone happened to fill in.
+                        displayStage = getEffectiveStage(order) || seg.stage;
+                    }
+                    if (!displayStage || displayStage === 'ready_to_ship' || displayStage === 'shipped') return; // รอส่ง/ส่งแล้ว are not shown on this calendar
                     let cursor = parseDateOnly(seg.start);
                     const segEnd = parseDateOnly(seg.end);
                     if (!cursor || !segEnd) return;
@@ -11265,7 +11289,7 @@
                     while (cursor <= cappedEnd) {
                         const key = formatDateKeyUTC(cursor);
                         if (!dayMapByOrder[key]) dayMapByOrder[key] = {};
-                        dayMapByOrder[key][orderIndex] = { order, orderIndex, stage: seg.stage };
+                        dayMapByOrder[key][orderIndex] = { order, orderIndex, stage: displayStage };
                         cursor = addDaysUTC(cursor, 1);
                     }
                 });
