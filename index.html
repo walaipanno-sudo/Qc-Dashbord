@@ -3240,6 +3240,12 @@
         // synced). Persisted to localStorage so it survives the very reload this bug happens around.
         let qcPendingSyncIds = new Set();
         let productionOrders = [];
+        // Latest local order payloads that have not yet received an explicit success response from
+        // Google Apps Script. A Sheet refresh must never overwrite these rows with an older server
+        // copy; the queue is persisted so a reload or temporary network outage cannot make a newly
+        // created/transferred M/O disappear.
+        let pendingOrderSyncs = new Map();
+        const activeOrderSyncs = new Map();
         // NEW (2026-09-16): true once fetchOrdersFromGoogleSheet() has completed at least one successful
         // response (even if it came back with zero orders) — lets the yarn calculator's "ค้นหา" lookup
         // tell a genuine "not found" apart from "still loading" right after the page opens. See the
@@ -3868,6 +3874,15 @@
             if (savedOrders) {
                 try { productionOrders = deduplicateProductionOrders(JSON.parse(savedOrders)); } catch(e) {}
             }
+            const savedPendingOrderSyncs = localStorage.getItem('qc_pending_order_syncs_v1');
+            if (savedPendingOrderSyncs) {
+                try {
+                    const parsedPending = JSON.parse(savedPendingOrderSyncs);
+                    pendingOrderSyncs = new Map(Object.entries(parsedPending || {}));
+                } catch(e) {
+                    pendingOrderSyncs = new Map();
+                }
+            }
             // NEW (2026-09e): issue reports — same load-then-refresh-from-Sheet pattern as qcData/productionOrders.
             const savedIssues = localStorage.getItem('qc_issues_v1');
             if (savedIssues) {
@@ -3912,7 +3927,9 @@
             initSupabase(); // NEW (2026-09-11): no-op until a Supabase URL/anon key has been saved
             if (gasWebAppUrl) {
                 fetchDataFromGoogleSheet(false);
-                fetchOrdersFromGoogleSheet(false);
+                // Retry local writes first, then read the shared Sheet. This ordering prevents a
+                // startup GET from returning an old stage while a queued transfer is still saving.
+                flushPendingOrderSyncs().finally(() => fetchOrdersFromGoogleSheet(false));
                 fetchIssuesFromGoogleSheet(false);
                 fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
                 fetchSpecTemplatesFromGoogleSheet(false); // NEW (2026-09-12): shared SPECIFICATIONS templates
@@ -3936,6 +3953,13 @@
         function saveOrdersToLocal() {
             productionOrders = deduplicateProductionOrders(productionOrders);
             localStorage.setItem('qc_production_orders_v1', JSON.stringify(productionOrders));
+        }
+
+        function savePendingOrderSyncsToLocal() {
+            localStorage.setItem(
+                'qc_pending_order_syncs_v1',
+                JSON.stringify(Object.fromEntries(pendingOrderSyncs))
+            );
         }
 
         function normalizeMoSoKey(value) {
@@ -4132,6 +4156,7 @@
             icon.classList.add('fa-spin');
             showToast('กำลังซิงค์ข้อมูลกับ Google Sheets...');
             await fetchDataFromGoogleSheet(true);
+            await flushPendingOrderSyncs();
             await fetchOrdersFromGoogleSheet(false);
             await fetchIssuesFromGoogleSheet(false);
             await fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
@@ -6671,7 +6696,26 @@
                 let result;
                 try { result = JSON.parse(text); } catch(e) { return; }
                 if (Array.isArray(result)) {
-                    productionOrders = deduplicateProductionOrders(result);
+                    const fetchedOrders = deduplicateProductionOrders(result);
+                    const fetchedByKey = new Map(
+                        fetchedOrders.map(order => [normalizeMoSoKey(order.moSo), order])
+                    );
+
+                    // The Sheet owns rows with no local write pending. For pending keys, the latest
+                    // local payload remains authoritative until syncOrderToSheet() receives an
+                    // explicit success response; otherwise a stale GET can make a just-sent row
+                    // disappear or jump back to its previous department.
+                    pendingOrderSyncs.forEach((pendingOrder, key) => {
+                        const fetchedOrder = fetchedByKey.get(key);
+                        if (fetchedOrder && fetchedOrder.syncRevision &&
+                            fetchedOrder.syncRevision === pendingOrder.syncRevision) {
+                            pendingOrderSyncs.delete(key);
+                        } else {
+                            fetchedByKey.set(key, normalizeOrder(pendingOrder));
+                        }
+                    });
+                    savePendingOrderSyncsToLocal();
+                    productionOrders = deduplicateProductionOrders(Array.from(fetchedByKey.values()));
                     ordersFetchedFromSheetOnce = true;
                     saveOrdersToLocal();
                     renderProductionOverview();
@@ -7710,6 +7754,7 @@
                 // NEW (2026-09-10): production calc engine inputs — see comment above.
                 productionCalc,
                 departmentGrades,
+                syncRevision: raw.syncRevision || '',
                 // NEW (2026-09-12): "SPECIFICATIONS" checklist — see comment above.
                 specs,
                 // NEW (2026-09-10): whether "แผนกวางแผน ต้องเสร็จวันที่" currently auto-follows the last
@@ -9098,19 +9143,91 @@
             `;
         }
 
-        async function syncOrderToSheet(order) {
-            if (!gasWebAppUrl) return;
+        function queueOrderForSync(order) {
+            const key = normalizeMoSoKey(order && order.moSo);
+            if (!key) return '';
+            order.syncRevision = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            pendingOrderSyncs.set(key, JSON.parse(JSON.stringify(order)));
+            saveOrdersToLocal();
+            savePendingOrderSyncsToLocal();
+            return key;
+        }
+
+        async function confirmOrderSyncRevision(key, revision) {
+            if (!gasWebAppUrl || !key || !revision) return false;
+            const separator = gasWebAppUrl.includes('?') ? '&' : '?';
+            const fetchUrl = gasWebAppUrl + separator + 'action=getOrders&syncCheck=' + encodeURIComponent(revision);
+            const response = await fetch(fetchUrl, { cache: 'no-store' });
+            if (!response.ok) return false;
+            const result = await response.json();
+            if (!Array.isArray(result)) return false;
+            return result.some(order =>
+                normalizeMoSoKey(order.moSo) === key &&
+                String(order.syncRevision || '') === String(revision)
+            );
+        }
+
+        async function flushOrderSyncKey(key) {
+            if (!gasWebAppUrl || !key) return false;
+            if (activeOrderSyncs.has(key)) return activeOrderSyncs.get(key);
+
+            const task = (async () => {
+                let allSaved = true;
+                while (pendingOrderSyncs.has(key)) {
+                    const payload = pendingOrderSyncs.get(key);
+                    const payloadJson = JSON.stringify(payload);
+                    try {
+                        const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=order' : gasWebAppUrl + '?type=order';
+                        await fetch(postUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: payloadJson
+                        });
+                        const confirmed = await confirmOrderSyncRevision(key, payload.syncRevision);
+                        if (!confirmed) {
+                            throw new Error('Google Sheets has not confirmed the latest order revision');
+                        }
+
+                        // A newer edit may have been queued while this request was in flight. Only
+                        // clear the entry when the acknowledged payload is still the latest one.
+                        if (JSON.stringify(pendingOrderSyncs.get(key)) === payloadJson) {
+                            pendingOrderSyncs.delete(key);
+                            savePendingOrderSyncsToLocal();
+                        }
+                    } catch(err) {
+                        allSaved = false;
+                        console.error("Error syncing production order to Google Sheet:", err);
+                        updateSyncStatus(false, `รอส่งข้อมูล ${pendingOrderSyncs.size} M/O, S/O`);
+                        break;
+                    }
+                }
+                return allSaved && !pendingOrderSyncs.has(key);
+            })();
+
+            activeOrderSyncs.set(key, task);
             try {
-                const postUrl = gasWebAppUrl.includes('?') ? gasWebAppUrl + '&type=order' : gasWebAppUrl + '?type=order';
-                await fetch(postUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(order)
-                });
-            } catch(err) {
-                console.error("Error syncing production order to Google Sheet:", err);
+                return await task;
+            } finally {
+                activeOrderSyncs.delete(key);
             }
+        }
+
+        async function flushPendingOrderSyncs() {
+            if (!gasWebAppUrl || pendingOrderSyncs.size === 0) return true;
+            const keys = Array.from(pendingOrderSyncs.keys());
+            const results = await Promise.all(keys.map(key => flushOrderSyncKey(key)));
+            if (results.every(Boolean)) {
+                updateSyncStatus(true, 'บันทึกรายการสายการผลิตครบแล้ว');
+                return true;
+            }
+            return false;
+        }
+
+        function syncOrderToSheet(order) {
+            const key = queueOrderForSync(order);
+            if (!key || !gasWebAppUrl) return Promise.resolve(false);
+            return flushOrderSyncKey(key);
         }
 
         // Sends a LINE broadcast (to everyone who's added the company's LINE Official Account as a

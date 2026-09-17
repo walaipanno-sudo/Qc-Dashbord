@@ -221,5 +221,23 @@ if (!appsScriptCode.includes('"DepartmentGrades"') ||
     !appsScriptCode.includes('JSON.stringify(order.departmentGrades || {})')) {
     throw new Error('Department work grades are not fully wired through the Google Sheets backend');
 }
+if (!appsScriptCode.includes('"SyncRevision"') ||
+    !appsScriptCode.includes("headerNames.indexOf('syncrevision')") ||
+    !appsScriptCode.includes("setValue(order.syncRevision || '')")) {
+    throw new Error('Production-order sync revision is not fully wired through the Google Sheets backend');
+}
 
-console.log('Order deduplication, calendar deduplication, transfer guards, dye-plan guards, and BOM memory passed.');
+[
+    "localStorage.getItem('qc_pending_order_syncs_v1')",
+    "localStorage.setItem(\n                'qc_pending_order_syncs_v1'",
+    'pendingOrderSyncs.forEach((pendingOrder, key) =>',
+    "mode: 'no-cors'",
+    'confirmOrderSyncRevision(key, payload.syncRevision)',
+    'flushPendingOrderSyncs().finally(() => fetchOrdersFromGoogleSheet(false))'
+].forEach(marker => {
+    if (!script.includes(marker)) {
+        throw new Error(`Production-order pending sync guard is incomplete: ${marker}`);
+    }
+});
+
+console.log('Order deduplication, calendar deduplication, transfer guards, pending sync, dye-plan guards, and BOM memory passed.');

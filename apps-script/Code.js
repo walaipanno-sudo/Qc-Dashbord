@@ -894,7 +894,9 @@ var ORDERS_NEW_HEADERS = ["CreatedAt", "IsInserted", "ShippingMark",
   "Specs",
   // Free-text work grades entered independently by Sales, Planning, Design, Dyeing, Weaving and
   // Finishing. Appended by header name so existing order sheets keep every current column in place.
-  "DepartmentGrades"];
+  "DepartmentGrades",
+  // Browser-generated receipt used to confirm that the latest order payload reached the Sheet.
+  "SyncRevision"];
 function ensureOrdersHeaders(sheet) {
   var lastCol = sheet.getLastColumn();
   var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); }) : [];
@@ -964,6 +966,7 @@ function extractOrderFromRow_(row, headerNames) {
   // NEW (2026-09-12): "SPECIFICATIONS" checklist — see ORDERS_NEW_HEADERS.
   var specsIdx = headerNames.indexOf('specs');
   var departmentGradesIdx = headerNames.indexOf('departmentgrades');
+  var syncRevisionIdx = headerNames.indexOf('syncrevision');
 
   return {
     moSo: String(row[0] || ''),
@@ -1048,7 +1051,8 @@ function extractOrderFromRow_(row, headerNames) {
     // NEW (2026-09-12): passed through as the raw JSON string — QCDashboard.html's normalizeOrder()
     // already parses either a string or a real object (same pattern as productionCalc/design above).
     specs: specsIdx !== -1 && row[specsIdx] ? String(row[specsIdx]) : '{}',
-    departmentGrades: departmentGradesIdx !== -1 && row[departmentGradesIdx] ? String(row[departmentGradesIdx]) : '{}'
+    departmentGrades: departmentGradesIdx !== -1 && row[departmentGradesIdx] ? String(row[departmentGradesIdx]) : '{}',
+    syncRevision: syncRevisionIdx !== -1 && row[syncRevisionIdx] ? String(row[syncRevisionIdx]) : ''
   };
 }
 
@@ -1296,6 +1300,10 @@ function upsertOrderIntoSheets_(order) {
       sheet.getRange(targetRow, departmentGradesIdx + 1).setValue(
         typeof order.departmentGrades === 'object' ? JSON.stringify(order.departmentGrades || {}) : (order.departmentGrades || '{}')
       );
+    }
+    var syncRevisionIdx = headerNames.indexOf('syncrevision');
+    if (syncRevisionIdx !== -1) {
+      sheet.getRange(targetRow, syncRevisionIdx + 1).setValue(order.syncRevision || '');
     }
 
     // NEW (2026-09-12): วันที่ส่งแบบ/ได้รับแบบ (แผนกดีไซน์) + "ข้อกำหนดสำหรับฝ่ายผลิต" — plain string/date
