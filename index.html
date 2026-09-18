@@ -10991,7 +10991,8 @@
         }
 
         function getOverviewStageLabel(order, effectiveStage) {
-            if (effectiveStage !== 'weaving' || order.weaving.mode === 'external') return STAGE_LABELS[effectiveStage];
+            if (effectiveStage !== 'weaving') return STAGE_LABELS[effectiveStage];
+            if (order.weaving.mode === 'external') return 'จ้างทอภายนอก';
             const occupancy = getCurrentLoomOccupancies([order])[0];
             return occupancy ? `กำลังทอจอ ${occupancy.loom}` : 'รอคิวทอ';
         }

@@ -122,8 +122,13 @@ assert.strictEqual(
 );
 assert.strictEqual(
     context.getOverviewStageLabel({ weaving: { mode: 'external', dailyLog: [] } }, 'weaving'),
-    'ทอ',
-    'Outsourced weaving must retain its normal stage label'
+    'จ้างทอภายนอก',
+    'Outsourced weaving must have its own overview status'
+);
+assert.strictEqual(
+    context.getOverviewStageLabel({ weaving: { mode: 'external', dailyLog: [{ date: '2026-09-18', loom: '3' }] } }, 'weaving'),
+    'จ้างทอภายนอก',
+    'Stale internal loom logs must not override outsourced weaving status'
 );
 assert.strictEqual(context.getOverviewStageLabel(first, 'planning'), 'วางแผน');
 
