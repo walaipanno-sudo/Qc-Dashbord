@@ -10975,7 +10975,7 @@
                 : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fa-solid fa-hourglass-half"></i> เหลืออีก ${warning.daysRemaining} วันถึงกำหนด — แผนก${escapeHtml(stageLabel)}เสี่ยงไม่ทัน</span>`;
         }
 
-        function renderStageStepper(effectiveStage) {
+        function renderStageStepper(effectiveStage, displayLabel = STAGE_LABELS[effectiveStage]) {
             const idx = ALL_STAGES.indexOf(effectiveStage);
             const dots = ALL_STAGES.map((s, i) => {
                 const colors = STAGE_COLORS[s];
@@ -10987,7 +10987,13 @@
                 const connector = i < ALL_STAGES.length - 1 ? `<div class="w-3 sm:w-5 h-0.5 ${i < idx ? colors.connector : 'bg-slate-200'}"></div>` : '';
                 return dot + connector;
             }).join('');
-            return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold ${STAGE_COLORS[effectiveStage].text} mt-1.5">${escapeHtml(STAGE_LABELS[effectiveStage])}</div>`;
+            return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold ${STAGE_COLORS[effectiveStage].text} mt-1.5">${escapeHtml(displayLabel)}</div>`;
+        }
+
+        function getOverviewStageLabel(order, effectiveStage) {
+            if (effectiveStage !== 'weaving' || order.weaving.mode === 'external') return STAGE_LABELS[effectiveStage];
+            const occupancy = getCurrentLoomOccupancies([order])[0];
+            return occupancy ? `กำลังทอจอ ${occupancy.loom}` : 'รอคิวทอ';
         }
 
         // One row of the Overview table — shared by the M/O box and the S/O box. runningNo is the
@@ -11342,7 +11348,7 @@
                         ${buildDueDateRescheduleWidgetHtml(order, orderIndex)}
                     </td>
                     <td class="py-3.5 px-4">
-                        ${renderStageStepper(effectiveStage)}
+                        ${renderStageStepper(effectiveStage, getOverviewStageLabel(order, effectiveStage))}
                         ${deadlineWarningHtml ? `<div class="mt-1.5">${deadlineWarningHtml}</div>` : ''}
                     </td>
                     <td class="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(order.lastUpdated || '-')}</td>
