@@ -1162,7 +1162,8 @@ function upsertOrderIntoSheets_(order) {
   });
 
   var sheet = infos.filter(function(info) { return info.key === targetKey; })[0].sheet;
-  var headerNames = ensureOrdersHeaders(sheet).map(function(h) { return h.toLowerCase(); });
+  var headers = ensureOrdersHeaders(sheet);
+  var headerNames = headers.map(function(h) { return h.toLowerCase(); });
   var rows = sheet.getDataRange().getValues();
   var matchingRowIndexes = [];
   for (var i = 1; i < rows.length; i++) {
@@ -1176,178 +1177,88 @@ function upsertOrderIntoSheets_(order) {
     sheet.deleteRow(matchingRowIndexes[d]);
   }
 
-  var rowValues = [
-      order.moSo || '',
-      order.dueDate || '',
-      order.currentStage || 'planning',
-      typeof order.planning === 'object' ? JSON.stringify(order.planning) : (order.planning || '{}'),
-      typeof order.dyeing === 'object' ? JSON.stringify(order.dyeing) : (order.dyeing || '{}'),
-      typeof order.weaving === 'object' ? JSON.stringify(order.weaving) : (order.weaving || '{}'),
-      typeof order.finishing === 'object' ? JSON.stringify(order.finishing) : (order.finishing || '{}'),
-      order.lastUpdated || '',
-      order.customerName || '',
-      order.customerPO || '',
-      order.totalSqm || 0,
-      order.totalPieces || 0,
-      order.readyToShip ? true : false,
-      order.shipped ? true : false,
-      order.shippedDate || '',
-      order.designImageUrl || '',          // NEW
-      (order.orderType === 'SO' || order.orderType === 'MO') ? order.orderType : '',  // NEW
-      typeof order.sizeItems === 'object' ? JSON.stringify(order.sizeItems || []) : (order.sizeItems || '[]')  // NEW
-    ];
+  // Build the complete row in memory and write it once. The previous implementation made dozens
+  // of separate setValue() calls, which could exceed the Web App execution window and leave the
+  // browser waiting while a newly-created/transferred order appeared to vanish.
+  var fullRow = existingRowIndex !== -1 ? rows[existingRowIndex - 1].slice(0, headers.length) : [];
+  while (fullRow.length < headers.length) fullRow.push('');
 
-    var targetRow;
-    if (existingRowIndex !== -1) {
-      sheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
-      targetRow = existingRowIndex;
-    } else {
-      sheet.appendRow(rowValues);
-      targetRow = sheet.getLastRow();
-    }
+  var baseValues = [
+    order.moSo || '',
+    order.dueDate || '',
+    order.currentStage || 'planning',
+    typeof order.planning === 'object' ? JSON.stringify(order.planning) : (order.planning || '{}'),
+    typeof order.dyeing === 'object' ? JSON.stringify(order.dyeing) : (order.dyeing || '{}'),
+    typeof order.weaving === 'object' ? JSON.stringify(order.weaving) : (order.weaving || '{}'),
+    typeof order.finishing === 'object' ? JSON.stringify(order.finishing) : (order.finishing || '{}'),
+    order.lastUpdated || '',
+    order.customerName || '',
+    order.customerPO || '',
+    order.totalSqm || 0,
+    order.totalPieces || 0,
+    order.readyToShip ? true : false,
+    order.shipped ? true : false,
+    order.shippedDate || '',
+    order.designImageUrl || '',
+    (order.orderType === 'SO' || order.orderType === 'MO') ? order.orderType : '',
+    typeof order.sizeItems === 'object' ? JSON.stringify(order.sizeItems || []) : (order.sizeItems || '[]')
+  ];
+  baseValues.forEach(function(value, index) { fullRow[index] = value; });
 
-    // NEW (2026-09): CreatedAt/IsInserted/ShippingMark are written by header name, not appended onto
-    // rowValues above — ensureOrdersHeaders() may have placed them at a different column than
-    // rowValues.length+1 if this sheet already had extra columns before this update shipped.
-    var createdAtIdx = headerNames.indexOf('createdat');
-    var isInsertedIdx = headerNames.indexOf('isinserted');
-    var shippingMarkIdx = headerNames.indexOf('shippingmark');
-    if (createdAtIdx !== -1) sheet.getRange(targetRow, createdAtIdx + 1).setValue(order.createdAt || '');
-    if (isInsertedIdx !== -1) sheet.getRange(targetRow, isInsertedIdx + 1).setValue(order.isInserted ? true : false);
-    if (shippingMarkIdx !== -1) sheet.getRange(targetRow, shippingMarkIdx + 1).setValue(order.shippingMark || '');
+  function setHeaderValue_(name, value) {
+    var index = headerNames.indexOf(name);
+    if (index !== -1) fullRow[index] = value;
+  }
+  function jsonValue_(value, fallback) {
+    return typeof value === 'object' ? JSON.stringify(value || fallback) : (value || JSON.stringify(fallback));
+  }
 
-    // NEW (2026-09b): Excel-worksheet-style fields, written by header name for the same reason as
-    // CreatedAt/IsInserted/ShippingMark above — see ORDERS_NEW_HEADERS.
-    var openDateIdx = headerNames.indexOf('opendate');
-    var locationNameIdx = headerNames.indexOf('locationname');
-    var qualityIdx = headerNames.indexOf('quality');
-    var packagingIdx = headerNames.indexOf('packaging');
-    var colorsCountIdx = headerNames.indexOf('colorscount');
-    var carpetSizeNoteIdx = headerNames.indexOf('carpetsizenote');
-    var incotermsIdx = headerNames.indexOf('incoterms');
-    var postponeDispatchDateIdx = headerNames.indexOf('postponedispatchdate');
-    var designRefIdx = headerNames.indexOf('designref');
-    var refNoteIdx = headerNames.indexOf('refnote');
-    var orderRemarkIdx = headerNames.indexOf('orderremark');
-    if (openDateIdx !== -1) sheet.getRange(targetRow, openDateIdx + 1).setValue(order.openDate || '');
-    if (locationNameIdx !== -1) sheet.getRange(targetRow, locationNameIdx + 1).setValue(order.locationName || '');
-    if (qualityIdx !== -1) sheet.getRange(targetRow, qualityIdx + 1).setValue(order.quality || '');
-    if (packagingIdx !== -1) sheet.getRange(targetRow, packagingIdx + 1).setValue(order.packaging || '');
-    if (colorsCountIdx !== -1) sheet.getRange(targetRow, colorsCountIdx + 1).setValue(order.colorsCount || 0);
-    if (carpetSizeNoteIdx !== -1) sheet.getRange(targetRow, carpetSizeNoteIdx + 1).setValue(order.carpetSizeNote || '');
-    if (incotermsIdx !== -1) sheet.getRange(targetRow, incotermsIdx + 1).setValue(order.incoterms || '');
-    if (postponeDispatchDateIdx !== -1) sheet.getRange(targetRow, postponeDispatchDateIdx + 1).setValue(order.postponeDispatchDate || '');
-    if (designRefIdx !== -1) sheet.getRange(targetRow, designRefIdx + 1).setValue(order.designRef || '');
-    if (refNoteIdx !== -1) sheet.getRange(targetRow, refNoteIdx + 1).setValue(order.refNote || '');
-    if (orderRemarkIdx !== -1) sheet.getRange(targetRow, orderRemarkIdx + 1).setValue(order.orderRemark || '');
+  setHeaderValue_('createdat', order.createdAt || '');
+  setHeaderValue_('isinserted', order.isInserted ? true : false);
+  setHeaderValue_('shippingmark', order.shippingMark || '');
+  setHeaderValue_('opendate', order.openDate || '');
+  setHeaderValue_('locationname', order.locationName || '');
+  setHeaderValue_('quality', order.quality || '');
+  setHeaderValue_('packaging', order.packaging || '');
+  setHeaderValue_('colorscount', order.colorsCount || 0);
+  setHeaderValue_('carpetsizenote', order.carpetSizeNote || '');
+  setHeaderValue_('incoterms', order.incoterms || '');
+  setHeaderValue_('postponedispatchdate', order.postponeDispatchDate || '');
+  setHeaderValue_('designref', order.designRef || '');
+  setHeaderValue_('refnote', order.refNote || '');
+  setHeaderValue_('orderremark', order.orderRemark || '');
+  setHeaderValue_('market', (order.market === 'export' || order.market === 'domestic') ? order.market : '');
+  setHeaderValue_('salesname', order.salesName || '');
 
-    // NEW (2026-09c): market/salesName — see ORDERS_NEW_HEADERS.
-    var marketIdx = headerNames.indexOf('market');
-    var salesNameIdx = headerNames.indexOf('salesname');
-    if (marketIdx !== -1) sheet.getRange(targetRow, marketIdx + 1).setValue((order.market === 'export' || order.market === 'domestic') ? order.market : '');
-    if (salesNameIdx !== -1) sheet.getRange(targetRow, salesNameIdx + 1).setValue(order.salesName || '');
+  var planDates = order.planDates || {};
+  setHeaderValue_('plandatedesign', planDates.design || '');
+  setHeaderValue_('plandateplanning', planDates.planning || '');
+  setHeaderValue_('plandatedyeing', planDates.dyeing || '');
+  setHeaderValue_('plandateweaving', planDates.weaving || '');
+  setHeaderValue_('plandatefinishing', planDates.finishing || '');
+  setHeaderValue_('duedatehistory', jsonValue_(order.dueDateHistory, []));
+  setHeaderValue_('plandurations', jsonValue_(order.planDurations, {}));
+  setHeaderValue_('design', jsonValue_(order.design, {}));
+  setHeaderValue_('productioncalc', jsonValue_(order.productionCalc, {}));
+  setHeaderValue_('planningdeadlineauto', order.planningDeadlineAuto === false ? false : true);
+  setHeaderValue_('departmentgrades', jsonValue_(order.departmentGrades, {}));
+  setHeaderValue_('syncrevision', order.syncRevision || '');
+  setHeaderValue_('designsentdate', order.designSentDate || '');
+  setHeaderValue_('designreceiveddate', order.designReceivedDate || '');
+  setHeaderValue_('yarntype', order.yarnType || '');
+  setHeaderValue_('tuftingspec', order.tuftingSpec || '');
+  setHeaderValue_('surface', order.surface || '');
+  setHeaderValue_('texture', order.texture || '');
+  setHeaderValue_('colorplacement', order.colorPlacement || '');
+  setHeaderValue_('yarnplan', order.yarnPlan || '');
+  setHeaderValue_('latexing', order.latexing || '');
+  setHeaderValue_('tuftbind', order.tuftBind || '');
+  setHeaderValue_('sproutinglabel', order.sproutingLabel || '');
+  setHeaderValue_('productioninstruction', order.productionInstruction || '');
+  setHeaderValue_('specs', jsonValue_(order.specs, {}));
 
-    // NEW (2026-09d/2026-09-09): per-department plan/target finish dates — see ORDERS_NEW_HEADERS.
-    // order.planDates is a nested object client-side ({design, planning, dyeing, weaving, finishing});
-    // guard against it being missing entirely (an order object built before this feature existed)
-    // rather than assuming it's there.
-    var planDates = order.planDates || {};
-    var planDateDesignIdx = headerNames.indexOf('plandatedesign');
-    var planDatePlanningIdx = headerNames.indexOf('plandateplanning');
-    var planDateDyeingIdx = headerNames.indexOf('plandatedyeing');
-    var planDateWeavingIdx = headerNames.indexOf('plandateweaving');
-    var planDateFinishingIdx = headerNames.indexOf('plandatefinishing');
-    if (planDateDesignIdx !== -1) sheet.getRange(targetRow, planDateDesignIdx + 1).setValue(planDates.design || '');
-    if (planDatePlanningIdx !== -1) sheet.getRange(targetRow, planDatePlanningIdx + 1).setValue(planDates.planning || '');
-    if (planDateDyeingIdx !== -1) sheet.getRange(targetRow, planDateDyeingIdx + 1).setValue(planDates.dyeing || '');
-    if (planDateWeavingIdx !== -1) sheet.getRange(targetRow, planDateWeavingIdx + 1).setValue(planDates.weaving || '');
-    if (planDateFinishingIdx !== -1) sheet.getRange(targetRow, planDateFinishingIdx + 1).setValue(planDates.finishing || '');
-
-    // NEW (2026-09-10): due-date postponement history ("เลื่อนครั้งที่ N") — see ORDERS_NEW_HEADERS.
-    // order.dueDateHistory is a client-side array; stored as its JSON string, same pattern as
-    // planning/dyeing/weaving/finishing/sizeItems above.
-    var dueDateHistoryIdx = headerNames.indexOf('duedatehistory');
-    if (dueDateHistoryIdx !== -1) {
-      sheet.getRange(targetRow, dueDateHistoryIdx + 1).setValue(
-        typeof order.dueDateHistory === 'object' ? JSON.stringify(order.dueDateHistory || []) : (order.dueDateHistory || '[]')
-      );
-    }
-
-    // NEW (2026-09-11): per-department planned durations (days) — see ORDERS_NEW_HEADERS.
-    var planDurationsIdx = headerNames.indexOf('plandurations');
-    if (planDurationsIdx !== -1) {
-      sheet.getRange(targetRow, planDurationsIdx + 1).setValue(
-        typeof order.planDurations === 'object' ? JSON.stringify(order.planDurations || {}) : (order.planDurations || '{}')
-      );
-    }
-
-    // NEW (2026-09-16): แผนกดีไซน์/ขยายลาย checklist (done/doneBy/note) — see ORDERS_NEW_HEADERS.
-    var designIdx = headerNames.indexOf('design');
-    if (designIdx !== -1) {
-      sheet.getRange(targetRow, designIdx + 1).setValue(
-        typeof order.design === 'object' ? JSON.stringify(order.design || {}) : (order.design || '{}')
-      );
-    }
-
-    // NEW (2026-09-10): production calc engine inputs + deadline auto-follow flag — see ORDERS_NEW_HEADERS.
-    var productionCalcIdx = headerNames.indexOf('productioncalc');
-    if (productionCalcIdx !== -1) {
-      sheet.getRange(targetRow, productionCalcIdx + 1).setValue(
-        typeof order.productionCalc === 'object' ? JSON.stringify(order.productionCalc || {}) : (order.productionCalc || '{}')
-      );
-    }
-    var planningDeadlineAutoIdx = headerNames.indexOf('planningdeadlineauto');
-    if (planningDeadlineAutoIdx !== -1) {
-      sheet.getRange(targetRow, planningDeadlineAutoIdx + 1).setValue(order.planningDeadlineAuto === false ? false : true);
-    }
-    var departmentGradesIdx = headerNames.indexOf('departmentgrades');
-    if (departmentGradesIdx !== -1) {
-      sheet.getRange(targetRow, departmentGradesIdx + 1).setValue(
-        typeof order.departmentGrades === 'object' ? JSON.stringify(order.departmentGrades || {}) : (order.departmentGrades || '{}')
-      );
-    }
-    var syncRevisionIdx = headerNames.indexOf('syncrevision');
-    if (syncRevisionIdx !== -1) {
-      sheet.getRange(targetRow, syncRevisionIdx + 1).setValue(order.syncRevision || '');
-    }
-
-    // NEW (2026-09-12): วันที่ส่งแบบ/ได้รับแบบ (แผนกดีไซน์) + "ข้อกำหนดสำหรับฝ่ายผลิต" — plain string/date
-    // cells, written by header name for the same reason as everything else in this function (a sheet
-    // may have these columns at a different position than a fresh one would) — see ORDERS_NEW_HEADERS.
-    var designSentDateIdx = headerNames.indexOf('designsentdate');
-    var designReceivedDateIdx = headerNames.indexOf('designreceiveddate');
-    var yarnTypeIdx = headerNames.indexOf('yarntype');
-    var tuftingSpecIdx = headerNames.indexOf('tuftingspec');
-    var surfaceIdx = headerNames.indexOf('surface');
-    var textureIdx = headerNames.indexOf('texture');
-    var colorPlacementIdx = headerNames.indexOf('colorplacement');
-    var yarnPlanIdx = headerNames.indexOf('yarnplan');
-    var latexingIdx = headerNames.indexOf('latexing');
-    var tuftBindIdx = headerNames.indexOf('tuftbind');
-    var sproutingLabelIdx = headerNames.indexOf('sproutinglabel');
-    var productionInstructionIdx = headerNames.indexOf('productioninstruction');
-    if (designSentDateIdx !== -1) sheet.getRange(targetRow, designSentDateIdx + 1).setValue(order.designSentDate || '');
-    if (designReceivedDateIdx !== -1) sheet.getRange(targetRow, designReceivedDateIdx + 1).setValue(order.designReceivedDate || '');
-    if (yarnTypeIdx !== -1) sheet.getRange(targetRow, yarnTypeIdx + 1).setValue(order.yarnType || '');
-    if (tuftingSpecIdx !== -1) sheet.getRange(targetRow, tuftingSpecIdx + 1).setValue(order.tuftingSpec || '');
-    if (surfaceIdx !== -1) sheet.getRange(targetRow, surfaceIdx + 1).setValue(order.surface || '');
-    if (textureIdx !== -1) sheet.getRange(targetRow, textureIdx + 1).setValue(order.texture || '');
-    if (colorPlacementIdx !== -1) sheet.getRange(targetRow, colorPlacementIdx + 1).setValue(order.colorPlacement || '');
-    if (yarnPlanIdx !== -1) sheet.getRange(targetRow, yarnPlanIdx + 1).setValue(order.yarnPlan || '');
-    if (latexingIdx !== -1) sheet.getRange(targetRow, latexingIdx + 1).setValue(order.latexing || '');
-    if (tuftBindIdx !== -1) sheet.getRange(targetRow, tuftBindIdx + 1).setValue(order.tuftBind || '');
-    if (sproutingLabelIdx !== -1) sheet.getRange(targetRow, sproutingLabelIdx + 1).setValue(order.sproutingLabel || '');
-    if (productionInstructionIdx !== -1) sheet.getRange(targetRow, productionInstructionIdx + 1).setValue(order.productionInstruction || '');
-
-    // NEW (2026-09-12): "SPECIFICATIONS" checklist — stored as a JSON string, same pass-through
-    // pattern as ProductionCalc/Design above (order.specs may already arrive as a string from a
-    // client that just re-sends what it read, or as a real object from a freshly-built order).
-    var specsIdx = headerNames.indexOf('specs');
-    if (specsIdx !== -1) {
-      sheet.getRange(targetRow, specsIdx + 1).setValue(
-        typeof order.specs === 'object' ? JSON.stringify(order.specs || {}) : (order.specs || '{}')
-      );
-    }
+  var targetRow = existingRowIndex !== -1 ? existingRowIndex : sheet.getLastRow() + 1;
+  sheet.getRange(targetRow, 1, 1, fullRow.length).setValues([fullRow]);
 
     // NEW (2026-09-11): dual-write to Supabase alongside the Google Sheet above, while the system is
     // being migrated over — see the "Supabase dual-write" block below for syncOrderToSupabase_(). This

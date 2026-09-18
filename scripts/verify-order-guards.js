@@ -218,13 +218,19 @@ if (context.bomMemoryCandidateScore(targetOrder, { planning: { bom: { yarnSkuCod
 }
 if (!appsScriptCode.includes('"DepartmentGrades"') ||
     !appsScriptCode.includes("headerNames.indexOf('departmentgrades')") ||
-    !appsScriptCode.includes('JSON.stringify(order.departmentGrades || {})')) {
+    !appsScriptCode.includes("setHeaderValue_('departmentgrades', jsonValue_(order.departmentGrades, {}))")) {
     throw new Error('Department work grades are not fully wired through the Google Sheets backend');
 }
 if (!appsScriptCode.includes('"SyncRevision"') ||
     !appsScriptCode.includes("headerNames.indexOf('syncrevision')") ||
-    !appsScriptCode.includes("setValue(order.syncRevision || '')")) {
+    !appsScriptCode.includes("setHeaderValue_('syncrevision', order.syncRevision || '')")) {
     throw new Error('Production-order sync revision is not fully wired through the Google Sheets backend');
+}
+const orderUpsertMatch = appsScriptCode.match(/function upsertOrderIntoSheets_\(order\) \{([\s\S]*?)\n\}/);
+if (!orderUpsertMatch ||
+    orderUpsertMatch[1].includes('.setValue(') ||
+    !orderUpsertMatch[1].includes('.setValues([fullRow])')) {
+    throw new Error('Production-order upsert must use one batched row write instead of per-cell writes');
 }
 
 [
