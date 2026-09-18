@@ -27,6 +27,7 @@ function assertInOrder(source, first, second, message) {
 const buildOrderCard = extractFunction('buildOrderCard');
 const dyeingCard = extractFunction('renderDyeingOrderCardHtml');
 const weavingBoard = extractFunction('renderWeavingLoomBoard');
+const overviewRow = extractFunction('buildOverviewRowHtml');
 
 assertInOrder(
     buildOrderCard,
@@ -63,10 +64,18 @@ assert(
     weavingBoard.includes('occupanciesByLoom.get(loomLabel) || []'),
     'Weaving board must preserve all assignments sharing one loom label'
 );
+assert(
+    overviewRow.includes('renderStageStepper(effectiveStage, getOverviewStageLabel(order, effectiveStage))'),
+    'Overview rows must render the derived weaving status'
+);
 
-const context = { productionOrders: [] };
+const context = {
+    productionOrders: [],
+    STAGE_LABELS: { planning: 'วางแผน', weaving: 'ทอ' }
+};
 vm.createContext(context);
 vm.runInContext(extractFunction('getCurrentLoomOccupancies'), context);
+vm.runInContext(extractFunction('getOverviewStageLabel'), context);
 
 const first = {
     moSo: 'M/O 100',
@@ -94,5 +103,28 @@ assert.strictEqual(
     0,
     'An order without a loom number must remain in the waiting list'
 );
+
+assert.strictEqual(context.getOverviewStageLabel(waiting, 'weaving'), 'รอคิวทอ');
+assert.strictEqual(context.getOverviewStageLabel(first, 'weaving'), 'กำลังทอจอ 2');
+assert.strictEqual(
+    context.getOverviewStageLabel({
+        weaving: { dailyLog: [{ date: '2026-09-17', loom: '2' }, { date: '2026-09-18', loom: '5' }] }
+    }, 'weaving'),
+    'กำลังทอจอ 5',
+    'Overview must use the latest logged loom, not a previous assignment'
+);
+assert.strictEqual(
+    context.getOverviewStageLabel({
+        weaving: { dailyLog: [{ date: '2026-09-17', loom: '2' }, { date: '2026-09-18', loom: '' }] }
+    }, 'weaving'),
+    'รอคิวทอ',
+    'A latest log without a loom must return the order to the waiting queue'
+);
+assert.strictEqual(
+    context.getOverviewStageLabel({ weaving: { mode: 'external', dailyLog: [] } }, 'weaving'),
+    'ทอ',
+    'Outsourced weaving must retain its normal stage label'
+);
+assert.strictEqual(context.getOverviewStageLabel(first, 'planning'), 'วางแผน');
 
 console.log('Board detail collapse and active-loom rendering guards passed.');
