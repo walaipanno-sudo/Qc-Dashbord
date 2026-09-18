@@ -1,0 +1,64 @@
+name: Validate Apps Script
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps-script/**"
+      - "scripts/**"
+      - "index.html"
+      - ".github/workflows/validate-apps-script.yml"
+  push:
+    branches:
+      - main
+      - "skywork/**"
+    paths:
+      - "apps-script/**"
+      - "scripts/**"
+      - "index.html"
+      - ".github/workflows/validate-apps-script.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Syntax and dashboard validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check Apps Script backend syntax
+        run: node --check apps-script/Code.js
+
+      - name: Check inline frontend JavaScript syntax
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('apps-script/index.html', 'utf8');
+          const start = html.lastIndexOf('<script>');
+          const end = html.lastIndexOf('</script>');
+          if (start < 0 || end <= start) {
+            throw new Error('Could not find the executable inline script in apps-script/index.html');
+          }
+          fs.writeFileSync('/tmp/qc-dashboard-inline.js', html.slice(start + '<script>'.length, end));
+          NODE
+          node --check /tmp/qc-dashboard-inline.js
+
+      - name: Audit HTML references
+        run: node scripts/audit-html.js apps-script/index.html
+
+      - name: Run order and workflow guards
+        run: node scripts/verify-order-guards.js
+
+      - name: Keep the deployable HTML copies in sync
+        run: cmp --silent apps-script/index.html index.html
