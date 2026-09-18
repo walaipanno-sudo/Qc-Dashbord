@@ -8190,7 +8190,18 @@
             // ORDER_STAGES/currentStage state machine (see STAGE_LABELS.design's comment above
             // normalizeOrder), so it has no percent/transfer logic — just a simple tracked note shown
             // in its own section of the order detail modal (see renderDesignSectionHtml()).
-            const design = Object.assign({ done: false, doneBy: '', note: '' }, parseField(raw.design, {}));
+            const design = Object.assign({
+                done: false, doneBy: '', note: '',
+                salesReceivedDate: '', grade: '', startDate: '', designer: '',
+                doneDate: '', revisionCount: 0, revisionReason: '', designNo: '',
+                usedMoSo: raw.moSo || '', punchLog: []
+            }, parseField(raw.design, {}));
+            if (!Array.isArray(design.punchLog)) design.punchLog = [];
+            design.punchLog = design.punchLog.map((row, index) => Object.assign({
+                id: `punch_${index}`, grade: '', startDate: '', doneDate: '',
+                transferToPrintingDate: '', printingGrade: '', printingDoneDate: '',
+                canvasFace: '', canvasSize: '', transferToWeavingDate: ''
+            }, row || {}));
 
             // Free-text work grades are intentionally independent from the automatic production grades.
             // Each department can record its own operational grade using the terminology used on the floor.
@@ -8255,6 +8266,7 @@
                 id: 'co_normalized_' + index,
                 colorCode: '',
                 kg: 0,
+                dyeLocation: dyeing.mode === 'external' ? 'external' : 'internal',
                 useSurplus: false,
                 surplusKg: 0,
                 surplusLedgerId: '',
@@ -8352,8 +8364,12 @@
                 weavingMigrated = true;
             }
 
-            const finishing = Object.assign({ status: 'waiting', percent: 0, items: [] }, parseField(raw.finishing, {}));
+            const finishing = Object.assign({
+                status: 'waiting', percent: 0, items: [], startDate: '', grade: '',
+                completedDate: '', efficiencyLog: []
+            }, parseField(raw.finishing, {}));
             if (!Array.isArray(finishing.items)) finishing.items = [];
+            if (!Array.isArray(finishing.efficiencyLog)) finishing.efficiencyLog = [];
             let finishingMigrated = false;
             if (finishing.items.length === 0 && finishing.status && finishing.status !== 'waiting') {
                 finishing.items = [{ batch: '(ข้อมูลเดิม)', status: finishing.status }];
@@ -11639,7 +11655,6 @@
             let orders = deduplicateOrderReferences(productionOrders.filter(order =>
                 !order.summaryOnly &&
                 getEffectiveStage(order) !== 'shipped' &&
-                (order.dyeing || {}).mode !== 'external' &&
                 Array.isArray((order.dyeing || {}).colorOrders) &&
                 order.dyeing.colorOrders.length > 0
             ));
@@ -11669,8 +11684,8 @@
                     <div class="flex items-center justify-between border-b ${tone} pb-1"><h4 class="text-[11px] font-bold">${label}</h4><span class="text-[10px]">${list.length} รายการ</span></div>
                     ${list.map(order => renderDyeingOrderCardHtml(order, productionOrders.indexOf(order))).join('')}
                 </section>` : '';
-            column.innerHTML = section('M/O ใบสั่งย้อมภายใน', moOrders, 'border-sky-200 text-sky-700') +
-                section('S/O ใบสั่งย้อมภายใน', soOrders, 'border-amber-200 text-amber-700');
+            column.innerHTML = section('M/O ใบสั่งย้อม (แยกในบริษัท/นอกบริษัทในแต่ละสี)', moOrders, 'border-sky-200 text-sky-700') +
+                section('S/O ใบสั่งย้อม (แยกในบริษัท/นอกบริษัทในแต่ละสี)', soOrders, 'border-amber-200 text-amber-700');
         }
 
         function renderProductionBoard() {
@@ -11711,6 +11726,10 @@
                 }
                 if (stage === 'weaving') {
                     renderWeavingLoomBoard(ordersHere, searchTerm);
+                    return;
+                }
+                if (stage === 'finishing') {
+                    renderFinishingBoard(ordersHere, searchTerm);
                     return;
                 }
 
@@ -11921,6 +11940,38 @@
                 const orderIndex = productionOrders.indexOf(order);
                 column.appendChild(buildDesignOrderCard(order, orderIndex));
             });
+        }
+
+        function renderFinishingBoard(ordersHere, searchTerm) {
+            const column = document.getElementById('boardColumn-finishing');
+            if (!column) return;
+            const orders = ordersHere.slice().sort((a, b) => String(a.dueDate || '9999-99-99').localeCompare(String(b.dueDate || '9999-99-99')));
+            if (!orders.length) {
+                column.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">${searchTerm ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการ'}</p>`;
+                return;
+            }
+            column.innerHTML = orders.map(order => {
+                const orderIndex = productionOrders.indexOf(order);
+                const f = order.finishing || {};
+                const log = Array.isArray(f.efficiencyLog) ? f.efficiencyLog : [];
+                const latest = log.length ? log[log.length - 1] : null;
+                const employees = latest && Array.isArray(latest.employees) ? latest.employees.join(', ') : '';
+                return `<div class="bg-white rounded-xl border border-fuchsia-200 shadow-sm p-3 space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${escapeHtml(order.moSo)}</p>
+                            <p class="text-[11px] text-slate-500">${escapeHtml(order.customerName || '-')}</p>
+                            <p class="text-[10px] text-slate-400">เกรด ${escapeHtml(f.grade || (order.departmentGrades || {}).finishing || '-')} • เริ่ม ${escapeHtml(f.startDate || '-')} • เสร็จ ${escapeHtml(f.completedDate || '-')}</p>
+                        </div>
+                        <button onclick="openOrderDetailModal(${orderIndex}, 'finishing')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600" title="ดู/แก้ไขรายละเอียด"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                    </div>
+                    <div class="text-[10px] text-slate-600 bg-fuchsia-50 border border-fuchsia-100 rounded-lg p-2">
+                        <p><i class="fa-solid fa-users mr-1 text-fuchsia-600"></i>${escapeHtml(employees || 'ยังไม่ได้ระบุพนักงาน')}</p>
+                        <p class="mt-1">ทำได้ล่าสุด ${latest ? `${Number(latest.areaSqm) || 0} ตร.ม. วันที่ ${escapeHtml(latest.date || '-')}` : '-'}</p>
+                    </div>
+                    <p class="text-[10px] text-slate-400">กำหนดส่ง: ${escapeHtml(order.dueDate || '-')}</p>
+                </div>`;
+            }).join('');
         }
 
         // --- Board department tabs ("แผนผังการผลิต แยกเป็นแท็บแยกแผนก"): lets the user click one
@@ -12670,7 +12721,9 @@
                     <div class="flex-grow min-w-0">
                         <p class="font-bold ${moSoTextColorClass(order)} text-xs font-mono">${orderTypeBadgeHtml(order.orderType)}${marketBadgeHtml(order.market)}${orderFlagBadgesHtml(order)}${issueBadgeHtml(order.moSo)}${escapeHtml(order.moSo)}</p>
                         ${order.customerName ? `<p class="text-[11px] text-slate-500">${escapeHtml(order.customerName)}${order.customerPO ? ` • PO ${escapeHtml(order.customerPO)}` : ''}</p>` : ''}
-                        <p class="text-[11px] text-slate-400">ดีไซน์ (รหัสอ้างอิง): ${order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>'}</p>
+                        <p class="text-[11px] text-slate-400">D/N No.: ${design.designNo ? escapeHtml(design.designNo) : (order.designRef ? escapeHtml(order.designRef) : '<span class="text-amber-500">ยังไม่ได้กรอก</span>')}</p>
+                        <p class="text-[10px] text-slate-400">รับแบบ ${escapeHtml(design.salesReceivedDate || order.designReceivedDate || '-')} • เกรด ${escapeHtml(design.grade || '-')} • ผู้ทำ ${escapeHtml(design.designer || design.doneBy || '-')}</p>
+                        <p class="text-[10px] text-slate-400">แก้แบบ ${Number(design.revisionCount) || 0} ครั้ง${design.revisionReason ? ` • ${escapeHtml(design.revisionReason)}` : ''} • ใช้กับ ${escapeHtml(design.usedMoSo || order.moSo || '-')}</p>
                         <p class="text-[11px] text-slate-400">กำหนดเสร็จ: ${escapeHtml(order.dueDate || '-')}</p>
                     </div>
                     <button onclick="openOrderDetailModal(${orderIndex}, 'design')" class="shrink-0 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition inline-flex items-center justify-center" title="ดู/แก้ไขรายละเอียด (สลับแผนกได้ในหน้าต่างนี้)">
@@ -13694,6 +13747,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <label class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-700"><input type="checkbox" ${row.dyeDone ? 'checked' : ''} onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'dyeDone', this.checked)" class="rounded"> ย้อมแล้ว</label>
                             <span class="text-[10px] font-semibold ${diffClass}">ส่วนต่าง ${differenceKg > 0 ? '+' : ''}${differenceKg.toFixed(2)} กก.</span>
+                            <select title="สถานที่ย้อม" onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'dyeLocation', this.value)" class="p-1 bg-white border border-slate-200 rounded text-[11px]"><option value="internal" ${row.dyeLocation !== 'external' ? 'selected' : ''}>ย้อมในบริษัท</option><option value="external" ${row.dyeLocation === 'external' ? 'selected' : ''}>สั่งย้อมนอกบริษัท</option></select>
                             <select title="วิธีย้อม" onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'dyeRoute', this.value)" class="p-1 bg-white border border-slate-200 rounded text-[11px]"><option value="">— วิธีย้อม —</option>${['C TO C', 'C TO S', 'S TO S', 'S TO C'].map(route => `<option value="${route}" ${row.dyeRoute === route ? 'selected' : ''}>${route}</option>`).join('')}<option value="custom" ${row.dyeRoute === 'custom' ? 'selected' : ''}>อื่นๆ</option></select>
                             ${row.dyeRoute === 'custom' ? `<input type="text" placeholder="ระบุวิธีย้อม" value="${escapeHtml(row.dyeRouteCustom || '')}" onchange="updateDyeingColorOrderField(${orderIndex}, '${row.id}', 'dyeRouteCustom', this.value)" class="p-1 bg-white border border-slate-200 rounded text-[11px]">` : ''}
                             <label class="inline-flex items-center gap-1 text-[10px] text-slate-600"><input type="checkbox" ${row.useSurplus ? 'checked' : ''} onchange="updateDyeingColorOrderSurplus(${orderIndex}, '${row.id}', 'useSurplus', this.checked)" class="rounded"> ใช้ Surplus</label>
@@ -15302,6 +15356,39 @@
                     </div>
                 </div>
             `;
+            const designTrackingHtml = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">รับแบบจากแผนกขายวันที่</label><input type="date" value="${escapeHtml(design.salesReceivedDate || order.designReceivedDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.salesReceivedDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เกรด</label><input type="text" value="${escapeHtml(design.grade || '')}" onchange="updateOrderField(${orderIndex}, 'design.grade', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เริ่มทำวันที่</label><input type="date" value="${escapeHtml(design.startDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.startDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">ผู้ทำ</label><input type="text" value="${escapeHtml(design.designer || design.doneBy || '')}" onchange="updateOrderField(${orderIndex}, 'design.designer', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เสร็จวันที่</label><input type="date" value="${escapeHtml(design.doneDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.doneDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">แก้แบบ (ครั้ง)</label><input type="number" min="0" step="1" value="${Number(design.revisionCount) || 0}" onchange="updateOrderField(${orderIndex}, 'design.revisionCount', Math.max(0, Number(this.value) || 0))" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div class="lg:col-span-2"><label class="block text-[10px] text-slate-500 mb-0.5">สาเหตุที่แก้แบบ</label><input type="text" value="${escapeHtml(design.revisionReason || '')}" onchange="updateOrderField(${orderIndex}, 'design.revisionReason', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">แบบ D/N No.</label><input type="text" value="${escapeHtml(design.designNo || '')}" onchange="updateOrderField(${orderIndex}, 'design.designNo', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">ใช้กับ M/O,S/O</label><input type="text" value="${escapeHtml(design.usedMoSo || order.moSo || '')}" onchange="updateOrderField(${orderIndex}, 'design.usedMoSo', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                </div>
+            `;
+            const punchRows = (design.punchLog || []).map((row, rowIndex) => `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 bg-white p-2.5 rounded-xl border border-cyan-100">
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เกรดเจาะลาย</label><input type="text" value="${escapeHtml(row.grade || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.grade', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เริ่มเจาะวันที่</label><input type="date" value="${escapeHtml(row.startDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.startDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เสร็จเจาะวันที่</label><input type="date" value="${escapeHtml(row.doneDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.doneDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">โอนไปปั๊มลายวันที่</label><input type="date" value="${escapeHtml(row.transferToPrintingDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.transferToPrintingDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เกรดปั๊มลาย</label><input type="text" value="${escapeHtml(row.printingGrade || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.printingGrade', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">เสร็จปั๊มลายวันที่</label><input type="date" value="${escapeHtml(row.printingDoneDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.printingDoneDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">ผ้าใบหน้า</label><input type="text" value="${escapeHtml(row.canvasFace || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.canvasFace', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">ขนาด</label><input type="text" value="${escapeHtml(row.canvasSize || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.canvasSize', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div><label class="block text-[10px] text-slate-500 mb-0.5">โอนไปแผนกทอวันที่</label><input type="date" value="${escapeHtml(row.transferToWeavingDate || '')}" onchange="updateOrderField(${orderIndex}, 'design.punchLog.${rowIndex}.transferToWeavingDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    <div class="flex items-end"><button type="button" onclick="removePunchLogRow(${orderIndex}, ${rowIndex})" class="text-[10px] text-rose-600 border border-rose-200 px-2 py-1.5 rounded-lg"><i class="fa-solid fa-trash mr-1"></i>ลบแถว</button></div>
+                </div>
+            `).join('');
+            const punchHtml = `
+                <div class="bg-cyan-50/60 border border-cyan-100 p-2.5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><p class="text-xs font-bold text-cyan-800"><i class="fa-solid fa-bullseye mr-1"></i>เจาะลาย / ปั๊มลาย</p><button type="button" onclick="addPunchLogRow(${orderIndex})" class="text-[10px] bg-white text-cyan-700 border border-cyan-200 px-2 py-1 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>เพิ่มรายการ</button></div>
+                    ${punchRows || '<p class="text-[10px] text-slate-400">ยังไม่มีรายการเจาะลาย</p>'}
+                </div>
+            `;
 
             return `
                 <div id="orderDetailSection-design" class="border border-slate-200 rounded-2xl overflow-hidden">
@@ -15317,6 +15404,8 @@
                         ${planDateBadgeHtml}
                         ${designRefHtml}
                         ${designDatesHtml}
+                        ${designTrackingHtml}
+                        ${punchHtml}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
                             <label class="flex items-center gap-2 text-xs text-slate-600 sm:col-span-2">
                                 <input type="checkbox" ${design.done ? 'checked' : ''} onchange="updateOrderField(${orderIndex}, 'design.done', this.checked)" class="rounded">
@@ -15334,6 +15423,28 @@
                     </div>
                 </div>
             `;
+        }
+
+        function addPunchLogRow(orderIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order) return;
+            if (!order.design) order.design = {};
+            if (!Array.isArray(order.design.punchLog)) order.design.punchLog = [];
+            order.design.punchLog.push({
+                id: `punch_${Date.now()}`, grade: '', startDate: '', doneDate: '',
+                transferToPrintingDate: '', printingGrade: '', printingDoneDate: '',
+                canvasFace: '', canvasSize: '', transferToWeavingDate: ''
+            });
+            persistOrderChange(order);
+            renderOrderDetailModalBody(orderIndex);
+        }
+
+        function removePunchLogRow(orderIndex, rowIndex) {
+            const order = productionOrders[orderIndex];
+            if (!order || !order.design || !Array.isArray(order.design.punchLog)) return;
+            order.design.punchLog.splice(rowIndex, 1);
+            persistOrderChange(order);
+            renderOrderDetailModalBody(orderIndex);
         }
         const STAGE_ITEM_RENDERERS = {
             dyeing: renderDyeingItemsHtml,
@@ -15477,7 +15588,13 @@
             } else if (stage === 'weaving') {
                 modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage) + renderStageModeBadgeHtml(order.weaving.mode, 'ทอในบริษัท', 'จ้างภายนอกทอ');
             } else if (stage === 'finishing') {
-                modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage);
+                const f = order.finishing || {};
+                modeToggleHtml = renderStagePlanDateBadgeHtml(order, stage) + `
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-white p-2.5 rounded-xl border border-slate-200 mb-2">
+                        <div><label class="block text-[10px] text-slate-500 mb-0.5">เริ่มแต่งวันที่</label><input type="date" value="${escapeHtml(f.startDate || '')}" onchange="updateOrderField(${orderIndex}, 'finishing.startDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                        <div><label class="block text-[10px] text-slate-500 mb-0.5">เกรด</label><input type="text" value="${escapeHtml(f.grade || (order.departmentGrades || {}).finishing || '')}" onchange="updateOrderField(${orderIndex}, 'finishing.grade', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                        <div><label class="block text-[10px] text-slate-500 mb-0.5">เสร็จวันที่</label><input type="date" value="${escapeHtml(f.completedDate || '')}" onchange="updateOrderField(${orderIndex}, 'finishing.completedDate', this.value)" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"></div>
+                    </div>`;
             }
 
             // MOVED (2026-09-16): production-spec fields (สเปกทอ/ผิวงาน/ผิวสัมผัส/ตำแหน่งสี/แผนไหม/
@@ -15533,6 +15650,15 @@
                     </div>
                     ${renderWeavingDailyLogHtml(order)}
                 `;
+            }
+            if (stage === 'finishing') {
+                const f = order.finishing || {};
+                const latest = Array.isArray(f.efficiencyLog) && f.efficiencyLog.length
+                    ? f.efficiencyLog[f.efficiencyLog.length - 1] : null;
+                weavingChecks = `<div class="bg-fuchsia-50/60 border border-fuchsia-100 rounded-xl p-2.5 text-[10px] text-slate-600">
+                    <p class="font-semibold text-fuchsia-800"><i class="fa-solid fa-users mr-1"></i>พนักงานตกแต่ง: ${escapeHtml(latest && Array.isArray(latest.employees) && latest.employees.length ? latest.employees.join(', ') : 'ยังไม่ได้บันทึก')}</p>
+                    <p class="mt-1">พื้นที่ล่าสุด: ${latest ? `${Number(latest.areaSqm) || 0} ตร.ม. • ${escapeHtml(latest.date || '-')}` : 'ยังไม่มีบันทึกประสิทธิภาพ'}</p>
+                </div>`;
             }
 
             const bodyContentHtml = stage === 'planning'

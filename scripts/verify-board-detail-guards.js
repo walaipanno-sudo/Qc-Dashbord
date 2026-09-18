@@ -28,6 +28,8 @@ const buildOrderCard = extractFunction('buildOrderCard');
 const dyeingCard = extractFunction('renderDyeingOrderCardHtml');
 const weavingBoard = extractFunction('renderWeavingLoomBoard');
 const overviewRow = extractFunction('buildOverviewRowHtml');
+const designBoard = extractFunction('buildDesignOrderCard');
+const finishingBoard = extractFunction('renderFinishingBoard');
 
 assertInOrder(
     buildOrderCard,
@@ -67,6 +69,29 @@ assert(
 assert(
     overviewRow.includes('renderStageStepper(effectiveStage, getOverviewStageLabel(order, effectiveStage))'),
     'Overview rows must render the derived weaving status'
+);
+assert(
+    script.includes("dyeLocation: dyeing.mode === 'external' ? 'external' : 'internal'") &&
+    script.includes('title="สถานที่ย้อม"'),
+    'Planning dyeing rows must allow internal/external routing per color'
+);
+assert(
+    script.includes('function addPunchLogRow') &&
+    script.includes('แบบ D/N No.') &&
+    script.includes('โอนไปแผนกทอวันที่'),
+    'Design detail must include design tracking and punch/printing transfer fields'
+);
+assert(
+    designBoard.includes('D/N No.') &&
+    designBoard.includes('แก้แบบ') &&
+    designBoard.includes('ใช้กับ'),
+    'Design board cards must summarize requested design tracking fields'
+);
+assert(
+    finishingBoard.includes('employees') &&
+    finishingBoard.includes('เริ่ม') &&
+    finishingBoard.includes('เสร็จ'),
+    'Finishing board must summarize dates, grade, and employees'
 );
 
 const context = {
