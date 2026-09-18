@@ -428,6 +428,15 @@ function doGet(e) {
     } else if (action === 'getOrders') {
       // NEW: production pipeline data for the "ภาพรวมการผลิต" / "แผนผังการผลิต" tabs
       return getOrdersJsonResponse();
+    } else if (action === 'historicalOrder') {
+      // One-time import path for the 2026 workbook. It is narrow, token-gated, idempotent by M/O,
+      // and separate from the normal browser write endpoints.
+      if (String(e.parameter.importToken || '') !== 'qcdashboard-historical-20260918') {
+        return dashboardWriteDeniedResponse_();
+      }
+      var historicalOrderRaw = e.parameter.payload ? JSON.parse(e.parameter.payload) : null;
+      var historicalOneResult = upsertHistoricalOrdersBatch(historicalOrderRaw ? [historicalOrderRaw] : []);
+      return ContentService.createTextOutput(JSON.stringify(historicalOneResult)).setMimeType(ContentService.MimeType.JSON);
     } else if (action === 'deleteOrder') {
       // NEW: deletes a whole M/O, S/O production-pipeline row (not a single QC record — see
       // deleteRowById above for that). Keyed by MoSo since this sheet has no separate ID column.
@@ -901,7 +910,10 @@ var ORDERS_NEW_HEADERS = ["CreatedAt", "IsInserted", "ShippingMark",
   // Finishing. Appended by header name so existing order sheets keep every current column in place.
   "DepartmentGrades",
   // Browser-generated receipt used to confirm that the latest order payload reached the Sheet.
-  "SyncRevision"];
+  "SyncRevision",
+  // Historical rows imported from the 2026 M/O workbook. These rows are visible in the Sales
+  // summary only and must never enter the live production workflow.
+  "SummaryOnly", "HistoricalSource"];
 function ensureOrdersHeaders(sheet) {
   var lastCol = sheet.getLastColumn();
   var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); }) : [];
@@ -972,6 +984,8 @@ function extractOrderFromRow_(row, headerNames) {
   var specsIdx = headerNames.indexOf('specs');
   var departmentGradesIdx = headerNames.indexOf('departmentgrades');
   var syncRevisionIdx = headerNames.indexOf('syncrevision');
+  var summaryOnlyIdx = headerNames.indexOf('summaryonly');
+  var historicalSourceIdx = headerNames.indexOf('historicalsource');
 
   return {
     moSo: String(row[0] || ''),
@@ -1057,7 +1071,9 @@ function extractOrderFromRow_(row, headerNames) {
     // already parses either a string or a real object (same pattern as productionCalc/design above).
     specs: specsIdx !== -1 && row[specsIdx] ? String(row[specsIdx]) : '{}',
     departmentGrades: departmentGradesIdx !== -1 && row[departmentGradesIdx] ? String(row[departmentGradesIdx]) : '{}',
-    syncRevision: syncRevisionIdx !== -1 && row[syncRevisionIdx] ? String(row[syncRevisionIdx]) : ''
+    syncRevision: syncRevisionIdx !== -1 && row[syncRevisionIdx] ? String(row[syncRevisionIdx]) : '',
+    summaryOnly: summaryOnlyIdx !== -1 && (row[summaryOnlyIdx] === true || String(row[summaryOnlyIdx]).toUpperCase() === 'TRUE'),
+    historicalSource: historicalSourceIdx !== -1 && row[historicalSourceIdx] ? String(row[historicalSourceIdx]) : ''
   };
 }
 
@@ -1133,6 +1149,45 @@ function upsertOrder(order) {
   try {
     ensureOrdersMigratedOnce_();
     upsertOrderIntoSheets_(order);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function upsertHistoricalOrdersBatch(orders) {
+  var list = Array.isArray(orders) ? orders : [];
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    ensureOrdersMigratedOnce_();
+    var existingKeys = {};
+    getAllOrderSheetInfos_().forEach(function(info) {
+      var rows = info.sheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        var key = normalizeOrderKey_(rows[i][0]);
+        if (key) existingKeys[key] = true;
+      }
+    });
+    var imported = [];
+    var skipped = [];
+    list.forEach(function(raw) {
+      var order = raw || {};
+      var key = normalizeOrderKey_(order.moSo);
+      if (!key || existingKeys[key]) {
+        if (key) skipped.push(order.moSo);
+        return;
+      }
+      order.summaryOnly = true;
+      order.historicalSource = order.historicalSource || '2020-2026 MO workbook / 2026 sheet';
+      order.orderType = 'MO';
+      order.currentStage = 'planning';
+      order.readyToShip = false;
+      order.shipped = false;
+      upsertOrderIntoSheets_(order);
+      existingKeys[key] = true;
+      imported.push(order.moSo);
+    });
+    return { result: 'success', imported: imported, skipped: skipped };
   } finally {
     lock.releaseLock();
   }
@@ -1243,6 +1298,8 @@ function upsertOrderIntoSheets_(order) {
   setHeaderValue_('planningdeadlineauto', order.planningDeadlineAuto === false ? false : true);
   setHeaderValue_('departmentgrades', jsonValue_(order.departmentGrades, {}));
   setHeaderValue_('syncrevision', order.syncRevision || '');
+  setHeaderValue_('summaryonly', order.summaryOnly ? true : false);
+  setHeaderValue_('historicalsource', order.historicalSource || '');
   setHeaderValue_('designsentdate', order.designSentDate || '');
   setHeaderValue_('designreceiveddate', order.designReceivedDate || '');
   setHeaderValue_('yarntype', order.yarnType || '');
@@ -2356,6 +2413,12 @@ function doPost(e) {
       var orderData = JSON.parse(e.postData.contents);
       upsertOrder(orderData);
       return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (type === 'historicalOrdersBatch') {
+      var historicalPayload = JSON.parse(e.postData.contents || '{}');
+      var historicalResult = upsertHistoricalOrdersBatch(historicalPayload.orders || []);
+      return ContentService.createTextOutput(JSON.stringify(historicalResult)).setMimeType(ContentService.MimeType.JSON);
     }
 
     // NEW (2026-09e): issue-report upsert (dashboard posts these with ?type=issue) — see upsertIssue()
