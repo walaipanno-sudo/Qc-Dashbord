@@ -417,6 +417,11 @@ function doGet(e) {
 
     if (action === 'get') {
       return getJsonDataResponse(sheet);
+    } else if (action === 'getRuntimeConfigStatus') {
+      // Returns booleans only. No token, key, spreadsheet id, or other secret is exposed.
+      return ContentService
+        .createTextOutput(JSON.stringify(getRuntimeConfigStatus()))
+        .setMimeType(ContentService.MimeType.JSON);
     } else if (action === 'delete') {
       var idToDelete = e.parameter.id;
       return deleteRowById(sheet, idToDelete);
