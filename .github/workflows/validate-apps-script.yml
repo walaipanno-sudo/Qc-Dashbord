@@ -60,5 +60,8 @@ jobs:
       - name: Run order and workflow guards
         run: node scripts/verify-order-guards.js
 
+      - name: Run board detail and active loom guards
+        run: node scripts/verify-board-detail-guards.js
+
       - name: Keep the deployable HTML copies in sync
         run: cmp --silent apps-script/index.html index.html
