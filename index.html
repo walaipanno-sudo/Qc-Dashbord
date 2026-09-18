@@ -3396,7 +3396,10 @@
         // often isn't a real M/O in this system yet (per-design-variant tasks, ones that never became an
         // order, etc.), so there's no natural order.* JSON blob to ride on.
         let designJobLogs = [];
-        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || '';
+        // Production Web App URL is safe to use as the default because this HTML is served by the
+        // same Apps Script deployment. Keep the local override for preview/staging environments.
+        const DEFAULT_GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx4-GPp_qi4um9SWWQWo5xNtuVyA9ROIsmKbMIMQbvqcf-oFPQvCN2wJO-Wq1spt89_Yg/exec';
+        let gasWebAppUrl = localStorage.getItem('qc_gas_url') || DEFAULT_GAS_WEB_APP_URL;
 
         // NEW (2026-09-16): "แจ้งเตือนผ่านไลน์ แจ้งแค่ปัญหาพอ ถ้ามีรายการอื่นด้วย limit จะเต็ม" — the LINE
         // Official Account's free-tier monthly message quota gets used up if every event type (งานเสร็จ
