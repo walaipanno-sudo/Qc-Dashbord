@@ -11006,7 +11006,61 @@
             return `<div class="flex items-center">${dots}</div><div class="text-[11px] font-semibold ${STAGE_COLORS[effectiveStage].text} mt-1.5">${escapeHtml(displayLabel)}</div>`;
         }
 
+        function getOverviewDyeingLabel(order) {
+            const dyeing = order.dyeing || {};
+            const rows = Array.isArray(dyeing.colorOrders)
+                ? dyeing.colorOrders.filter(row => (Number(row.kg) || 0) > 0 || String(row.colorCode || '').trim())
+                : [];
+            const legacyItems = Array.isArray(dyeing.items) ? dyeing.items : [];
+            let total = rows.length;
+            let done = rows.filter(row => row.dyeDone && row.qcResult === 'pass').length;
+            const legacyAggregate = rows.length === 1 && Number(dyeing.plannedColorCount) > 1 &&
+                /^\(.*\)\s*\d+\s*สี/.test(String(rows[0].colorCode || ''));
+            if (legacyAggregate) {
+                total = Number(dyeing.plannedColorCount) || total;
+                done = Number(dyeing.colorsCompleted) || done;
+            }
+            if (total === 0) {
+                total = Number(dyeing.colorsOrdered) || legacyItems.length || 0;
+                done = Number(dyeing.colorsCompleted) || legacyItems.filter(item => {
+                    const ordered = dyeing.mode === 'external' ? Number(item.weightKgOrdered) || 0 : Number(item.qty) || 0;
+                    const completed = dyeing.mode === 'external' ? Number(item.weightKgReceived) || 0 : Number(item.completedQty) || 0;
+                    return ordered > 0 && completed >= ordered;
+                }).length;
+            }
+            done = Math.min(Math.max(0, done), total);
+            return `ทั้งหมด ${total} สี / ย้อมแล้ว ${done} สี / เหลือ ${Math.max(0, total - done)} สี`;
+        }
+
+        function getOverviewDesignLabel(order) {
+            const design = order.design || {};
+            const punchLog = Array.isArray(design.punchLog) ? design.punchLog : [];
+            if (!design.done) return design.startDate ? 'กำลังทำแบบ' : 'คิวทำแบบ';
+            const printing = punchLog.some(row =>
+                row && (row.transferToPrintingDate || row.printingGrade) && !row.printingDoneDate
+            );
+            return printing ? 'กำลังปั๊มผ้า' : 'รอคิวปั๊มผ้า';
+        }
+
+        function getOverviewFinishingLabel(order) {
+            const finishing = order.finishing || {};
+            const log = Array.isArray(finishing.efficiencyLog) ? finishing.efficiencyLog : [];
+            const started = Number(finishing.percent) > 0 || !!finishing.startDate ||
+                log.some(item => item && (Number(item.areaSqm) > 0 || item.date));
+            return started ? 'กำลังแต่ง' : 'รอแต่ง';
+        }
+
         function getOverviewStageLabel(order, effectiveStage) {
+            if (effectiveStage === 'planning' && order.design) return getOverviewDesignLabel(order);
+            if (effectiveStage === 'dyeing') return getOverviewDyeingLabel(order);
+            if (effectiveStage === 'finishing') return getOverviewFinishingLabel(order);
+            if (effectiveStage !== 'weaving') return STAGE_LABELS[effectiveStage];
+            if (order.weaving.mode === 'external') return 'จ้างทอภายนอก';
+            const occupancy = getCurrentLoomOccupancies([order])[0];
+            return occupancy ? `กำลังทอจอ ${occupancy.loom}` : 'รอคิวทอ';
+        }
+
+        function getOverviewStageLabelLegacy(order, effectiveStage) {
             if (effectiveStage !== 'weaving') return STAGE_LABELS[effectiveStage];
             if (order.weaving.mode === 'external') return 'จ้างทอภายนอก';
             const occupancy = getCurrentLoomOccupancies([order])[0];
