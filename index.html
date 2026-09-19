@@ -13,6 +13,10 @@
     <!-- NEW: SheetJS — reads the weaving department's daily .xlsx report client-side (no server upload
          needed) for "นำเข้าข้อมูลทอ" — see handleWeavingExcelFile()/aggregateWeavingImport(). -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PO intake readers: text extraction for DOCX/PDF and OCR fallback for image scans. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
     <!-- NEW (2026-09-11): Supabase JS client — used for Login + สิทธิ์แต่ละแผนก (see the "Supabase /
          Login + สิทธิ์" block in the script below). Loaded unconditionally but harmless if unused —
          the app only calls it once a Supabase URL/anon key has actually been saved via "ตั้งค่า
@@ -944,6 +948,12 @@
                     <button onclick="setSalesSubTab('report')" id="salesSubTabBtn-report" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
                         <i class="fa-solid fa-table"></i> รายการทั้งหมด (M/O, S/O)
                     </button>
+                    <button onclick="setSalesSubTab('po')" id="salesSubTabBtn-po" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-file-arrow-up"></i> รับ PO / AI Scan
+                    </button>
+                    <button onclick="setSalesSubTab('staff')" id="salesSubTabBtn-staff" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        <i class="fa-solid fa-chart-column"></i> สรุปตร.ม. ราย Sale
+                    </button>
                 </div>
 
                 <div id="salesSubTab-add">
@@ -1322,6 +1332,52 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div id="salesSubTab-po" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-invoice text-indigo-600"></i> รับ PO จากลูกค้า</h3>
+                        <p class="text-[11px] text-slate-500 mt-1">รองรับไฟล์ข้อความ, CSV, Excel, PDF, Word และรูปภาพ ระบบจะอ่านข้อความ/รายการที่อ่านได้ แล้วให้ตรวจสอบก่อนเปิด M/O หรือ S/O</p>
+                    </div>
+                    <label class="shrink-0 cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-2 rounded-lg text-xs inline-flex items-center gap-2">
+                        <i class="fa-solid fa-upload"></i> เลือกไฟล์ PO
+                        <input id="salesPoFileInput" type="file" multiple accept="*/*" class="hidden" onchange="handleSalesPoFiles(this)">
+                    </label>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select id="salesPoOrderTypeInput" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <option value="MO">เปิดเป็น M/O</option>
+                        <option value="SO">เปิดเป็น S/O</option>
+                    </select>
+                    <input id="salesPoCustomerInput" type="text" placeholder="ชื่อลูกค้า" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <select id="salesPoMarketInput" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <option value="export">ต่างประเทศ</option>
+                        <option value="domestic">ในประเทศ</option>
+                    </select>
+                    <input id="salesPoSalesInput" type="text" placeholder="Sale ผู้รับผิดชอบ" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div id="salesPoStatus" class="text-xs text-slate-500">ยังไม่มีไฟล์ PO ที่กำลังตรวจสอบ</div>
+                <div id="salesPoRecordsList" class="space-y-3"></div>
+            </div>
+            <div id="salesSubTab-staff" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-end gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">ช่วงสรุป</label>
+                        <select id="salesStaffPeriodMode" onchange="renderSalesStaffSummary()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <option value="month">รายเดือน</option>
+                            <option value="year">รายปี</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">ปี</label>
+                        <input id="salesStaffYear" type="number" min="2000" max="2100" onchange="renderSalesStaffSummary()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs w-24">
+                    </div>
+                    <div id="salesStaffMonthWrap">
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">เดือน</label>
+                        <select id="salesStaffMonth" onchange="renderSalesStaffSummary()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"></select>
+                    </div>
+                </div>
+                <div id="salesStaffSummary" class="overflow-x-auto"></div>
             </div>
             <div id="boardColumnsGrid" class="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div id="boardColWrap-planning" class="bg-blue-50/60 border border-blue-100 border-t-4 border-t-blue-400 rounded-2xl p-3 flex flex-col gap-3 min-h-[200px]">
@@ -3354,6 +3410,10 @@
         // synced). Persisted to localStorage so it survives the very reload this bug happens around.
         let qcPendingSyncIds = new Set();
         let productionOrders = [];
+        // Sales PO intake records are separate from productionOrders until a salesperson confirms
+        // the extracted lines and opens M/O or S/O. This keeps an uploaded customer file auditable
+        // even when its first scan needs manual correction.
+        let salesPoRecords = [];
         // Latest local order payloads that have not yet received an explicit success response from
         // Google Apps Script. A Sheet refresh must never overwrite these rows with an older server
         // copy; the queue is persisted so a reload or temporary network outage cannot make a newly
@@ -3996,6 +4056,10 @@
             if (savedOrders) {
                 try { productionOrders = deduplicateProductionOrders(JSON.parse(savedOrders)); } catch(e) {}
             }
+            const savedSalesPoRecords = localStorage.getItem('qc_sales_po_records_v1');
+            if (savedSalesPoRecords) {
+                try { salesPoRecords = JSON.parse(savedSalesPoRecords) || []; } catch(e) { salesPoRecords = []; }
+            }
             const savedPendingOrderSyncs = localStorage.getItem('qc_pending_order_syncs_v1');
             if (savedPendingOrderSyncs) {
                 try {
@@ -4067,6 +4131,7 @@
                 // Retry local writes first, then read the shared Sheet. This ordering prevents a
                 // startup GET from returning an old stage while a queued transfer is still saving.
                 flushPendingOrderSyncs().finally(() => fetchOrdersFromGoogleSheet(false));
+                fetchSalesPoRecordsFromGoogleSheet(false);
                 fetchIssuesFromGoogleSheet(false);
                 fetchProductionSettingsFromSheet(); // NEW (2026-09-10): shared staff/OT settings for the calc engine
                 fetchSpecTemplatesFromGoogleSheet(false); // NEW (2026-09-12): shared SPECIFICATIONS templates
@@ -4090,6 +4155,250 @@
         function saveOrdersToLocal() {
             productionOrders = deduplicateProductionOrders(productionOrders);
             localStorage.setItem('qc_production_orders_v1', JSON.stringify(productionOrders));
+        }
+
+        function saveSalesPoRecordsToLocal() {
+            localStorage.setItem('qc_sales_po_records_v1', JSON.stringify(salesPoRecords));
+        }
+
+        function salesPoRecordId() {
+            return `PO-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+        }
+
+        function decodeSalesPoText(buffer) {
+            try { return new TextDecoder('utf-8').decode(buffer); }
+            catch (e) { return String(buffer || ''); }
+        }
+
+        async function extractSalesPoFileText(file) {
+            const name = String(file.name || '').toLowerCase();
+            const ext = name.includes('.') ? name.split('.').pop() : '';
+            const buffer = await file.arrayBuffer();
+            if (['txt', 'csv', 'tsv', 'json', 'xml', 'html', 'md'].includes(ext)) {
+                return decodeSalesPoText(buffer);
+            }
+            if (['xls', 'xlsx'].includes(ext) && window.XLSX) {
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                return workbook.SheetNames.map(sheetName => {
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                    return `SHEET: ${sheetName}\n` + rows.map(row => row.join(' | ')).join('\n');
+                }).join('\n\n');
+            }
+            if (ext === 'docx' && window.mammoth) {
+                const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+                return result.value || '';
+            }
+            if (ext === 'pdf' && window.pdfjsLib) {
+                if (window.pdfjsLib.GlobalWorkerOptions) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+                const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+                const pages = [];
+                for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+                    const page = await pdf.getPage(pageNo);
+                    const content = await page.getTextContent();
+                    pages.push(content.items.map(item => item.str).join(' '));
+                }
+                return pages.join('\n');
+            }
+            if (file.type && file.type.startsWith('image/') && window.Tesseract) {
+                const result = await Tesseract.recognize(file, 'eng+tha', {
+                    logger: message => {
+                        const status = document.getElementById('salesPoStatus');
+                        if (status && message && message.progress) status.textContent = `กำลัง AI SCAN รูปภาพ ${Math.round(message.progress * 100)}%`;
+                    }
+                });
+                return result && result.data ? result.data.text : '';
+            }
+            return '';
+        }
+
+        function parseSalesPoText(text, file) {
+            const raw = String(text || '').replace(/\r/g, '');
+            const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
+            const joined = lines.join(' ');
+            const pick = (patterns) => {
+                for (const pattern of patterns) {
+                    const match = joined.match(pattern);
+                    if (match && match[1]) return match[1].trim();
+                }
+                return '';
+            };
+            const poNo = pick([/(?:PO|P\.O\.|Purchase\s*Order)\s*(?:No\.?|#)?\s*[:\-]?\s*([A-Z0-9][A-Z0-9./_-]{2,})/i]);
+            const customer = pick([/(?:Customer|ลูกค้า|Bill\s*To|Ship\s*To)\s*[:\-]\s*([^|,\n]{2,80})/i]);
+            const dueDate = pick([/(?:Due\s*Date|Delivery\s*Date|กำหนดส่ง|ส่งวันที่)\s*[:\-]\s*([0-9]{1,4}[\/-][0-9]{1,2}[\/-][0-9]{1,4})/i]);
+            const sqmMatches = Array.from(joined.matchAll(/(\d+(?:\.\d+)?)\s*(?:m2|m²|sqm|ตร\.?\s*ม\.?)/gi));
+            const totalSqm = sqmMatches.reduce((sum, match) => sum + (Number(match[1]) || 0), 0);
+            const pieces = pick([/(?:Qty|Quantity|จำนวน|PCS|ชิ้น)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i]);
+            const itemLines = lines.filter(line => /\d+(?:\.\d+)?\s*(?:m2|m²|sqm|ตร\.?\s*ม\.?)/i.test(line)).slice(0, 50);
+            return {
+                id: salesPoRecordId(),
+                fileName: file.name,
+                fileType: file.type || '',
+                scannedAt: new Date().toISOString(),
+                customerName: customer || document.getElementById('salesPoCustomerInput')?.value.trim() || '',
+                market: document.getElementById('salesPoMarketInput')?.value || 'export',
+                salesName: document.getElementById('salesPoSalesInput')?.value.trim() || '',
+                poNumber: poNo,
+                dueDate,
+                totalSqm,
+                totalPieces: Number(pieces) || 0,
+                rawText: raw.slice(0, 30000),
+                extractedItems: itemLines,
+                scanEngine: raw ? 'browser-ai-heuristic' : 'manual-review-required',
+                status: raw ? 'scanned' : 'needs-review',
+                linkedMoSo: ''
+            };
+        }
+
+        async function handleSalesPoFiles(input) {
+            const files = Array.from(input.files || []);
+            if (!files.length) return;
+            const status = document.getElementById('salesPoStatus');
+            status.textContent = `กำลังอ่าน ${files.length} ไฟล์...`;
+            for (const file of files) {
+                try {
+                    const text = await extractSalesPoFileText(file);
+                    const record = parseSalesPoText(text, file);
+                    salesPoRecords.unshift(record);
+                    syncSalesPoRecordToSheet(record);
+                } catch (error) {
+                    const record = parseSalesPoText('', file);
+                    record.status = 'scan-error';
+                    record.error = String(error && error.message || error);
+                    salesPoRecords.unshift(record);
+                    syncSalesPoRecordToSheet(record);
+                }
+            }
+            saveSalesPoRecordsToLocal();
+            renderSalesPoRecords();
+            status.textContent = `สแกนเสร็จ ${files.length} ไฟล์ — กรุณาตรวจสอบข้อมูลก่อนเปิด M/O หรือ S/O`;
+            input.value = '';
+        }
+
+        function renderSalesPoRecords() {
+            const container = document.getElementById('salesPoRecordsList');
+            if (!container) return;
+            if (!salesPoRecords.length) {
+                container.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">ยังไม่มีทะเบียน PO</div>';
+                return;
+            }
+            container.innerHTML = salesPoRecords.slice(0, 50).map((record, index) => `
+                <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-slate-800 truncate">${escapeHtml(record.fileName || '-')}</p>
+                            <p class="text-[11px] text-slate-500 mt-1">${escapeHtml(record.customerName || 'ยังไม่ระบุลูกค้า')} · PO ${escapeHtml(record.poNumber || '-')} · ${record.market === 'domestic' ? 'ในประเทศ' : 'ต่างประเทศ'} · Sale ${escapeHtml(record.salesName || '-')}</p>
+                            <p class="text-[11px] text-slate-600 mt-1">รวม ${Number(record.totalSqm || 0).toFixed(2)} ตร.ม. · ${Number(record.totalPieces || 0)} ชิ้น · ${record.status === 'scanned' ? 'AI SCAN แล้ว' : 'ต้องตรวจสอบเอง'}</p>
+                            ${record.extractedItems?.length ? `<pre class="mt-2 max-h-24 overflow-auto whitespace-pre-wrap text-[10px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2">${escapeHtml(record.extractedItems.join('\n'))}</pre>` : ''}
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button type="button" onclick="openSalesPoAsOrder('${record.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-semibold"><i class="fa-solid fa-plus mr-1"></i>เปิด M/O,S/O</button>
+                            <button type="button" onclick="removeSalesPoRecord('${record.id}')" class="px-3 py-1.5 bg-white hover:bg-rose-50 border border-slate-300 text-rose-600 rounded-lg text-[11px]"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openSalesPoAsOrder(recordId) {
+            const record = salesPoRecords.find(item => item.id === recordId);
+            if (!record) return;
+            openNewOrderModal();
+            const type = document.getElementById('salesPoOrderTypeInput')?.value || 'MO';
+            document.getElementById('newOrderTypeMo').checked = type === 'MO';
+            document.getElementById('newOrderTypeSo').checked = type === 'SO';
+            document.getElementById('newOrderMarketExport').checked = record.market !== 'domestic';
+            document.getElementById('newOrderMarketDomestic').checked = record.market === 'domestic';
+            updateNewOrderTypeStyle();
+            updateNewOrderMarketStyle();
+            document.getElementById('newOrderCustomerName').value = record.customerName || '';
+            document.getElementById('newOrderCustomerPO').value = record.poNumber || '';
+            document.getElementById('newOrderSalesName').value = record.salesName || '';
+            document.getElementById('newOrderDueDate').value = normalizeDateString(record.dueDate) || '';
+            document.getElementById('newOrderSizeItemsBody').innerHTML = '';
+            addNewOrderSizeRow();
+            const firstRow = document.querySelector('#newOrderSizeItemsBody .new-order-size-row');
+            if (firstRow && Number(record.totalSqm) > 0) firstRow.querySelector('.size-sqm').value = Number(record.totalSqm).toFixed(2);
+            updateNewOrderSizeSummaryOnly();
+            document.getElementById('salesPoStatus').textContent = `เปิด ${record.fileName} เข้าแบบฟอร์มสร้าง M/O,S/O แล้ว กรุณาตรวจสอบและกดเพิ่มรายการ`;
+        }
+
+        function removeSalesPoRecord(recordId) {
+            salesPoRecords = salesPoRecords.filter(item => item.id !== recordId);
+            saveSalesPoRecordsToLocal();
+            renderSalesPoRecords();
+            if (gasWebAppUrl) {
+                const url = gasWebAppUrl + (gasWebAppUrl.includes('?') ? '&' : '?') + 'type=deleteSharedRecord';
+                fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'salesPoRecords', id: recordId }) }).catch(() => {});
+            }
+        }
+
+        async function fetchSalesPoRecordsFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                const url = gasWebAppUrl + (gasWebAppUrl.includes('?') ? '&' : '?') + 'action=getSharedRecords&collection=salesPoRecords';
+                const response = await fetch(url);
+                const result = await response.json();
+                if (Array.isArray(result)) {
+                    salesPoRecords = result;
+                    saveSalesPoRecordsToLocal();
+                    renderSalesPoRecords();
+                    if (isManual) showToast(`ซิงค์ทะเบียน PO สำเร็จ (${salesPoRecords.length} รายการ)`);
+                }
+            } catch (error) {
+                console.warn('Fetch sales PO records failed:', error);
+            }
+        }
+
+        async function syncSalesPoRecordToSheet(record) {
+            if (!gasWebAppUrl) return;
+            try {
+                const url = gasWebAppUrl + (gasWebAppUrl.includes('?') ? '&' : '?') + 'type=sharedRecord';
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collection: 'salesPoRecords', record })
+                });
+            } catch (error) {
+                console.warn('Sync sales PO record failed:', error);
+            }
+        }
+
+        function renderSalesStaffSummary() {
+            const container = document.getElementById('salesStaffSummary');
+            if (!container) return;
+            const mode = document.getElementById('salesStaffPeriodMode')?.value || 'month';
+            const year = Number(document.getElementById('salesStaffYear')?.value) || new Date().getFullYear();
+            const month = Number(document.getElementById('salesStaffMonth')?.value) || (new Date().getMonth() + 1);
+            const grouped = {};
+            productionOrders.filter(order => !order.summaryOnly).forEach(order => {
+                const sales = String(order.salesName || 'ยังไม่ระบุ Sale').trim() || 'ยังไม่ระบุ Sale';
+                const date = normalizeDateString(order.openDate || order.createdAt || order.lastUpdated);
+                if (!date || !date.startsWith(String(year))) return;
+                if (mode === 'month' && Number(date.slice(5, 7)) !== month) return;
+                if (!grouped[sales]) grouped[sales] = { sqm: 0, orders: 0, pieces: 0 };
+                grouped[sales].sqm += Number(order.totalSqm) || 0;
+                grouped[sales].orders += 1;
+                grouped[sales].pieces += Number(order.totalPieces) || 0;
+            });
+            const rows = Object.entries(grouped).sort((a, b) => b[1].sqm - a[1].sqm);
+            container.innerHTML = `
+                <table class="min-w-full text-xs border-collapse">
+                    <thead><tr class="bg-slate-100 text-slate-600">
+                        <th class="border border-slate-300 px-3 py-2 text-left">พนักงาน / Sale</th>
+                        <th class="border border-slate-300 px-3 py-2 text-right">จำนวน M/O,S/O</th>
+                        <th class="border border-slate-300 px-3 py-2 text-right">ชิ้น</th>
+                        <th class="border border-slate-300 px-3 py-2 text-right">รวม ตร.ม.</th>
+                    </tr></thead>
+                    <tbody>${rows.length ? rows.map(([name, values]) => `<tr>
+                        <td class="border border-slate-300 px-3 py-2 font-semibold">${escapeHtml(name)}</td>
+                        <td class="border border-slate-300 px-3 py-2 text-right">${values.orders}</td>
+                        <td class="border border-slate-300 px-3 py-2 text-right">${values.pieces.toLocaleString('th-TH')}</td>
+                        <td class="border border-slate-300 px-3 py-2 text-right font-bold">${values.sqm.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>`).join('') : '<tr><td colspan="4" class="border border-slate-300 px-3 py-8 text-center text-slate-400">ไม่พบข้อมูลในช่วงเวลานี้</td></tr>'}</tbody>
+                </table>`;
         }
 
         function savePendingOrderSyncsToLocal() {
@@ -4171,6 +4480,16 @@
         }
 
         function initApp() {
+            const salesYear = document.getElementById('salesStaffYear');
+            if (salesYear && !salesYear.value) salesYear.value = String(new Date().getFullYear());
+            const salesMonth = document.getElementById('salesStaffMonth');
+            if (salesMonth && !salesMonth.options.length) {
+                salesMonth.innerHTML = Array.from({ length: 12 }, (_, index) => {
+                    const month = index + 1;
+                    return `<option value="${month}">${String(month).padStart(2, '0')}</option>`;
+                }).join('');
+                salesMonth.value = String(new Date().getMonth() + 1);
+            }
             populateMoSoFilterOptions();
             filterTable(); // applies the search/status/dept/month filters plus the global M/O, S/O switch, and renders both the records table and the shipping list
             renderWeeklyQcSummary();
@@ -13989,12 +14308,14 @@
         // display toggle within the already-selected แผนกขาย department tab.
         let salesActiveSubTab = 'add';
         function setSalesSubTab(tab) {
-            salesActiveSubTab = (tab === 'report') ? 'report' : 'add';
+            salesActiveSubTab = ['report', 'po', 'staff'].includes(tab) ? tab : 'add';
             const activeClasses = ['bg-indigo-600', 'text-white', 'shadow-sm'];
             const inactiveClasses = ['bg-slate-100', 'text-slate-600', 'hover:bg-slate-200'];
             [
                 { el: document.getElementById('salesSubTabBtn-add'), isActive: salesActiveSubTab === 'add' },
-                { el: document.getElementById('salesSubTabBtn-report'), isActive: salesActiveSubTab === 'report' }
+                { el: document.getElementById('salesSubTabBtn-report'), isActive: salesActiveSubTab === 'report' },
+                { el: document.getElementById('salesSubTabBtn-po'), isActive: salesActiveSubTab === 'po' },
+                { el: document.getElementById('salesSubTabBtn-staff'), isActive: salesActiveSubTab === 'staff' }
             ].forEach(({ el, isActive }) => {
                 if (!el) return;
                 if (isActive) { el.classList.remove(...inactiveClasses); el.classList.add(...activeClasses); }
@@ -14002,9 +14323,15 @@
             });
             const addPane = document.getElementById('salesSubTab-add');
             const reportPane = document.getElementById('salesSubTab-report');
+            const poPane = document.getElementById('salesSubTab-po');
+            const staffPane = document.getElementById('salesSubTab-staff');
             if (addPane) addPane.classList.toggle('hidden', salesActiveSubTab !== 'add');
             if (reportPane) reportPane.classList.toggle('hidden', salesActiveSubTab !== 'report');
+            if (poPane) poPane.classList.toggle('hidden', salesActiveSubTab !== 'po');
+            if (staffPane) staffPane.classList.toggle('hidden', salesActiveSubTab !== 'staff');
             if (salesActiveSubTab === 'report') renderSalesReportTables();
+            if (salesActiveSubTab === 'po') renderSalesPoRecords();
+            if (salesActiveSubTab === 'staff') renderSalesStaffSummary();
         }
 
         // NEW (2026-09-12): "แผนกทอ" local sub-tab switcher — "บอร์ดงานทอ" (the pre-existing Kanban
