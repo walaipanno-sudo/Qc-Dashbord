@@ -1988,7 +1988,8 @@ var SHARED_RECORDS_HEADERS = ["Collection", "ID", "Data", "UpdatedAt"];
 var SHARED_RECORD_COLLECTIONS = {
   finishingStaff: true,
   surplusLedger: true,
-  designJobLogs: true
+  designJobLogs: true,
+  salesPoRecords: true
 };
 
 function normalizeSharedRecordCollection_(collection) {
