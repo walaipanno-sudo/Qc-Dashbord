@@ -13,6 +13,9 @@
   - Deployment ID: `6537923975`
   - SHA: `3f07d5b1ac8c58174adff86ead5cbfa9de9b2ea4`
   - สถานะ: `success`
+- PR งานล่าสุด: [PR #7](https://github.com/walaipanno-sudo/Qc-Dashbord/pull/7)
+- Branch งานล่าสุด: `claude/sales-po-and-employee-reports`
+- Commit งานล่าสุด: `4587061`
 - Branch ที่ใช้พัฒนาก่อน merge: `skywork/department-board-details-20260918`
 - Commit ก่อน merge บน branch ดังกล่าว: `22f62a5`
 
@@ -58,8 +61,8 @@
 - Deployment ID เดิม:
   `AKfycbx4-GPp_qi4um9SWWQWo5xNtuVyA9ROIsmKbMIMQbvqcf-oFPQvCN2wJO-Wq1spt89_Yg`
 - Apps Script version ล่าสุดที่ deploy:
-  - Version: `71`
-  - Description: `คืนรูปแบบหน้าเว็บเดิม คงสถานะการผลิตแบบใหม่`
+  - Version: `72`
+  - Description: `รับ PO จากลูกค้า แยกตลาดและ Sale เพิ่ม AI Scan และสรุปตร.ม. รายเดือนรายปี`
 
 GitHub Pages และ Apps Script Production เป็นคนละระบบ อย่าสับสนกัน:
 
@@ -172,4 +175,3 @@ gh api "repos/walaipanno-sudo/Qc-Dashbord/deployments?environment=github-pages&p
 สรุปไฟล์ที่แก้ไข ผลการตรวจสอบ และงานที่ยังเหลือ
 สร้าง commit และ push branch เมื่อการเปลี่ยนแปลงพร้อม review
 ```
-
